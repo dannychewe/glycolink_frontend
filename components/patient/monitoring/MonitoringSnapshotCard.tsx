@@ -9,11 +9,9 @@ type SnapshotData = {
     latestGlucose: {
       id: string;
       readingType: string;
-      recordedAt: string;
       value: number;
-      context: string | null;
-      source: string;
       unit: string | null;
+      recordedAt: string;
     } | null;
     trend: {
       readingType: string;
@@ -34,11 +32,6 @@ function formatRecordedAt(value: string) {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-function formatContext(ctx: string | null) {
-  if (!ctx) return null;
-  return ctx.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function MonitoringSnapshotCard() {
@@ -95,11 +88,6 @@ export function MonitoringSnapshotCard() {
 
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/70">
           <span>{formatRecordedAt(latest.recordedAt)}</span>
-          {latest.context ? (
-            <span className="rounded-full bg-white/15 px-2 py-0.5">
-              {formatContext(latest.context)}
-            </span>
-          ) : null}
         </div>
       </div>
 

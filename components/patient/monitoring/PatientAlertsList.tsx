@@ -10,12 +10,9 @@ type Alert = {
   id: string;
   type: string;
   severity: string;
-  sourceEntityType: string;
-  sourceEntityId: string;
   message: string;
-  acknowledgedAt: string | null;
-  acknowledgedByUserId: string | null;
   createdAt: string;
+  acknowledgedAt: string | null;
 };
 
 type AlertsData = {

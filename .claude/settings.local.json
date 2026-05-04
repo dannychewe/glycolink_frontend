@@ -22,7 +22,11 @@
       "Bash(grep -E \"^[^/]*app[^/]*page.tsx$|/app/page.tsx\")",
       "Bash(awk -F/ '{print NF, $0}')",
       "Bash(awk '{$1=\"\"; print $0}')",
-      "Bash(wait)"
+      "Bash(wait)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Nakubiana\\\\glycolink-front\\\\components\\\\ui\" -Name)",
+      "Bash(Get-ChildItem \"d:/Nakubiana/glycolink-front/components/patient/messages\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem \"d:/Nakubiana/glycolink-front/app/\\(patient\\)/patient/messages\" -Recurse)"
     ]
   }
 }

@@ -2,15 +2,18 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { MessageSquare, Send, ChevronLeft, Paperclip, AlertCircle, CheckCheck, Check } from "lucide-react";
+import { MessageSquare, Send, ChevronLeft, Paperclip, AlertCircle, CheckCheck, Check, Archive, RotateCcw } from "lucide-react";
 import {
+  PATIENT_ARCHIVE_CONVERSATION_MUTATION,
   PATIENT_CONVERSATION_MESSAGES_QUERY,
   PATIENT_MARK_CONVERSATION_READ_MUTATION,
   PATIENT_MESSAGE_THREADS_QUERY,
+  PATIENT_REOPEN_CONVERSATION_MUTATION,
   PATIENT_SEND_MESSAGE_MUTATION,
 } from "@/lib/patient/messages-graphql";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
+import { useAuth } from "@/features/auth/auth-context";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -26,11 +29,11 @@ type LastMessage = {
 
 type Thread = {
   id: string;
-  patientId: string;
+  providerId: string;
   appointmentId: string | null;
   encounterId: string | null;
   status: string;
-  patientName: string | null;
+  providerName: string | null;
   unreadCount: number;
   unreadMessageCount: number;
   unreadThread: boolean;
@@ -53,7 +56,6 @@ type Message = {
   sequenceNumber: number;
   senderUserId: string;
   senderName: string | null;
-  patientName: string | null;
   body: string | null;
   priority: string | null;
   sentAt: string;
@@ -84,15 +86,8 @@ function formatFullTime(value: string) {
   return d.toLocaleString("en-ZM", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function isFromMe(message: Message): boolean {
-  return message.senderName === message.patientName && message.patientName !== null;
-}
-
 function threadLabel(thread: Thread): string {
-  if (thread.lastMessage && thread.lastMessage.senderName !== thread.patientName) {
-    return thread.lastMessage.senderName ?? "Care Team";
-  }
-  return "Care Team";
+  return thread.providerName ?? "Care Team";
 }
 
 function statusVariant(status: string): "success" | "secondary" | "warning" {
@@ -107,10 +102,12 @@ function statusVariant(status: string): "success" | "secondary" | "warning" {
 function ThreadRow({
   thread,
   isSelected,
+  currentUserId,
   onClick,
 }: {
   thread: Thread;
   isSelected: boolean;
+  currentUserId: string | undefined;
   onClick: () => void;
 }) {
   const hasUnread = thread.unreadThread || thread.unreadMessageCount > 0;
@@ -138,7 +135,7 @@ function ThreadRow({
           </div>
           {thread.lastMessage?.body ? (
             <p className={cn("truncate text-xs", hasUnread ? "text-text" : "text-muted")}>
-              {thread.lastMessage.senderName === thread.patientName ? "You: " : ""}
+              {thread.lastMessage.senderUserId === currentUserId ? "You: " : ""}
               {thread.lastMessage.body}
             </p>
           ) : null}
@@ -160,8 +157,8 @@ function ThreadRow({
 
 // ─── Message Bubble ───────────────────────────────────────
 
-function MessageBubble({ message }: { message: Message }) {
-  const fromMe = isFromMe(message);
+function MessageBubble({ message, currentUserId }: { message: Message; currentUserId: string | undefined }) {
+  const fromMe = message.senderUserId === currentUserId;
 
   return (
     <div className={cn("flex", fromMe ? "justify-end" : "justify-start")}>
@@ -219,10 +216,12 @@ function MessageBubble({ message }: { message: Message }) {
 
 function ConversationView({
   thread,
+  currentUserId,
   onBack,
   onThreadUpdated,
 }: {
   thread: Thread;
+  currentUserId: string | undefined;
   onBack: () => void;
   onThreadUpdated: () => void;
 }) {
@@ -239,6 +238,14 @@ function ConversationView({
 
   const [sendMessage, { loading: sending }] = useMutation(PATIENT_SEND_MESSAGE_MUTATION);
   const [markRead] = useMutation(PATIENT_MARK_CONVERSATION_READ_MUTATION);
+  const [archiveConversation, { loading: archiving }] = useMutation(
+    PATIENT_ARCHIVE_CONVERSATION_MUTATION,
+    { onCompleted: onThreadUpdated },
+  );
+  const [reopenConversation, { loading: reopening }] = useMutation(
+    PATIENT_REOPEN_CONVERSATION_MUTATION,
+    { onCompleted: onThreadUpdated },
+  );
 
   const messages = [...(data?.conversationMessages ?? [])].sort(
     (a, b) => a.sequenceNumber - b.sequenceNumber,
@@ -307,6 +314,32 @@ function ConversationView({
             <Badge variant={statusVariant(thread.status)}>{thread.status}</Badge>
           </div>
         </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          {isArchived ? (
+            <button
+              type="button"
+              onClick={() => void reopenConversation({ variables: { conversationId: thread.id } })}
+              disabled={reopening}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-text transition hover:bg-surface disabled:opacity-50"
+              title="Reopen conversation"
+            >
+              <RotateCcw className="size-3.5" />
+              Reopen
+            </button>
+          ) : !isClosed ? (
+            <button
+              type="button"
+              onClick={() => void archiveConversation({ variables: { conversationId: thread.id } })}
+              disabled={archiving}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted transition hover:text-text hover:bg-surface disabled:opacity-50"
+              title="Archive conversation"
+            >
+              <Archive className="size-3.5" />
+              Archive
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* Messages */}
@@ -332,7 +365,7 @@ function ConversationView({
         ) : messages.length === 0 ? (
           <p className="text-center text-sm text-muted">No messages yet.</p>
         ) : (
-          messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
+          messages.map((msg) => <MessageBubble key={msg.id} message={msg} currentUserId={currentUserId} />)
         )}
 
         <div ref={bottomRef} />
@@ -382,6 +415,8 @@ function ConversationView({
 // ─── Main Inbox ───────────────────────────────────────────
 
 export function PatientInbox({ initialConversationId }: { initialConversationId?: string }) {
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selectedId, setSelectedId] = useState<string | null>(initialConversationId ?? null);
 
@@ -405,11 +440,11 @@ export function PatientInbox({ initialConversationId }: { initialConversationId?
     !loading && selectedId && !foundThread
       ? {
           id: selectedId,
-          patientId: "",
+          providerId: "",
           appointmentId: null,
           encounterId: null,
           status: "OPEN",
-          patientName: null,
+          providerName: null,
           unreadCount: 0,
           unreadMessageCount: 0,
           unreadThread: false,
@@ -474,6 +509,7 @@ export function PatientInbox({ initialConversationId }: { initialConversationId?
                 key={thread.id}
                 thread={thread}
                 isSelected={selectedId === thread.id}
+                currentUserId={currentUserId}
                 onClick={() => setSelectedId(thread.id)}
               />
             ))
@@ -490,6 +526,7 @@ export function PatientInbox({ initialConversationId }: { initialConversationId?
           <ConversationView
             key={selectedThread.id}
             thread={selectedThread}
+            currentUserId={currentUserId}
             onBack={() => setSelectedId(null)}
             onThreadUpdated={() => void refetch()}
           />

@@ -52,6 +52,14 @@ function NavIcon({
     );
   }
 
+  if (icon === "records") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9h6m-6-4h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
   if (icon === "prescriptions") {
     return (
       <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">

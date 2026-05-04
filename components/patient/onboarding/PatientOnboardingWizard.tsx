@@ -82,7 +82,7 @@ const defaultValues: PatientOnboardingValues = {
   dateOfBirth: "",
   phone: "",
   email: "",
-  diabetesType: "TYPE_2",
+  diabetesType: "type_2",
   diagnosisDate: "",
   allergies: "",
   currentMedications: "",
@@ -98,7 +98,7 @@ type ExistingProfile = {
   fullName: string | null;
   dateOfBirth: string | null;
   phone: string | null;
-  diabetesType: "TYPE_1" | "TYPE_2" | "GESTATIONAL" | "PREDIABETES" | "OTHER" | null;
+  diabetesType: string | null;
   diagnosisDate: string | null;
 } | null;
 
@@ -183,7 +183,7 @@ export function PatientOnboardingWizard() {
       setValue("dateOfBirth", profile.dateOfBirth);
     }
     if (profile?.diabetesType && !getFieldState("diabetesType").isDirty) {
-      setValue("diabetesType", profile.diabetesType);
+      setValue("diabetesType", profile.diabetesType.toLowerCase() as PatientOnboardingValues["diabetesType"]);
     }
     if (profile?.diagnosisDate && !getFieldState("diagnosisDate").isDirty) {
       setValue("diagnosisDate", profile.diagnosisDate);

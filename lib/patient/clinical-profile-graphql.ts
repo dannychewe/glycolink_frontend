@@ -47,11 +47,12 @@ export const COMPLETE_PATIENT_PROFILE_MUTATION = gql`
     completePatientProfile(data: $data) {
       patientProfile {
         id
-        profileComplete
-        onboardingStatus
+        fullName
+        dateOfBirth
         diabetesType
         diagnosisDate
-        phone
+        profileComplete
+        onboardingStatus
       }
     }
   }
@@ -63,11 +64,12 @@ export const UPDATE_PATIENT_PROFILE_MUTATION = gql`
     updatePatientProfile(data: $data) {
       patientProfile {
         id
-        profileComplete
-        onboardingStatus
+        fullName
+        dateOfBirth
         diabetesType
         diagnosisDate
-        phone
+        profileComplete
+        onboardingStatus
       }
     }
   }
@@ -199,11 +201,11 @@ export const ACCEPT_CONSENT_MUTATION = gql`
 `;
 
 export const DIABETES_TYPE_OPTIONS = [
-  { value: "TYPE_1", label: "Type 1" },
-  { value: "TYPE_2", label: "Type 2" },
-  { value: "GESTATIONAL", label: "Gestational" },
-  { value: "PREDIABETES", label: "Prediabetes" },
-  { value: "OTHER", label: "Other" },
+  { value: "type_1", label: "Type 1" },
+  { value: "type_2", label: "Type 2" },
+  { value: "gestational", label: "Gestational" },
+  { value: "prediabetes", label: "Prediabetes" },
+  { value: "other", label: "Other" },
 ] as const;
 
 export const ALLERGY_SEVERITY_OPTIONS = [

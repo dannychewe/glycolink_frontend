@@ -6,9 +6,10 @@ import { GlucoseLogForm } from "@/components/patient/monitoring/GlucoseLogForm";
 import { VitalsLogForm } from "@/components/patient/monitoring/VitalsLogForm";
 import { GraphqlReadingsList } from "@/components/patient/monitoring/GraphqlReadingsList";
 import { PatientAlertsList } from "@/components/patient/monitoring/PatientAlertsList";
+import { PatientDevicesList } from "@/components/patient/monitoring/PatientDevicesList";
 import { cn } from "@/lib/utils/cn";
 
-const TABS = ["Overview", "Log Reading", "Readings", "Alerts"] as const;
+const TABS = ["Overview", "Log Reading", "Readings", "Alerts", "Devices"] as const;
 type Tab = (typeof TABS)[number];
 
 export function GraphqlMonitoringView() {
@@ -88,6 +89,9 @@ export function GraphqlMonitoringView() {
 
       {/* Alerts */}
       {activeTab === "Alerts" ? <PatientAlertsList /> : null}
+
+      {/* Devices */}
+      {activeTab === "Devices" ? <PatientDevicesList /> : null}
     </div>
   );
 }

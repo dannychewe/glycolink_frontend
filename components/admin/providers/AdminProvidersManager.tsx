@@ -32,7 +32,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
-type StatusFilter = "all" | "pending" | "approved" | "rejected" | "suspended";
+type StatusFilter = "all" | "draft" | "submitted" | "approved" | "rejected" | "suspended";
 type ActionMode = "reject" | "suspend" | null;
 
 type ProviderListItem = {
@@ -69,7 +69,7 @@ type ProviderDetail = {
 };
 
 type ProvidersData = {
-  providers: {
+  systemProviders: {
     items: ProviderListItem[];
     total: number;
     page: number;
@@ -81,7 +81,23 @@ type ProviderDetailData = {
   providerProfile: ProviderDetail | null;
 };
 
-const STATUS_FILTERS: StatusFilter[] = ["all", "pending", "approved", "rejected", "suspended"];
+const STATUS_FILTERS: StatusFilter[] = [
+  "all",
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "suspended",
+];
+
+const STATUS_FILTER_VALUES: Record<StatusFilter, string | undefined> = {
+  all: undefined,
+  draft: "DRAFT",
+  submitted: "SUBMITTED",
+  approved: "APPROVED",
+  rejected: "REJECTED",
+  suspended: "SUSPENDED",
+};
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Unknown";
@@ -123,15 +139,6 @@ function statusVariant(status: string | null | undefined) {
     return "danger" as const;
   }
   return "secondary" as const;
-}
-
-function providerMatchesFilter(provider: ProviderListItem, filter: StatusFilter) {
-  if (filter === "all") return true;
-  const haystack = `${provider.status ?? ""} ${provider.verificationStatus ?? ""}`.toLowerCase();
-  if (filter === "pending") {
-    return haystack.includes("pending") || haystack.includes("submitted") || haystack.includes("review");
-  }
-  return haystack.includes(filter);
 }
 
 function InlineAlert({ alert, onDismiss }: Readonly<{ alert: AlertState; onDismiss: () => void }>) {
@@ -428,26 +435,24 @@ function ProviderDetailModal({
 export function AdminProvidersManager() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("submitted");
   const [page, setPage] = useState(1);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [alert, setAlert] = useState<AlertState>(null);
   const limit = 10;
 
   const { data, loading, error } = useQuery<ProvidersData>(ADMIN_PROVIDERS_QUERY, {
-    variables: { search: search || undefined, page, limit },
+    variables: {
+      search: search || undefined,
+      status: STATUS_FILTER_VALUES[statusFilter],
+      page,
+      limit,
+    },
     fetchPolicy: "cache-and-network",
   });
 
-  const filteredProviders = useMemo(
-    () =>
-      (data?.providers?.items ?? []).filter((provider) =>
-        providerMatchesFilter(provider, statusFilter),
-      ),
-    [data?.providers?.items, statusFilter],
-  );
-  const providers = data?.providers?.items ?? [];
-  const total = data?.providers?.total ?? 0;
+  const providers = useMemo(() => data?.systemProviders?.items ?? [], [data?.systemProviders?.items]);
+  const total = data?.systemProviders?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   function handleSearch(event: FormEvent) {
@@ -479,7 +484,7 @@ export function AdminProvidersManager() {
                 Provider List
               </CardTitle>
               <p className="text-sm text-muted">
-                Pending provider queue is filtered client-side from the general provider list.
+                System provider lifecycle list across draft, submitted, approved, rejected, and suspended states.
               </p>
             </div>
 
@@ -504,7 +509,10 @@ export function AdminProvidersManager() {
               <button
                 key={filter}
                 type="button"
-                onClick={() => setStatusFilter(filter)}
+                onClick={() => {
+                  setStatusFilter(filter);
+                  setPage(1);
+                }}
                 className={cn(
                   "whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition",
                   statusFilter === filter
@@ -533,14 +541,14 @@ export function AdminProvidersManager() {
             </div>
           ) : null}
 
-          {!loading && filteredProviders.length === 0 ? (
+          {!loading && providers.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-10 text-center">
               <UserCheck className="size-8 text-muted" />
               <p className="text-sm text-muted">No providers match the current filter.</p>
             </div>
           ) : null}
 
-          {filteredProviders.length > 0 ? (
+          {providers.length > 0 ? (
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="hidden grid-cols-[1.35fr_0.9fr_1fr_0.8fr_0.55fr] gap-4 border-b border-border bg-background px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted lg:grid">
                 <span>Provider</span>
@@ -550,7 +558,7 @@ export function AdminProvidersManager() {
                 <span className="text-right">Action</span>
               </div>
               <div className="divide-y divide-border">
-                {filteredProviders.map((provider) => (
+                {providers.map((provider) => (
                   <div
                     key={provider.id}
                     className="grid gap-3 px-4 py-4 text-sm lg:grid-cols-[1.35fr_0.9fr_1fr_0.8fr_0.55fr] lg:items-center lg:gap-4"

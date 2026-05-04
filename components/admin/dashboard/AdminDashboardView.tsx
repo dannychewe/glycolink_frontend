@@ -113,14 +113,19 @@ type ReviewQueueData = {
 };
 
 type ProviderReviewQueueData = {
-  providers: {
+  systemProviders: {
     items: Array<{
       id: string;
       displayName: string | null;
       hpczNumber: string | null;
       status: string | null;
       verificationStatus: string | null;
+      eligible: boolean | null;
       createdAt: string | null;
+      organization: {
+        id: string;
+        name: string;
+      } | null;
     }>;
     total: number;
     page: number;
@@ -276,14 +281,8 @@ export function AdminDashboardView() {
   );
 
   const reviewQueue = useMemo(
-    () => {
-      const providers = providersData?.providers?.items ?? [];
-      return providers.filter((provider) => {
-        const status = `${provider.status ?? ""} ${provider.verificationStatus ?? ""}`.toUpperCase();
-        return status.includes("PENDING") || status.includes("SUBMITTED") || status.includes("REVIEW");
-      });
-    },
-    [providersData?.providers?.items],
+    () => providersData?.systemProviders?.items ?? [],
+    [providersData?.systemProviders?.items],
   );
 
   const tenantTotal = dashboardData?.systemTenants?.total ?? 0;
@@ -353,11 +352,11 @@ export function AdminDashboardView() {
                 Provider Review Queue
               </CardTitle>
               <p className="text-sm text-muted">
-                Built from the existing provider list contract until a dedicated pending approvals query exists.
+                Provider lifecycle profiles submitted for system admin approval.
               </p>
             </div>
             <Badge variant={reviewQueue.length > 0 ? "warning" : "secondary"}>
-              {reviewQueue.length} pending
+              {providersData?.systemProviders?.total ?? reviewQueue.length} submitted
             </Badge>
           </CardHeader>
           <CardContent>
@@ -365,7 +364,7 @@ export function AdminDashboardView() {
 
             {!providersLoading && reviewQueue.length === 0 ? (
               <div className="rounded-xl border border-border bg-background px-4 py-5 text-sm text-muted">
-                No pending provider reviews were found in the current provider page.
+                No submitted provider reviews were found.
               </div>
             ) : null}
 

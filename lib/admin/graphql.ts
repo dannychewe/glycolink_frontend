@@ -143,14 +143,19 @@ export const ADMIN_MODERATE_REVIEW_MUTATION = gql`
 
 export const ADMIN_PROVIDER_REVIEW_QUEUE_QUERY = gql`
   query AdminProviderReviewQueue($page: Int, $limit: Int) {
-    providers(page: $page, limit: $limit) {
+    systemProviders(status: "SUBMITTED", page: $page, limit: $limit) {
       items {
         id
         displayName
         hpczNumber
         status
         verificationStatus
+        eligible
         createdAt
+        organization {
+          id
+          name
+        }
       }
       total
       page
@@ -160,8 +165,20 @@ export const ADMIN_PROVIDER_REVIEW_QUEUE_QUERY = gql`
 `;
 
 export const ADMIN_PROVIDERS_QUERY = gql`
-  query AdminProviders($search: String, $page: Int, $limit: Int) {
-    providers(search: $search, page: $page, limit: $limit) {
+  query AdminProviders(
+    $search: String
+    $status: String
+    $tenantId: UUID
+    $page: Int
+    $limit: Int
+  ) {
+    systemProviders(
+      search: $search
+      status: $status
+      tenantId: $tenantId
+      page: $page
+      limit: $limit
+    ) {
       items {
         id
         displayName

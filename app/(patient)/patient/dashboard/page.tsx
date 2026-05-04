@@ -5,7 +5,6 @@ import { LabSummarySection } from "@/components/patient/dashboard/LabSummarySect
 import { NotificationsSection } from "@/components/patient/dashboard/NotificationsSection";
 import { PrescriptionSummarySection } from "@/components/patient/dashboard/PrescriptionSummarySection";
 import { Container } from "@/components/ui/container";
-import { patientDashboardData } from "@/lib/patient/mock-dashboard-data";
 
 export default function PatientDashboardPage() {
   return (
@@ -18,16 +17,14 @@ export default function PatientDashboardPage() {
       <OnboardingBanner />
 
       <GraphqlBookingOverview />
-      <HealthSummarySection recentReadings={patientDashboardData.recentReadings} />
+      <HealthSummarySection />
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <PrescriptionSummarySection
-          latestPrescription={patientDashboardData.latestPrescription}
-        />
-        <LabSummarySection latestLab={patientDashboardData.latestLab} />
+        <PrescriptionSummarySection />
+        <LabSummarySection />
       </div>
 
-      <NotificationsSection notifications={patientDashboardData.notifications} />
+      <NotificationsSection />
     </Container>
   );
 }

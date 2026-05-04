@@ -5,7 +5,7 @@ export const patientOnboardingSchema = z.object({
   dateOfBirth: z.string().min(1, "Date of birth is required."),
   phone: z.string().optional(),
   email: z.string().email("Enter a valid email address.").or(z.literal("")),
-  diabetesType: z.enum(["TYPE_1", "TYPE_2", "GESTATIONAL", "PREDIABETES", "OTHER"], {
+  diabetesType: z.enum(["type_1", "type_2", "gestational", "prediabetes", "other"], {
     error: "Select a diabetes type.",
   }),
   diagnosisDate: z.string().min(1, "Diagnosis date is required."),

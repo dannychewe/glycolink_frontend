@@ -9,11 +9,11 @@ export const PATIENT_MESSAGE_THREADS_QUERY = gql`
       participantRole: "patient"
     ) {
       id
-      patientId
+      providerId
       appointmentId
       encounterId
       status
-      patientName
+      providerName
       unreadCount
       unreadMessageCount
       unreadThread
@@ -40,7 +40,6 @@ export const PATIENT_CONVERSATION_MESSAGES_QUERY = gql`
       sequenceNumber
       senderUserId
       senderName
-      patientName
       body
       priority
       sentAt
@@ -57,44 +56,6 @@ export const PATIENT_CONVERSATION_MESSAGES_QUERY = gql`
         fileUrl
       }
     }
-  }
-`;
-
-export const PATIENT_SEND_MESSAGE_MUTATION = gql`
-  mutation PatientSendMessage(
-    $conversationId: UUID
-    $appointmentId: UUID
-    $body: String
-    $priority: String
-  ) {
-    sendMessage(
-      conversationId: $conversationId
-      appointmentId: $appointmentId
-      body: $body
-      priority: $priority
-      participantRole: "patient"
-    ) {
-      id
-      conversationId
-      sequenceNumber
-      senderUserId
-      senderName
-      patientName
-      body
-      priority
-      sentAt
-      attachments {
-        id
-        originalName
-        fileUrl
-      }
-    }
-  }
-`;
-
-export const PATIENT_MARK_CONVERSATION_READ_MUTATION = gql`
-  mutation PatientMarkConversationRead($conversationId: UUID!) {
-    markConversationRead(conversationId: $conversationId)
   }
 `;
 
@@ -115,6 +76,63 @@ export const PATIENT_UNREAD_MESSAGES_PREVIEW_QUERY = gql`
         sentAt
         hasAttachments
       }
+    }
+  }
+`;
+
+export const PATIENT_SEND_MESSAGE_MUTATION = gql`
+  mutation PatientSendMessage(
+    $conversationId: UUID
+    $appointmentId: UUID
+    $body: String
+    $attachments: [Upload]
+    $priority: String
+  ) {
+    sendMessage(
+      conversationId: $conversationId
+      appointmentId: $appointmentId
+      body: $body
+      attachments: $attachments
+      priority: $priority
+      participantRole: "patient"
+    ) {
+      id
+      conversationId
+      sequenceNumber
+      senderUserId
+      senderName
+      body
+      priority
+      sentAt
+      attachments {
+        id
+        originalName
+        fileUrl
+      }
+    }
+  }
+`;
+
+export const PATIENT_MARK_CONVERSATION_READ_MUTATION = gql`
+  mutation PatientMarkConversationRead($conversationId: UUID!) {
+    markConversationRead(conversationId: $conversationId)
+  }
+`;
+
+export const PATIENT_ARCHIVE_CONVERSATION_MUTATION = gql`
+  mutation PatientArchiveConversation($conversationId: UUID!) {
+    archiveConversation(conversationId: $conversationId) {
+      id
+      status
+    }
+  }
+`;
+
+export const PATIENT_REOPEN_CONVERSATION_MUTATION = gql`
+  mutation PatientReopenConversation($conversationId: UUID!) {
+    reopenConversation(conversationId: $conversationId) {
+      id
+      status
     }
   }
 `;

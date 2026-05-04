@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 
 export const PROVIDERS_QUERY = gql`
-  query Providers(
+  query PatientProviders(
     $search: String
     $specialtyId: UUID
     $page: Int
@@ -41,7 +41,7 @@ export const PROVIDERS_QUERY = gql`
 `;
 
 export const PROVIDER_QUERY = gql`
-  query Provider($id: UUID!) {
+  query PatientProviderDetail($id: UUID!) {
     provider(id: $id) {
       id
       displayName

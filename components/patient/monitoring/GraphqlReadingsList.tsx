@@ -10,12 +10,11 @@ import { cn } from "@/lib/utils/cn";
 type Reading = {
   id: string;
   readingType: string;
-  recordedAt: string;
-  value: number;
-  context: string | null;
-  source: string;
-  unit: string | null;
   vitalType: string | null;
+  value: string;
+  unit: string | null;
+  flag: string | null;
+  recordedAt: string;
 };
 
 type ReadingsData = {
@@ -40,22 +39,9 @@ function formatRecordedAt(value: string) {
   });
 }
 
-function formatContext(ctx: string | null) {
-  if (!ctx) return null;
-  return ctx.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 function formatVitalType(vt: string | null) {
   if (!vt) return null;
   return vt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function getGlucoseStatus(value: number | string, unit: string | null) {
-  const num = Number(value);
-  const inMmol = unit === "mg/dL" ? num / 18 : num;
-  if (inMmol < 3.9) return "low";
-  if (inMmol > 10) return "high";
-  return "normal";
 }
 
 export function GraphqlReadingsList() {
@@ -118,16 +104,16 @@ export function GraphqlReadingsList() {
       {!loading ? (
         <div className="space-y-2">
           {readings.map((reading) => {
-            const isGlucose = reading.readingType === "glucose";
-            const glucoseStatus = isGlucose ? getGlucoseStatus(reading.value, reading.unit) : null;
+            const isGlucose = reading.readingType.toUpperCase() === "GLUCOSE";
+            const flag = reading.flag?.toLowerCase() ?? null;
 
             return (
               <div
                 key={reading.id}
                 className={cn(
                   "flex flex-col gap-3 rounded-xl border-l-4 bg-surface px-4 py-3.5 shadow-subtle sm:flex-row sm:items-center sm:justify-between",
-                  isGlucose && glucoseStatus === "low" ? "border-l-danger/50" :
-                  isGlucose && glucoseStatus === "high" ? "border-l-warning/60" :
+                  isGlucose && flag === "low" ? "border-l-danger/50" :
+                  isGlucose && flag === "high" ? "border-l-warning/60" :
                   isGlucose ? "border-l-success/50" :
                   "border-l-primary/40",
                 )}
@@ -135,12 +121,9 @@ export function GraphqlReadingsList() {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <p className="text-base font-semibold text-text">
-                      {Number(reading.value).toFixed(reading.readingType === "glucose" ? 1 : 0)}
+                      {Number(reading.value).toFixed(isGlucose ? 1 : 0)}
                       {reading.unit ? <span className="ml-1 text-sm font-normal text-muted">{reading.unit}</span> : null}
                     </p>
-                    {isGlucose && reading.context ? (
-                      <span className="text-xs text-muted">· {formatContext(reading.context)}</span>
-                    ) : null}
                     {!isGlucose && reading.vitalType ? (
                       <span className="text-xs text-muted">· {formatVitalType(reading.vitalType)}</span>
                     ) : null}
@@ -152,9 +135,9 @@ export function GraphqlReadingsList() {
                   <Badge variant={isGlucose ? "primary" : "secondary"}>
                     {isGlucose ? "Glucose" : "Vital"}
                   </Badge>
-                  {isGlucose && glucoseStatus === "low" ? (
+                  {isGlucose && flag === "low" ? (
                     <Badge variant="danger">Low</Badge>
-                  ) : isGlucose && glucoseStatus === "high" ? (
+                  ) : isGlucose && flag === "high" ? (
                     <Badge variant="warning">High</Badge>
                   ) : isGlucose ? (
                     <Badge variant="success">Normal</Badge>

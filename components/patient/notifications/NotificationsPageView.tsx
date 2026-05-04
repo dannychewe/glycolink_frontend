@@ -1,80 +1,67 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@apollo/client";
 import { NotificationTypeBadge } from "@/components/patient/notifications/NotificationTypeBadge";
 import { Button } from "@/components/ui/button";
+import type { NotificationType } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import type { PatientNotification } from "@/types";
+import {
+  PATIENT_MARK_ALL_NOTIFICATIONS_READ_MUTATION,
+  PATIENT_MARK_NOTIFICATION_READ_MUTATION,
+  PATIENT_NOTIFICATIONS_FEED_QUERY,
+} from "@/lib/patient/notifications-graphql";
 
-type NotificationsPageViewProps = Readonly<{
-  initialNotifications: PatientNotification[];
-}>;
+type NotificationItem = {
+  id: string;
+  title: string | null;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+};
 
-const notificationsStorageKey = "glycolink.patient.notifications";
+type NotificationsFeedData = {
+  myNotifications: {
+    items: NotificationItem[];
+    page: number;
+    limit: number;
+    total: number;
+  };
+};
 
-function formatTimestamp(timestamp: string) {
+function formatTimestamp(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
   return new Intl.DateTimeFormat("en-ZM", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(timestamp));
+  }).format(parsed);
 }
 
-export function NotificationsPageView({
-  initialNotifications,
-}: NotificationsPageViewProps) {
-  const [notifications, setNotifications] = useState(initialNotifications);
+export function NotificationsPageView() {
+  const { data, loading } = useQuery<NotificationsFeedData>(PATIENT_NOTIFICATIONS_FEED_QUERY, {
+    variables: { limit: 50 },
+    fetchPolicy: "network-only",
+  });
 
-  useEffect(() => {
-    const rawNotifications = window.localStorage.getItem(notificationsStorageKey);
+  const [markRead] = useMutation(PATIENT_MARK_NOTIFICATION_READ_MUTATION, {
+    refetchQueries: [{ query: PATIENT_NOTIFICATIONS_FEED_QUERY, variables: { limit: 50 } }],
+  });
 
-    if (!rawNotifications) {
-      return;
-    }
-
-    try {
-      const parsedNotifications = JSON.parse(rawNotifications) as PatientNotification[];
-
-      if (Array.isArray(parsedNotifications)) {
-        setNotifications(parsedNotifications);
-      }
-    } catch {
-      window.localStorage.removeItem(notificationsStorageKey);
-    }
-  }, []);
-
-  const unreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.isRead).length,
-    [notifications],
+  const [markAllRead, { loading: markingAll }] = useMutation(
+    PATIENT_MARK_ALL_NOTIFICATIONS_READ_MUTATION,
+    {
+      refetchQueries: [{ query: PATIENT_NOTIFICATIONS_FEED_QUERY, variables: { limit: 50 } }],
+    },
   );
 
-  function persistNotifications(nextNotifications: PatientNotification[]) {
-    setNotifications(nextNotifications);
-    window.localStorage.setItem(
-      notificationsStorageKey,
-      JSON.stringify(nextNotifications),
-    );
-  }
+  const notifications = data?.myNotifications?.items ?? [];
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  function handleNotificationClick(notificationId: string) {
-    const nextNotifications = notifications.map((notification) =>
-      notification.id === notificationId
-        ? {
-            ...notification,
-            isRead: true,
-          }
-        : notification,
-    );
-
-    persistNotifications(nextNotifications);
-  }
-
-  function handleMarkAllAsRead() {
-    const nextNotifications = notifications.map((notification) => ({
-      ...notification,
-      isRead: true,
-    }));
-
-    persistNotifications(nextNotifications);
+  function handleNotificationClick(notificationId: string, isRead: boolean) {
+    if (!isRead) {
+      markRead({ variables: { notificationId } });
+    }
   }
 
   return (
@@ -86,23 +73,31 @@ export function NotificationsPageView({
           </p>
           <h1 className="text-3xl font-semibold text-text sm:text-4xl">Notifications</h1>
           <p className="text-sm text-muted">
-            {unreadCount > 0
-              ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-              : "All notifications have been read"}
+            {loading
+              ? "Loading…"
+              : unreadCount > 0
+                ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
+                : "All notifications have been read"}
           </p>
         </div>
 
         <Button
           type="button"
           variant="secondary"
-          onClick={handleMarkAllAsRead}
-          disabled={notifications.length === 0 || unreadCount === 0}
+          onClick={() => markAllRead()}
+          disabled={loading || notifications.length === 0 || unreadCount === 0 || markingAll}
         >
           Mark all as read
         </Button>
       </header>
 
-      {notifications.length > 0 ? (
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-border/40" />
+          ))}
+        </div>
+      ) : notifications.length > 0 ? (
         <Card>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
@@ -110,7 +105,7 @@ export function NotificationsPageView({
                 <button
                   key={notification.id}
                   type="button"
-                  onClick={() => handleNotificationClick(notification.id)}
+                  onClick={() => handleNotificationClick(notification.id, notification.isRead)}
                   className={`flex w-full flex-col gap-3 px-5 py-5 text-left transition hover:bg-slate-50 sm:flex-row sm:items-start sm:justify-between ${
                     notification.isRead ? "bg-surface" : "bg-primary/5"
                   }`}
@@ -123,6 +118,9 @@ export function NotificationsPageView({
                       aria-hidden="true"
                     />
                     <div className="space-y-2">
+                      {notification.title ? (
+                        <p className="text-sm font-semibold text-text">{notification.title}</p>
+                      ) : null}
                       <p
                         className={`text-sm leading-6 ${
                           notification.isRead ? "text-text/80" : "font-medium text-text"
@@ -131,13 +129,13 @@ export function NotificationsPageView({
                         {notification.message}
                       </p>
                       <p className="text-xs uppercase tracking-[0.14em] text-muted">
-                        {formatTimestamp(notification.timestamp)}
+                        {formatTimestamp(notification.createdAt)}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 sm:pl-4">
-                    <NotificationTypeBadge type={notification.type} />
+                    <NotificationTypeBadge type={notification.type as NotificationType} />
                     {!notification.isRead ? (
                       <span className="text-xs font-medium text-primary">Unread</span>
                     ) : null}

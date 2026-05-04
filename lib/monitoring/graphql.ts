@@ -33,22 +33,46 @@ export const LOG_VITALS_MUTATION = gql`
 `;
 
 export const MY_READINGS_QUERY = gql`
-  query MyReadings($readingType: String) {
+  query PatientReadings($readingType: String) {
     myReadings(readingType: $readingType) {
       id
       readingType
-      recordedAt
-      value
-      context
-      source
-      unit
       vitalType
+      value
+      unit
+      flag
+      recordedAt
+    }
+  }
+`;
+
+export const PATIENT_GLUCOSE_SUMMARY_QUERY = gql`
+  query PatientGlucoseSummary($range: String!) {
+    glucoseSummary(range: $range) {
+      range
+      unit
+      overallStatus
+      stats {
+        average
+        highest
+        lowest
+        inRangeCount
+        totalCount
+        inRangePercent
+      }
+      buckets {
+        label
+        date
+        average
+        status
+        readingCount
+      }
     }
   }
 `;
 
 export const MONITORING_TRENDS_QUERY = gql`
-  query MonitoringTrends($readingType: String!, $vitalType: String) {
+  query PatientMonitoringTrends($readingType: String!, $vitalType: String) {
     monitoringTrends(readingType: $readingType, vitalType: $vitalType) {
       readingType
       average7Days
@@ -59,16 +83,14 @@ export const MONITORING_TRENDS_QUERY = gql`
 `;
 
 export const MONITORING_SNAPSHOT_QUERY = gql`
-  query MonitoringSnapshot($includeTrend: Boolean) {
+  query PatientMonitoringSnapshot($includeTrend: Boolean) {
     monitoringSnapshot(includeTrend: $includeTrend) {
       latestGlucose {
         id
         readingType
-        recordedAt
         value
-        context
-        source
         unit
+        recordedAt
       }
       trend {
         readingType
@@ -81,17 +103,14 @@ export const MONITORING_SNAPSHOT_QUERY = gql`
 `;
 
 export const MY_ALERTS_QUERY = gql`
-  query MyAlerts {
+  query PatientAlerts {
     myAlerts {
       id
       type
       severity
-      sourceEntityType
-      sourceEntityId
       message
-      acknowledgedAt
-      acknowledgedByUserId
       createdAt
+      acknowledgedAt
     }
   }
 `;
@@ -141,12 +160,13 @@ export const SET_THRESHOLD_MUTATION = gql`
 `;
 
 export const MY_DEVICE_CONNECTIONS_QUERY = gql`
-  query MyDeviceConnections {
+  query PatientDeviceConnections {
     myDeviceConnections {
       id
       vendor
       status
       connectedAt
+      revokedAt
     }
   }
 `;

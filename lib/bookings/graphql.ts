@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 
 export const AVAILABLE_SLOTS_QUERY = gql`
-  query AvailableSlots($providerId: UUID!, $date: Date!) {
+  query PatientAvailableSlots($providerId: UUID!, $date: Date!) {
     availableSlots(providerId: $providerId, date: $date) {
       startTime
       endTime
@@ -10,7 +10,7 @@ export const AVAILABLE_SLOTS_QUERY = gql`
 `;
 
 export const UPCOMING_APPOINTMENT_QUERY = gql`
-  query UpcomingAppointment {
+  query PatientUpcomingAppointment {
     upcomingAppointment {
       appointment {
         id
@@ -28,7 +28,7 @@ export const UPCOMING_APPOINTMENT_QUERY = gql`
 `;
 
 export const MY_APPOINTMENTS_QUERY = gql`
-  query MyAppointments($limit: Int, $status: String) {
+  query PatientAppointments($limit: Int, $status: String) {
     myAppointments(limit: $limit, status: $status) {
       id
       status
@@ -45,7 +45,7 @@ export const MY_APPOINTMENTS_QUERY = gql`
 `;
 
 export const PENDING_ACTIONS_QUERY = gql`
-  query PendingActions {
+  query PatientPendingActions {
     pendingActions {
       action
       title
@@ -62,7 +62,7 @@ export const PENDING_ACTIONS_QUERY = gql`
 `;
 
 export const BOOK_APPOINTMENT_MUTATION = gql`
-  mutation BookAppointment(
+  mutation PatientBookAppointment(
     $providerId: UUID!
     $startTime: DateTime!
     $endTime: DateTime!
@@ -88,7 +88,7 @@ export const BOOK_APPOINTMENT_MUTATION = gql`
 `;
 
 export const RESCHEDULE_APPOINTMENT_MUTATION = gql`
-  mutation RescheduleAppointment(
+  mutation PatientRescheduleAppointment(
     $appointmentId: UUID!
     $newStartTime: DateTime!
     $newEndTime: DateTime!
@@ -109,7 +109,7 @@ export const RESCHEDULE_APPOINTMENT_MUTATION = gql`
 `;
 
 export const CANCEL_APPOINTMENT_MUTATION = gql`
-  mutation CancelAppointment($appointmentId: UUID!, $reason: String) {
+  mutation PatientCancelAppointment($appointmentId: UUID!, $reason: String) {
     cancelAppointment(appointmentId: $appointmentId, reason: $reason) {
       appointment {
         id
