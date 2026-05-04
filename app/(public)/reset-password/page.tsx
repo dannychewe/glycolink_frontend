@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AuthCard } from "@/features/auth/components/auth-card";
 import { ResetPasswordPanel } from "@/features/auth/components/reset-password-panel";
 
@@ -7,7 +8,9 @@ export default function ResetPasswordPage() {
       title="Reset password"
       description="Choose a new password for your account."
     >
-      <ResetPasswordPanel />
+      <Suspense>
+        <ResetPasswordPanel />
+      </Suspense>
     </AuthCard>
   );
 }

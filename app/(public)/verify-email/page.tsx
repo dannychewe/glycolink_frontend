@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AuthCard } from "@/features/auth/components/auth-card";
 import { VerifyEmailPanel } from "@/features/auth/components/verify-email-panel";
 
@@ -7,7 +8,9 @@ export default function VerifyEmailPage() {
       title="Verify your email"
       description="Complete verification to unlock your account."
     >
-      <VerifyEmailPanel />
+      <Suspense>
+        <VerifyEmailPanel />
+      </Suspense>
     </AuthCard>
   );
 }
