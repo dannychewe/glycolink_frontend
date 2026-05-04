@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-text antialiased;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+
+  main {
+    @apply min-h-[calc(100vh-4rem)];
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-balance font-semibold tracking-tight text-text;
+  }
+
+  p {
+    @apply text-pretty text-sm leading-7 text-muted sm:text-base;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply bg-hero-grid;
+  }
+}
