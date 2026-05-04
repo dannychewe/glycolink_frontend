@@ -244,7 +244,7 @@ export function PatientOnboardingWizard() {
     setCurrentStep(stepIndex);
   }
 
-  const onSubmit = methods.handleSubmit(async () => {
+  const submitProfile = methods.handleSubmit(async () => {
     setSubmitError(null);
     setErrorStep(null);
     setSubmitMessage(null);
@@ -332,7 +332,7 @@ export function PatientOnboardingWizard() {
 
   return (
     <FormProvider {...methods}>
-      <form className="space-y-6" onSubmit={onSubmit}>
+      <form className="space-y-6" onSubmit={(event) => event.preventDefault()}>
         <OnboardingStepper
           steps={steps.map((step) => step.title)}
           currentStep={currentStep}
@@ -409,7 +409,12 @@ export function PatientOnboardingWizard() {
           </Button>
 
           {isLastStep ? (
-            <Button type="submit" disabled={isSubmitting} className="gap-1.5 px-6">
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => void submitProfile()}
+              className="gap-1.5 px-6"
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
