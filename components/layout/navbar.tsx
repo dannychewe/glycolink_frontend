@@ -34,10 +34,7 @@ export function Navbar() {
       <Container className="flex h-16 items-center justify-between gap-6">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-[13px] font-bold text-white">
-            G
-          </span>
-          <span className="text-base font-semibold tracking-tight text-text">Naje Health</span>
+          <span className="text-base font-bold tracking-tight text-text">NAJE Health</span>
         </Link>
 
         {/* Desktop nav links */}
