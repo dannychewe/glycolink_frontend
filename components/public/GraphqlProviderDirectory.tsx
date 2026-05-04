@@ -6,6 +6,10 @@ import Image from "next/image";
 import { BadgeCheck, Globe2, MapPin, Star } from "lucide-react";
 import { getGraphQLErrorCode } from "@/features/auth/auth-context";
 import { PROVIDERS_QUERY } from "@/lib/providers/directory-graphql";
+import {
+  CONSULTANT_SPECIALTIES_QUERY,
+  CONSULTANT_SUB_SPECIALTIES_QUERY,
+} from "@/lib/consultant/provider-lifecycle-graphql";
 import { getProviderFallbackImage } from "@/lib/providers/provider-images";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,11 +55,14 @@ const feeRanges = [
   { value: "above-500", label: "Above ZMW 500" },
 ];
 
+type SpecialtyItem = { id: string; name: string };
+type SubSpecialtyItem = { id: string; name: string; specialtyId: string; specialtyName: string };
+
 export function GraphqlProviderDirectory() {
   const [filters, setFilters] = useState({
     search: "",
-    specialty: "",
-    subSpecialty: "",
+    specialtyId: "",
+    subSpecialtyName: "",
     feeRange: "all",
     page: 1,
     limit: 20,
@@ -71,34 +78,52 @@ export function GraphqlProviderDirectory() {
   const { data, loading, error } = useQuery<ProviderDirectoryData>(PROVIDERS_QUERY, {
     variables: {
       search: filters.search || undefined,
-      specialty: filters.specialty || undefined,
-      subSpecialty: filters.subSpecialty || undefined,
-      minFee: feeRangeBounds.minFee,
-      maxFee: feeRangeBounds.maxFee,
+      specialtyId: filters.specialtyId || undefined,
       page: filters.page,
       limit: filters.limit,
     },
     fetchPolicy: "network-only",
   });
 
+  const { data: specialtiesData } = useQuery<{ specialties: SpecialtyItem[] }>(
+    CONSULTANT_SPECIALTIES_QUERY,
+  );
+  const { data: subSpecialtiesData } = useQuery<{ subSpecialties: SubSpecialtyItem[] }>(
+    CONSULTANT_SUB_SPECIALTIES_QUERY,
+    { variables: { specialtyId: null } },
+  );
+
   const code = getGraphQLErrorCode(error);
-  const providers = useMemo(
+  const allProviders = useMemo(
     () => data?.providers?.results ?? data?.providers?.items ?? [],
     [data?.providers?.items, data?.providers?.results],
   );
+  const providers = useMemo(() => {
+    let results = allProviders;
+    if (filters.subSpecialtyName) {
+      results = results.filter((p) => p.subSpecialties.includes(filters.subSpecialtyName));
+    }
+    const { minFee, maxFee } = feeRangeBounds;
+    if (minFee !== undefined || maxFee !== undefined) {
+      results = results.filter((p) => {
+        if (p.consultationFee == null) return false;
+        if (minFee !== undefined && p.consultationFee < minFee) return false;
+        if (maxFee !== undefined && p.consultationFee > maxFee) return false;
+        return true;
+      });
+    }
+    return results;
+  }, [allProviders, filters.subSpecialtyName, feeRangeBounds]);
   const total = data?.providers?.total ?? 0;
 
-  const specialtyOptions = useMemo(() => {
-    const values = new Set<string>();
-    providers.forEach((p) => p.specialties.forEach((s) => values.add(s)));
-    return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [providers]);
-
+  const specialtyOptions = specialtiesData?.specialties ?? [];
   const subSpecialtyOptions = useMemo(() => {
-    const values = new Set<string>();
-    providers.forEach((p) => p.subSpecialties.forEach((s) => values.add(s)));
-    return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [providers]);
+    const all = subSpecialtiesData?.subSpecialties ?? [];
+    if (!filters.specialtyId) return all;
+    const spec = specialtyOptions.find((s) => s.id === filters.specialtyId);
+    if (!spec) return all;
+    return all.filter((ss) => ss.specialtyName === spec.name);
+  }, [subSpecialtiesData, filters.specialtyId, specialtyOptions]);
 
   const accessDenied =
     code === "TENANT_ACCESS_DENIED" ||
@@ -108,7 +133,7 @@ export function GraphqlProviderDirectory() {
     code === "UNAUTHENTICATED";
 
   function resetFilters() {
-    setFilters({ search: "", specialty: "", subSpecialty: "", feeRange: "all", page: 1, limit: 20 });
+    setFilters({ search: "", specialtyId: "", subSpecialtyName: "", feeRange: "all", page: 1, limit: 20 });
   }
 
   return (
@@ -129,13 +154,20 @@ export function GraphqlProviderDirectory() {
             <Label htmlFor="specialty">Specialty</Label>
             <select
               id="specialty"
-              value={filters.specialty}
-              onChange={(e) => setFilters((prev) => ({ ...prev, specialty: e.target.value, page: 1 }))}
+              value={filters.specialtyId}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  specialtyId: e.target.value,
+                  subSpecialtyName: "",
+                  page: 1,
+                }))
+              }
               className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               <option value="">All specialties</option>
               {specialtyOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </div>
@@ -143,13 +175,16 @@ export function GraphqlProviderDirectory() {
             <Label htmlFor="subSpecialty">Sub-specialty</Label>
             <select
               id="subSpecialty"
-              value={filters.subSpecialty}
-              onChange={(e) => setFilters((prev) => ({ ...prev, subSpecialty: e.target.value, page: 1 }))}
-              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              value={filters.subSpecialtyName}
+              disabled={subSpecialtyOptions.length === 0}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, subSpecialtyName: e.target.value, page: 1 }))
+              }
+              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
             >
               <option value="">All sub-specialties</option>
               {subSpecialtyOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s.id} value={s.name}>{s.name}</option>
               ))}
             </select>
           </div>

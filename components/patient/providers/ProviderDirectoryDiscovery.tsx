@@ -6,6 +6,10 @@ import Image from "next/image";
 import { BadgeCheck, Globe2, MapPin, Star } from "lucide-react";
 import { getGraphQLErrorCode } from "@/features/auth/auth-context";
 import { PROVIDERS_QUERY } from "@/lib/providers/directory-graphql";
+import {
+  CONSULTANT_SPECIALTIES_QUERY,
+  CONSULTANT_SUB_SPECIALTIES_QUERY,
+} from "@/lib/consultant/provider-lifecycle-graphql";
 import { getProviderFallbackImage } from "@/lib/providers/provider-images";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,10 +48,14 @@ type ProviderDirectoryItem = {
   } | null;
 };
 
+type SpecialtyItem = { id: string; name: string };
+type SubSpecialtyItem = { id: string; name: string; specialtyId: string; specialtyName: string };
+
 export function ProviderDirectoryDiscovery() {
   const [filters, setFilters] = useState({
     search: "",
     specialtyId: "",
+    subSpecialtyName: "",
     page: 1,
     limit: 20,
   });
@@ -62,17 +70,30 @@ export function ProviderDirectoryDiscovery() {
     fetchPolicy: "network-only",
   });
 
-  const code = getGraphQLErrorCode(error);
-  const providers = useMemo(
-    () => data?.providers?.items ?? [],
-    [data?.providers?.items],
+  const { data: specialtiesData } = useQuery<{ specialties: SpecialtyItem[] }>(
+    CONSULTANT_SPECIALTIES_QUERY,
   );
+  const { data: subSpecialtiesData } = useQuery<{ subSpecialties: SubSpecialtyItem[] }>(
+    CONSULTANT_SUB_SPECIALTIES_QUERY,
+    { variables: { specialtyId: null } },
+  );
+
+  const code = getGraphQLErrorCode(error);
+  const allProviders = useMemo(() => data?.providers?.items ?? [], [data?.providers?.items]);
+  const providers = useMemo(() => {
+    if (!filters.subSpecialtyName) return allProviders;
+    return allProviders.filter((p) => p.subSpecialties.includes(filters.subSpecialtyName));
+  }, [allProviders, filters.subSpecialtyName]);
   const total = data?.providers?.total ?? 0;
-  const specialtyOptions = useMemo(() => {
-    const values = new Set<string>();
-    providers.forEach((provider) => provider.specialties.forEach((item) => values.add(item)));
-    return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [providers]);
+
+  const specialtyOptions = specialtiesData?.specialties ?? [];
+  const subSpecialtyOptions = useMemo(() => {
+    const all = subSpecialtiesData?.subSpecialties ?? [];
+    if (!filters.specialtyId) return all;
+    const spec = specialtyOptions.find((s) => s.id === filters.specialtyId);
+    if (!spec) return all;
+    return all.filter((ss) => ss.specialtyName === spec.name);
+  }, [subSpecialtiesData, filters.specialtyId, specialtyOptions]);
 
   return (
     <div className="space-y-7">
@@ -121,14 +142,38 @@ export function ProviderDirectoryDiscovery() {
                 id="specialty"
                 value={filters.specialtyId}
                 onChange={(event) =>
-                  setFilters((prev) => ({ ...prev, specialtyId: event.target.value, page: 1 }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    specialtyId: event.target.value,
+                    subSpecialtyName: "",
+                    page: 1,
+                  }))
                 }
                 className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">All specialties</option>
                 {specialtyOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subSpecialty">Sub-specialty</Label>
+              <select
+                id="subSpecialty"
+                value={filters.subSpecialtyName}
+                disabled={subSpecialtyOptions.length === 0}
+                onChange={(event) =>
+                  setFilters((prev) => ({ ...prev, subSpecialtyName: event.target.value, page: 1 }))
+                }
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              >
+                <option value="">All sub-specialties</option>
+                {subSpecialtyOptions.map((item) => (
+                  <option key={item.id} value={item.name}>
+                    {item.name}
                   </option>
                 ))}
               </select>
@@ -142,7 +187,7 @@ export function ProviderDirectoryDiscovery() {
               type="button"
               variant="secondary"
               onClick={() =>
-                setFilters({ search: "", specialtyId: "", page: 1, limit: 20 })
+                setFilters({ search: "", specialtyId: "", subSpecialtyName: "", page: 1, limit: 20 })
               }
             >
               Reset

@@ -242,6 +242,26 @@ export const SUSPEND_PROVIDER_MUTATION = gql`
   }
 `;
 
+export const CONSULTANT_SPECIALTIES_QUERY = gql`
+  query Specialties {
+    specialties {
+      id
+      name
+    }
+  }
+`;
+
+export const CONSULTANT_SUB_SPECIALTIES_QUERY = gql`
+  query SubSpecialties($specialtyId: UUID) {
+    subSpecialties(specialtyId: $specialtyId) {
+      id
+      name
+      specialtyId
+      specialtyName
+    }
+  }
+`;
+
 export const PROVIDER_LICENSE_TYPE_OPTIONS = [
   { value: "hpcz", label: "HPCZ License" },
   { value: "national_id", label: "National ID" },

@@ -26,7 +26,11 @@
       "Bash(Get-ChildItem -Path \"d:\\\\Nakubiana\\\\glycolink-front\\\\components\\\\ui\" -Name)",
       "Bash(Get-ChildItem \"d:/Nakubiana/glycolink-front/components/patient/messages\" -Recurse)",
       "Bash(Select-Object FullName)",
-      "Bash(Get-ChildItem \"d:/Nakubiana/glycolink-front/app/\\(patient\\)/patient/messages\" -Recurse)"
+      "Bash(Get-ChildItem \"d:/Nakubiana/glycolink-front/app/\\(patient\\)/patient/messages\" -Recurse)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Nakubiana\\\\glycolink-front\" -Recurse -Directory -Filter \"*consultant*\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Nakubiana\\\\glycolink-front\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }
