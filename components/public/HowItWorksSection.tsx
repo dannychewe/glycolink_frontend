@@ -35,7 +35,7 @@ export function HowItWorksSection() {
           </p>
           <h2 className="text-3xl sm:text-4xl">Four steps to better diabetes care</h2>
           <p>
-            GlycoLink removes friction from everyday diabetes support with a guided care journey
+            Naje Health removes friction from everyday diabetes support with a guided care journey
             that feels structured on desktop and effortless on mobile.
           </p>
         </div>

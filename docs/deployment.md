@@ -4,7 +4,7 @@
 
 - Node.js 20+ (LTS recommended)
 - npm 10+
-- Access to the GlycoLink backend GraphQL API
+- Access to the Naje Health backend GraphQL API
 
 ---
 
@@ -13,7 +13,7 @@
 Create a `.env.local` file in the project root (this file is gitignored and never committed):
 
 ```env
-NEXT_PUBLIC_GRAPHQL_ENDPOINT=https://api.glycolink.co.zm/graphql
+NEXT_PUBLIC_GRAPHQL_ENDPOINT=https://api.najehealth.com/graphql
 ```
 
 | Variable | Required | Description |
@@ -41,7 +41,7 @@ The app will be available at `http://localhost:3000`.
 1. Push the repository to GitHub.
 2. Import the project in the [Vercel dashboard](https://vercel.com/new).
 3. Set the environment variable under **Project → Settings → Environment Variables**:
-   - `NEXT_PUBLIC_GRAPHQL_ENDPOINT` → `https://api.glycolink.co.zm/graphql`
+   - `NEXT_PUBLIC_GRAPHQL_ENDPOINT` → `https://api.najehealth.com/graphql`
 4. Deploy. Vercel handles `npm run build` and `npm start` automatically.
 
 Vercel detects Next.js and applies optimal settings (edge caching, ISR, image optimisation) with no extra configuration.
@@ -60,8 +60,8 @@ sudo apt-get install -y nodejs
 ### 2. Clone and build
 
 ```bash
-git clone <repo-url> /var/www/glycolink-front
-cd /var/www/glycolink-front
+git clone <repo-url> /var/www/najehealth-front
+cd /var/www/najehealth-front
 npm ci --omit=dev
 cp .env.example .env.local
 # Edit .env.local and set NEXT_PUBLIC_GRAPHQL_ENDPOINT
@@ -72,7 +72,7 @@ npm run build
 
 ```bash
 npm install -g pm2
-pm2 start npm --name "glycolink-front" -- start
+pm2 start npm --name "najehealth-front" -- start
 pm2 save
 pm2 startup
 ```
@@ -88,7 +88,7 @@ PORT=8080 npm start
 ```nginx
 server {
     listen 80;
-    server_name glycolink.co.zm www.glycolink.co.zm;
+    server_name najehealth.com www.najehealth.com;
 
     location / {
         proxy_pass http://localhost:3000;
@@ -108,7 +108,7 @@ Enable HTTPS with Certbot:
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d glycolink.co.zm -d www.glycolink.co.zm
+sudo certbot --nginx -d najehealth.com -d www.najehealth.com
 ```
 
 ---
@@ -159,10 +159,10 @@ CMD ["node", "server.js"]
 
 ```bash
 docker build \
-  --build-arg NEXT_PUBLIC_GRAPHQL_ENDPOINT=https://api.glycolink.co.zm/graphql \
-  -t glycolink-front .
+  --build-arg NEXT_PUBLIC_GRAPHQL_ENDPOINT=https://api.najehealth.com/graphql \
+  -t najehealth-front .
 
-docker run -p 3000:3000 glycolink-front
+docker run -p 3000:3000 najehealth-front
 ```
 
 ---

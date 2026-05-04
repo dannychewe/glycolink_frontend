@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <PublicOnly>
       <AuthCard
-        title="Sign in to GlycoLink"
+        title="Sign in to Naje Health"
         description="Welcome back. Enter your details below."
         notice={notice}
       >

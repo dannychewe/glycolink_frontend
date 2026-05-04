@@ -15,7 +15,7 @@ export function StepConsent() {
         <div className="space-y-1 text-sm">
           <p className="font-medium text-text">Your data is handled with care</p>
           <p className="text-muted">
-            GlycoLink collects your health information solely to support your care team. Your data
+            Naje Health collects your health information solely to support your care team. Your data
             is encrypted, never sold, and accessed only by authorised medical professionals involved
             in your treatment.
           </p>

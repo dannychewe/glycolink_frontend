@@ -7,7 +7,7 @@ import { ProviderPreviewSection } from "@/components/public/ProviderPreviewSecti
 import { TrustSection } from "@/components/public/TrustSection";
 
 export const metadata: Metadata = {
-  title: "GlycoLink | Modern Diabetes Care & Online Doctor Consultation in Zambia",
+  title: "Naje Health | Modern Diabetes Care & Online Doctor Consultation in Zambia",
   description:
     "Consult verified diabetes specialists online. Book appointments, manage your health, and access structured care — all in one platform.",
 };

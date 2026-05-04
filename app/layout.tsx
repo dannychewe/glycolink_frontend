@@ -9,22 +9,22 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.glycolink.co.zm"),
-  title: "GlycoLink | Modern Diabetes Care & Online Consultation",
+  metadataBase: new URL("https://www.najehealth.com"),
+  title: "Naje Health | Modern Diabetes Care & Online Consultation",
   description:
     "Consult verified healthcare providers, manage diabetes, and access structured care online.",
   openGraph: {
-    title: "GlycoLink | Modern Diabetes Care & Online Consultation",
+    title: "Naje Health | Modern Diabetes Care & Online Consultation",
     description:
       "Consult verified healthcare providers, manage diabetes, and access structured care online.",
     url: "/",
-    siteName: "GlycoLink",
+    siteName: "Naje Health",
     locale: "en_ZM",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "GlycoLink | Modern Diabetes Care & Online Consultation",
+    title: "Naje Health | Modern Diabetes Care & Online Consultation",
     description:
       "Consult verified healthcare providers, manage diabetes, and access structured care online.",
   },

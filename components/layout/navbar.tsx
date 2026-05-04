@@ -37,7 +37,7 @@ export function Navbar() {
           <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-[13px] font-bold text-white">
             G
           </span>
-          <span className="text-base font-semibold tracking-tight text-text">GlycoLink</span>
+          <span className="text-base font-semibold tracking-tight text-text">Naje Health</span>
         </Link>
 
         {/* Desktop nav links */}

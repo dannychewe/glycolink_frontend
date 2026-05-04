@@ -3,7 +3,7 @@ import { GraphqlProviderDirectory } from "@/components/public/GraphqlProviderDir
 import { Container } from "@/components/ui/container";
 
 export const metadata: Metadata = {
-  title: "Find a Diabetes Specialist | GlycoLink",
+  title: "Find a Diabetes Specialist | Naje Health",
   description:
     "Browse verified diabetes doctors and specialists in Zambia. Review their backgrounds, specialties, and consultation fees before booking.",
 };
@@ -17,7 +17,7 @@ export default function ProvidersPage() {
         </p>
         <h1 className="text-3xl font-semibold text-text sm:text-4xl">Find a specialist</h1>
         <p className="text-base leading-7 text-muted">
-          Every provider on GlycoLink is reviewed and verified. Browse by specialty, filter by
+          Every provider on Naje Health is reviewed and verified. Browse by specialty, filter by
           consultation fee, and choose a doctor who fits your care needs.
         </p>
       </div>
@@ -27,7 +27,7 @@ export default function ProvidersPage() {
       <section className="max-w-3xl space-y-3 border-t border-border/80 pt-8">
         <h2 className="text-2xl">Diabetes care, close to you</h2>
         <p className="text-muted">
-          GlycoLink connects patients living with Type 1, Type 2, gestational diabetes, and
+          Naje Health connects patients living with Type 1, Type 2, gestational diabetes, and
           related conditions to verified specialists across Zambia. Book a consultation online,
           receive structured care, and manage your health journey in one place.
         </p>

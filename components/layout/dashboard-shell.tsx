@@ -17,7 +17,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
         <Container className="flex items-center justify-between py-5">
           <div className="space-y-1">
             <Link href="/" className="text-lg font-semibold tracking-tight text-text">
-              GlycoLink
+              Naje Health
             </Link>
             <p className="text-sm text-muted">{role} workspace</p>
           </div>

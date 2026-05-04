@@ -10,9 +10,9 @@ import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "How GlycoLink Works | Diabetes Care Platform",
+  title: "How Naje Health Works | Diabetes Care Platform",
   description:
-    "Learn how GlycoLink connects patients with verified diabetes specialists in Zambia for structured, ongoing care.",
+    "Learn how Naje Health connects patients with verified diabetes specialists in Zambia for structured, ongoing care.",
 };
 
 const steps = [
@@ -50,7 +50,7 @@ const faqs = [
   {
     question: "Do I need a referral to book a consultation?",
     answer:
-      "No. You can search for and book a provider directly through GlycoLink without a referral.",
+      "No. You can search for and book a provider directly through Naje Health without a referral.",
   },
   {
     question: "Is my health information kept private?",
@@ -58,14 +58,14 @@ const faqs = [
       "Yes. Your medical records and consultation history are private and only accessible to you and the providers you choose to share them with.",
   },
   {
-    question: "What types of diabetes does GlycoLink support?",
+    question: "What types of diabetes does Naje Health support?",
     answer:
-      "GlycoLink supports patients managing Type 1 diabetes, Type 2 diabetes, gestational diabetes, prediabetes, and related conditions.",
+      "Naje Health supports patients managing Type 1 diabetes, Type 2 diabetes, gestational diabetes, prediabetes, and related conditions.",
   },
   {
-    question: "Can I use GlycoLink from my phone?",
+    question: "Can I use Naje Health from my phone?",
     answer:
-      "Yes. GlycoLink is designed to work across all devices — phone, tablet, and desktop.",
+      "Yes. Naje Health is designed to work across all devices — phone, tablet, and desktop.",
   },
 ];
 
@@ -82,7 +82,7 @@ export default function HowItWorksPage() {
             Structured diabetes care, from first visit to ongoing support
           </h1>
           <p className="text-base leading-7 text-muted">
-            GlycoLink is built to make diabetes care feel manageable — not overwhelming. Here is
+            Naje Health is built to make diabetes care feel manageable — not overwhelming. Here is
             how the process works, from creating your profile to staying connected with your
             provider.
           </p>

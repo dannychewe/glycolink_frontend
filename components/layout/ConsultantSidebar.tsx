@@ -162,7 +162,7 @@ export function ConsultantSidebar({
             G
           </span>
           <div>
-            <p className="text-sm font-semibold tracking-tight text-text">GlycoLink</p>
+            <p className="text-sm font-semibold tracking-tight text-text">Naje Health</p>
             <p className="text-xs text-muted">Consultant workspace</p>
           </div>
         </Link>

@@ -18,7 +18,7 @@ export function AuthCard({ title, description, notice, children }: AuthCardProps
             href="/"
             className="text-xl font-semibold tracking-tight text-text hover:text-primary transition-colors"
           >
-            GlycoLink
+            Naje Health
           </Link>
         </div>
 

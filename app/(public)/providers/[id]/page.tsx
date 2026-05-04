@@ -9,7 +9,7 @@ type ProviderDetailPageProps = Readonly<{
 }>;
 
 export const metadata: Metadata = {
-  title: "Provider Profile | GlycoLink",
+  title: "Provider Profile | Naje Health",
   description: "View provider profile and consultation details from the GraphQL directory.",
 };
 

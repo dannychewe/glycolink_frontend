@@ -8,7 +8,7 @@ export default function RegisterPage() {
     <PublicOnly>
       <AuthCard
         title="Create your account"
-        description="Join GlycoLink to manage your health journey."
+        description="Join Naje Health to manage your health journey."
       >
         <Suspense>
           <AuthForm mode="register" />
