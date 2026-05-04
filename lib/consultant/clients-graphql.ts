@@ -34,16 +34,15 @@ export const INVITE_PATIENT_MUTATION = gql`
       phone: $phone
       note: $note
     ) {
-      activeConversationId
-      setupToken
-      patientProfile {
+      patient {
         id
-        fullName
         email
-        phone
-        onboardingStatus
-        profileComplete
+        fullName
       }
+      conversation {
+        id
+      }
+      setupToken
     }
   }
 `;

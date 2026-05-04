@@ -543,6 +543,83 @@ export const ADMIN_CORPORATE_PLANS_QUERY = gql`
   }
 `;
 
+export const ADMIN_SYSTEM_NOTIFICATIONS_PREVIEW_QUERY = gql`
+  query SystemNotificationsPreview($limit: Int, $tenantId: UUID, $type: String) {
+    systemNotificationsPreview(limit: $limit, tenantId: $tenantId, type: $type) {
+      unreadCount
+      items {
+        id
+        tenantId
+        userId
+        userEmail
+        title
+        message
+        type
+        isRead
+        sourceType
+        sourceId
+        createdAt
+      }
+    }
+  }
+`;
+
+export const ADMIN_SYSTEM_NOTIFICATIONS_QUERY = gql`
+  query SystemNotifications(
+    $page: Int
+    $limit: Int
+    $tenantId: UUID
+    $userId: UUID
+    $type: String
+    $isRead: Boolean
+  ) {
+    systemNotifications(
+      page: $page
+      limit: $limit
+      tenantId: $tenantId
+      userId: $userId
+      type: $type
+      isRead: $isRead
+    ) {
+      items {
+        id
+        tenantId
+        userId
+        userEmail
+        title
+        message
+        type
+        isRead
+        sourceType
+        sourceId
+        createdAt
+      }
+      total
+      page
+      limit
+    }
+  }
+`;
+
+export const ADMIN_MARK_NOTIFICATION_READ_MUTATION = gql`
+  mutation SystemMarkNotificationRead($notificationId: UUID!) {
+    systemMarkNotificationRead(notificationId: $notificationId) {
+      notification {
+        id
+        isRead
+      }
+    }
+  }
+`;
+
+export const ADMIN_MARK_NOTIFICATIONS_READ_MUTATION = gql`
+  mutation SystemMarkNotificationsRead($tenantId: UUID, $userId: UUID, $type: String) {
+    systemMarkNotificationsRead(tenantId: $tenantId, userId: $userId, type: $type) {
+      updatedCount
+    }
+  }
+`;
+
 export const ADMIN_AUDIT_STATUS_QUERY = gql`
   query AdminAuditStatus {
     auditStatus

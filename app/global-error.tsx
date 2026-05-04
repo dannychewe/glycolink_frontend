@@ -18,7 +18,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
         <h1 className="text-2xl font-semibold">Application Error</h1>
         <p className="max-w-md text-sm text-muted">
           A critical error occurred. Please reload the page or contact support if the issue
-          continues .
+          continues.
         </p>
         <button
           onClick={reset}

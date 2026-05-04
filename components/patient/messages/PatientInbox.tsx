@@ -2,20 +2,13 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
+import { MessageSquare, Send, ChevronLeft, Paperclip, AlertCircle, CheckCheck, Check } from "lucide-react";
 import {
-  MessageSquare, Send, Archive, X, RotateCcw, ChevronLeft,
-  Paperclip, AlertCircle, CheckCheck, Check,
-} from "lucide-react";
-import {
-  ARCHIVE_CONVERSATION_MUTATION,
-  CLOSE_CONVERSATION_MUTATION,
-  CONVERSATION_MESSAGES_QUERY,
-  MARK_CONVERSATION_READ_MUTATION,
-  MESSAGE_PRIORITY_OPTIONS,
-  MESSAGE_THREADS_QUERY,
-  REOPEN_CONVERSATION_MUTATION,
-  SEND_MESSAGE_MUTATION,
-} from "@/lib/consultant/messages-graphql";
+  PATIENT_CONVERSATION_MESSAGES_QUERY,
+  PATIENT_MARK_CONVERSATION_READ_MUTATION,
+  PATIENT_MESSAGE_THREADS_QUERY,
+  PATIENT_SEND_MESSAGE_MUTATION,
+} from "@/lib/patient/messages-graphql";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
 
@@ -91,8 +84,15 @@ function formatFullTime(value: string) {
   return d.toLocaleString("en-ZM", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function isFromPatient(message: Message): boolean {
+function isFromMe(message: Message): boolean {
   return message.senderName === message.patientName && message.patientName !== null;
+}
+
+function threadLabel(thread: Thread): string {
+  if (thread.lastMessage && thread.lastMessage.senderName !== thread.patientName) {
+    return thread.lastMessage.senderName ?? "Care Team";
+  }
+  return "Care Team";
 }
 
 function statusVariant(status: string): "success" | "secondary" | "warning" {
@@ -114,6 +114,7 @@ function ThreadRow({
   onClick: () => void;
 }) {
   const hasUnread = thread.unreadThread || thread.unreadMessageCount > 0;
+  const label = threadLabel(thread);
 
   return (
     <button
@@ -129,7 +130,7 @@ function ThreadRow({
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-center gap-2">
             <p className={cn("truncate text-sm", hasUnread ? "font-bold text-text" : "font-medium text-text")}>
-              {thread.patientName ?? `Patient ${thread.patientId.slice(0, 8)}…`}
+              {label}
             </p>
             {thread.lastMessage?.priority === "URGENT" ? (
               <Badge variant="danger">Urgent</Badge>
@@ -137,7 +138,7 @@ function ThreadRow({
           </div>
           {thread.lastMessage?.body ? (
             <p className={cn("truncate text-xs", hasUnread ? "text-text" : "text-muted")}>
-              {thread.lastMessage.senderName !== thread.patientName ? "You: " : ""}
+              {thread.lastMessage.senderName === thread.patientName ? "You: " : ""}
               {thread.lastMessage.body}
             </p>
           ) : null}
@@ -160,18 +161,18 @@ function ThreadRow({
 // ─── Message Bubble ───────────────────────────────────────
 
 function MessageBubble({ message }: { message: Message }) {
-  const fromPatient = isFromPatient(message);
+  const fromMe = isFromMe(message);
 
   return (
-    <div className={cn("flex", fromPatient ? "justify-start" : "justify-end")}>
+    <div className={cn("flex", fromMe ? "justify-end" : "justify-start")}>
       <div className={cn(
         "max-w-[75%] rounded-2xl px-4 py-2.5 space-y-1",
-        fromPatient
-          ? "rounded-tl-sm bg-surface border border-border"
-          : "rounded-tr-sm bg-primary text-white",
+        fromMe
+          ? "rounded-tr-sm bg-primary text-white"
+          : "rounded-tl-sm bg-surface border border-border",
       )}>
         {message.body ? (
-          <p className={cn("text-sm leading-5 whitespace-pre-wrap", fromPatient ? "text-text" : "text-white")}>
+          <p className={cn("text-sm leading-5 whitespace-pre-wrap", fromMe ? "text-white" : "text-text")}>
             {message.body}
           </p>
         ) : null}
@@ -186,9 +187,9 @@ function MessageBubble({ message }: { message: Message }) {
                 rel="noopener noreferrer"
                 className={cn(
                   "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition",
-                  fromPatient
-                    ? "bg-background text-primary hover:underline"
-                    : "bg-white/20 text-white hover:bg-white/30",
+                  fromMe
+                    ? "bg-white/20 text-white hover:bg-white/30"
+                    : "bg-background text-primary hover:underline",
                 )}
               >
                 <Paperclip className="size-3 shrink-0" />
@@ -198,12 +199,12 @@ function MessageBubble({ message }: { message: Message }) {
           </div>
         ) : null}
 
-        <div className={cn("flex items-center gap-1.5", fromPatient ? "justify-start" : "justify-end")}>
-          <p className={cn("text-xs", fromPatient ? "text-muted" : "text-white/70")}>
+        <div className={cn("flex items-center gap-1.5", fromMe ? "justify-end" : "justify-start")}>
+          <p className={cn("text-xs", fromMe ? "text-white/70" : "text-muted")}>
             {formatFullTime(message.sentAt)}
             {message.priority === "URGENT" ? " · Urgent" : ""}
           </p>
-          {!fromPatient ? (
+          {fromMe ? (
             message.isReadByRecipient
               ? <CheckCheck className="size-3 text-white/70" />
               : <Check className="size-3 text-white/50" />
@@ -226,23 +227,18 @@ function ConversationView({
   onThreadUpdated: () => void;
 }) {
   const [body, setBody] = useState("");
-  const [priority, setPriority] = useState("NORMAL");
-  const [_loadBefore, _setLoadBefore] = useState<string | undefined>(undefined);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data, loading, fetchMore, refetch } = useQuery<{ conversationMessages: Message[] }>(
-    CONVERSATION_MESSAGES_QUERY,
+    PATIENT_CONVERSATION_MESSAGES_QUERY,
     {
       variables: { conversationId: thread.id, limit: 30 },
       fetchPolicy: "network-only",
     },
   );
 
-  const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION);
-  const [markRead] = useMutation(MARK_CONVERSATION_READ_MUTATION);
-  const [archiveConversation, { loading: archiving }] = useMutation(ARCHIVE_CONVERSATION_MUTATION);
-  const [closeConversation, { loading: closing }] = useMutation(CLOSE_CONVERSATION_MUTATION);
-  const [reopenConversation, { loading: reopening }] = useMutation(REOPEN_CONVERSATION_MUTATION);
+  const [sendMessage, { loading: sending }] = useMutation(PATIENT_SEND_MESSAGE_MUTATION);
+  const [markRead] = useMutation(PATIENT_MARK_CONVERSATION_READ_MUTATION);
 
   const messages = [...(data?.conversationMessages ?? [])].sort(
     (a, b) => a.sequenceNumber - b.sequenceNumber,
@@ -250,6 +246,7 @@ function ConversationView({
 
   const isClosed = thread.status.toUpperCase() === "CLOSED";
   const isArchived = thread.status.toUpperCase() === "ARCHIVED";
+  const label = threadLabel(thread);
 
   useEffect(() => {
     void markRead({ variables: { conversationId: thread.id } });
@@ -264,14 +261,13 @@ function ConversationView({
     if (!body.trim()) return;
     try {
       await sendMessage({
-        variables: { conversationId: thread.id, body: body.trim(), priority },
+        variables: { conversationId: thread.id, body: body.trim(), priority: "NORMAL" },
       });
       setBody("");
-      setPriority("NORMAL");
       await refetch();
       onThreadUpdated();
     } catch {
-      /* handled silently — no alert needed for send failures here */
+      /* handled silently */
     }
   }
 
@@ -292,15 +288,6 @@ function ConversationView({
     });
   }
 
-  async function handleLifecycle(action: "archive" | "close" | "reopen") {
-    try {
-      if (action === "archive") await archiveConversation({ variables: { conversationId: thread.id } });
-      else if (action === "close") await closeConversation({ variables: { conversationId: thread.id } });
-      else await reopenConversation({ variables: { conversationId: thread.id } });
-      onThreadUpdated();
-    } catch { /* ignore */ }
-  }
-
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -315,58 +302,10 @@ function ConversationView({
         </button>
 
         <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-semibold text-text">
-            {thread.patientName ?? `Patient ${thread.patientId.slice(0, 8)}…`}
-          </p>
+          <p className="truncate text-sm font-semibold text-text">{label}</p>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant(thread.status)}>{thread.status}</Badge>
-            {thread.encounterId ? (
-              <a
-                href={`/consultant/consultations/${thread.encounterId}`}
-                className="text-xs text-primary hover:underline"
-              >
-                View encounter
-              </a>
-            ) : null}
           </div>
-        </div>
-
-        {/* Thread actions */}
-        <div className="flex shrink-0 items-center gap-1.5">
-          {!isClosed && !isArchived ? (
-            <>
-              <button
-                type="button"
-                onClick={() => void handleLifecycle("close")}
-                disabled={closing}
-                title="Close conversation"
-                className="rounded-lg p-1.5 text-muted hover:bg-background hover:text-text transition disabled:opacity-50"
-              >
-                <X className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleLifecycle("archive")}
-                disabled={archiving}
-                title="Archive conversation"
-                className="rounded-lg p-1.5 text-muted hover:bg-background hover:text-text transition disabled:opacity-50"
-              >
-                <Archive className="size-4" />
-              </button>
-            </>
-          ) : null}
-          {isClosed ? (
-            <button
-              type="button"
-              onClick={() => void handleLifecycle("reopen")}
-              disabled={reopening}
-              title="Reopen conversation"
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 transition disabled:opacity-50"
-            >
-              <RotateCcw className="size-3" />
-              Reopen
-            </button>
-          ) : null}
         </div>
       </div>
 
@@ -391,7 +330,7 @@ function ConversationView({
             ))}
           </div>
         ) : messages.length === 0 ? (
-          <p className="text-center text-sm text-muted">No messages yet. Send one to start the conversation.</p>
+          <p className="text-center text-sm text-muted">No messages yet.</p>
         ) : (
           messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
         )}
@@ -402,15 +341,7 @@ function ConversationView({
       {/* Compose */}
       {isClosed ? (
         <div className="border-t border-border bg-background px-4 py-3 text-center text-sm text-muted">
-          This conversation is closed.{" "}
-          <button
-            type="button"
-            onClick={() => void handleLifecycle("reopen")}
-            className="font-medium text-primary hover:underline"
-          >
-            Reopen
-          </button>{" "}
-          to send messages.
+          This conversation is closed.
         </div>
       ) : isArchived ? (
         <div className="border-t border-border bg-background px-4 py-3 text-center text-sm text-muted">
@@ -431,16 +362,7 @@ function ConversationView({
             }}
             className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none placeholder:text-muted transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
-          <div className="flex items-center justify-between gap-2">
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              className="h-9 rounded-xl border border-border bg-background px-3 text-xs text-text outline-none transition focus:border-primary"
-            >
-              {MESSAGE_PRIORITY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+          <div className="flex items-center justify-end">
             <button
               type="submit"
               disabled={sending || !body.trim()}
@@ -450,7 +372,7 @@ function ConversationView({
               {sending ? "Sending…" : "Send"}
             </button>
           </div>
-          <p className="text-xs text-muted">Ctrl+Enter to send · Patient is notified by email and in-app</p>
+          <p className="text-xs text-muted">Ctrl+Enter to send</p>
         </form>
       )}
     </div>
@@ -459,12 +381,12 @@ function ConversationView({
 
 // ─── Main Inbox ───────────────────────────────────────────
 
-export function GraphqlInbox({ initialConversationId }: { initialConversationId?: string }) {
+export function PatientInbox({ initialConversationId }: { initialConversationId?: string }) {
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selectedId, setSelectedId] = useState<string | null>(initialConversationId ?? null);
 
   const { data, loading, error, refetch } = useQuery<{ messageThreads: Thread[] }>(
-    MESSAGE_THREADS_QUERY,
+    PATIENT_MESSAGE_THREADS_QUERY,
     {
       variables: {
         limit: 50,
@@ -500,12 +422,11 @@ export function GraphqlInbox({ initialConversationId }: { initialConversationId?
 
   return (
     <div className="flex h-[calc(100vh-10rem)] min-h-[500px] overflow-hidden rounded-2xl border border-border bg-surface shadow-subtle">
-      {/* Thread list — hidden on mobile when a thread is selected */}
+      {/* Thread list */}
       <div className={cn(
         "flex w-full flex-col border-r border-border sm:w-80 sm:flex-shrink-0",
         selectedThread ? "hidden sm:flex" : "flex",
       )}>
-        {/* Tabs */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex gap-1">
             {(["all", "unread"] as FilterTab[]).map((tab) => (
@@ -527,7 +448,6 @@ export function GraphqlInbox({ initialConversationId }: { initialConversationId?
           </div>
         </div>
 
-        {/* Thread list */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="space-y-px p-4">
@@ -538,14 +458,14 @@ export function GraphqlInbox({ initialConversationId }: { initialConversationId?
           ) : error ? (
             <div className="px-4 py-6 text-center">
               <AlertCircle className="mx-auto size-6 text-warning" />
-              <p className="mt-2 text-xs text-muted">Unable to load threads.</p>
+              <p className="mt-2 text-xs text-muted">Unable to load messages.</p>
             </div>
           ) : threads.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
               <MessageSquare className="size-8 text-muted/40" />
               <p className="text-sm font-medium text-text">No conversations</p>
               <p className="text-xs text-muted">
-                {activeTab === "unread" ? "No unread messages." : "Conversations with patients will appear here."}
+                {activeTab === "unread" ? "No unread messages." : "Messages from your care team will appear here."}
               </p>
             </div>
           ) : (

@@ -18,7 +18,11 @@
       "Bash(grep -E \"\\(middleware|\\\\.ts$\\)\")",
       "Bash(npm run *)",
       "Bash(npx next *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(grep -E \"^[^/]*app[^/]*page.tsx$|/app/page.tsx\")",
+      "Bash(awk -F/ '{print NF, $0}')",
+      "Bash(awk '{$1=\"\"; print $0}')",
+      "Bash(wait)"
     ]
   }
 }

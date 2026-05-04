@@ -118,8 +118,6 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       if (code === "AUTH_USER_NOT_VERIFIED") {
-        setSubmitError("Your email is not verified yet.");
-        setHelperMessage("Verify your email first or request a new verification link.");
         router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
         return;
       }

@@ -36,7 +36,7 @@ export function VerifyEmailPanel() {
         if (!active) return;
         if (verifiedUser?.isVerified) {
           setVerificationState("success");
-          window.setTimeout(() => router.replace("/login"), 1500);
+          window.setTimeout(() => router.replace("/auth/redirect"), 1500);
         } else {
           setVerificationState("error");
         }

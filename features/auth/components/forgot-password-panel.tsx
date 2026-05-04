@@ -44,7 +44,7 @@ export function ForgotPasswordPanel() {
     } catch (error) {
       const code = getGraphQLErrorCode(error);
       if (code === "AUTH_USER_INACTIVE") {
-        setSubmitError("This account is inactive.");
+        setSuccessMessage("If your email exists in our records, a reset link has been sent.");
         return;
       }
 

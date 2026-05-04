@@ -95,7 +95,7 @@ function InlineAlert({ alert, onDismiss }: { alert: AlertState; onDismiss: () =>
 type InviteResult = {
   fullName: string;
   email: string;
-  onboardingStatus: string | null;
+  debugSetupToken: string | null;
 };
 
 function InvitePanel({ onClose }: { onClose: () => void }) {
@@ -117,14 +117,12 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
         },
         refetchQueries: [{ query: CONSULTANT_CLIENTS_QUERY, variables: { limit: 50 } }],
       });
-      const profile = res.data?.invitePatient?.patientProfile;
-      if (profile) {
-        setInvited({
-          fullName: profile.fullName ?? form.fullName ?? form.email,
-          email: profile.email ?? form.email,
-          onboardingStatus: profile.onboardingStatus ?? null,
-        });
-      }
+      const payload = res.data?.invitePatient;
+      setInvited({
+        fullName: payload?.patient?.fullName ?? (form.fullName || form.email),
+        email: payload?.patient?.email ?? form.email,
+        debugSetupToken: payload?.setupToken ?? null,
+      });
       setForm({ email: "", fullName: "", phone: "", note: "" });
     } catch (error) {
       setAlert({ type: "error", message: mapInviteError(error) });
@@ -136,12 +134,24 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
       <div className="rounded-2xl border border-success/25 bg-success/5 px-5 py-5 space-y-3">
         <div className="flex items-center gap-2 text-success">
           <CheckCircle className="size-5" />
-          <p className="text-sm font-semibold">Invitation sent</p>
+          <p className="text-sm font-semibold">Invite sent</p>
         </div>
         <p className="text-sm text-text">
-          <span className="font-medium">{invited.fullName}</span> ({invited.email}) has been
-          invited. They will receive an email with setup instructions to complete their profile.
+          <span className="font-medium">{invited.fullName}</span> ({invited.email}) —
+          the patient will receive setup instructions by email.
         </p>
+        {invited.debugSetupToken ? (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-text">
+            Debug setup token:
+            <div className="mt-1 break-all font-mono text-xs">{invited.debugSetupToken}</div>
+            <a
+              href={`/accept-patient-invite?token=${encodeURIComponent(invited.debugSetupToken)}`}
+              className="mt-2 inline-block text-xs font-medium text-primary underline underline-offset-4"
+            >
+              Open debug invite link
+            </a>
+          </div>
+        ) : null}
         <div className="flex gap-2 pt-1">
           <Button variant="secondary" size="sm" onClick={() => setInvited(null)}>
             Invite another
