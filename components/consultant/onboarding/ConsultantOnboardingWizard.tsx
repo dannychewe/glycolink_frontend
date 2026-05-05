@@ -85,6 +85,7 @@ type ExistingProfile = {
   hpczNumber: string | null;
   bio: string | null;
   languages: string | null;
+  languagesJson: string[] | string | null;
   specialties: string | null;
   subSpecialties: string | null;
   consultationFeeInitial: number | null;
@@ -93,6 +94,26 @@ type ExistingProfile = {
   telemedApprovalExpiryDate: string | null;
   status: string;
 } | null;
+
+function parseCommaSeparatedNames(value: string | undefined) {
+  return value
+    ? value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+}
+
+function languagesToCsv(languages: string | string[] | null | undefined) {
+  if (!languages) return "";
+  if (Array.isArray(languages)) return languages.join(", ");
+  try {
+    const parsed = JSON.parse(languages) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String).join(", ") : languages;
+  } catch {
+    return languages;
+  }
+}
 
 export function ConsultantOnboardingWizard() {
   const router = useRouter();
@@ -134,8 +155,9 @@ export function ConsultantOnboardingWizard() {
     if (p.bio && !getFieldState("bio").isDirty) {
       setValue("bio", p.bio);
     }
-    if (p.languages && !getFieldState("languages").isDirty) {
-      setValue("languages", p.languages);
+    const languages = languagesToCsv(p.languagesJson ?? p.languages);
+    if (languages && !getFieldState("languages").isDirty) {
+      setValue("languages", languages);
     }
     if (p.specialties && !getFieldState("specialties").isDirty) {
       setValue("specialties", p.specialties);
@@ -167,7 +189,7 @@ export function ConsultantOnboardingWizard() {
       displayName: values.displayName,
       hpczNumber: values.hpczNumber || undefined,
       bio: values.bio || undefined,
-      languages: values.languages || undefined,
+      languagesJson: JSON.stringify(parseCommaSeparatedNames(values.languages)),
       specialties: values.specialties || undefined,
       subSpecialties: values.subSpecialties || undefined,
       consultationFeeInitial:

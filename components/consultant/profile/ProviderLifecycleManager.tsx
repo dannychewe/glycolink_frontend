@@ -34,8 +34,8 @@ type ProviderProfile = {
   verificationStatus: string | null;
   hpczNumber: string | null;
   bio: string | null;
-  languages: string[] | null;
-  languagesJson: string[] | null;
+  languages: string[] | string | null;
+  languagesJson: string[] | string | null;
   specialties: string[] | null;
   subSpecialties: string[] | null;
   consultationFeeInitial: string | null;
@@ -73,6 +73,24 @@ type StatusSummaryData = {
 type AlertState = { type: "success" | "error"; message: string } | null;
 
 // ─── Helpers ─────────────────────────────────────────────
+
+function parseCommaSeparatedNames(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function namesToCsv(value: string[] | string | null | undefined) {
+  if (!value) return "";
+  if (Array.isArray(value)) return value.join(", ");
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String).join(", ") : value;
+  } catch {
+    return value;
+  }
+}
 
 function mapProviderError(error: unknown) {
   const code = getGraphQLErrorCode(error);
@@ -237,12 +255,12 @@ export function ProviderLifecycleManager() {
 
   useEffect(() => {
     if (!profile) return;
-    const langs = profile.languages ?? profile.languagesJson ?? [];
+    const langs = profile.languages ?? profile.languagesJson;
     setProfileForm({
       displayName: profile.displayName ?? "",
       hpczNumber: profile.hpczNumber ?? "",
       bio: profile.bio ?? "",
-      languagesCsv: langs.join(", "),
+      languagesCsv: namesToCsv(langs),
       consultationFeeInitial: profile.consultationFeeInitial ?? "",
       consultationFeeFollowup: profile.consultationFeeFollowup ?? "",
       certificateExpiryDate: profile.certificateExpiryDate ?? "",
@@ -266,10 +284,7 @@ export function ProviderLifecycleManager() {
       displayName: profileForm.displayName,
       hpczNumber: profileForm.hpczNumber || undefined,
       bio: profileForm.bio || undefined,
-      languagesJson: profileForm.languagesCsv
-        .split(",")
-        .map((l) => l.trim())
-        .filter(Boolean),
+      languagesJson: JSON.stringify(parseCommaSeparatedNames(profileForm.languagesCsv)),
       consultationFeeInitial: profileForm.consultationFeeInitial || undefined,
       consultationFeeFollowup: profileForm.consultationFeeFollowup || undefined,
       certificateExpiryDate: profileForm.certificateExpiryDate || undefined,
