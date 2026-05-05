@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  FileText,
   Search,
   ShieldAlert,
   UserCheck,
@@ -23,9 +24,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ADMIN_APPROVE_PROVIDER_LICENSE_MUTATION,
   ADMIN_APPROVE_PROVIDER_MUTATION,
   ADMIN_PROVIDER_DETAIL_QUERY,
   ADMIN_PROVIDERS_QUERY,
+  ADMIN_REJECT_PROVIDER_LICENSE_MUTATION,
   ADMIN_REJECT_PROVIDER_MUTATION,
   ADMIN_SUSPEND_PROVIDER_MUTATION,
 } from "@/lib/admin/graphql";
@@ -62,11 +65,21 @@ type ProviderDetail = {
   consultationFeeFollowup: number | null;
   specialties: string[] | null;
   subSpecialties: string[] | null;
+  licenses: ProviderLicense[];
   organization: {
     id: string;
     name: string;
     type: string | null;
   } | null;
+};
+
+type ProviderLicense = {
+  id: string;
+  type: string;
+  status: string;
+  expiryDate: string | null;
+  issuedAt: string | null;
+  fileUrl: string | null;
 };
 
 type ProvidersData = {
@@ -180,6 +193,8 @@ function ProviderDetailModal({
 }>) {
   const [actionMode, setActionMode] = useState<ActionMode>(null);
   const [reason, setReason] = useState("");
+  const [licenseRejectId, setLicenseRejectId] = useState<string | null>(null);
+  const [licenseRejectReason, setLicenseRejectReason] = useState("");
   const { data, loading, error, refetch } = useQuery<ProviderDetailData>(
     ADMIN_PROVIDER_DETAIL_QUERY,
     {
@@ -187,12 +202,22 @@ function ProviderDetailModal({
       fetchPolicy: "cache-and-network",
     },
   );
+  const [approveLicense, { loading: approvingLicense }] = useMutation(
+    ADMIN_APPROVE_PROVIDER_LICENSE_MUTATION,
+  );
+  const [rejectLicense, { loading: rejectingLicense }] = useMutation(
+    ADMIN_REJECT_PROVIDER_LICENSE_MUTATION,
+  );
   const [approveProvider, { loading: approving }] = useMutation(ADMIN_APPROVE_PROVIDER_MUTATION);
   const [rejectProvider, { loading: rejecting }] = useMutation(ADMIN_REJECT_PROVIDER_MUTATION);
   const [suspendProvider, { loading: suspending }] = useMutation(ADMIN_SUSPEND_PROVIDER_MUTATION);
 
   const provider = data?.providerProfile ?? null;
-  const actionLoading = approving || rejecting || suspending;
+  const licenseActionLoading = approvingLicense || rejectingLicense;
+  const actionLoading = approving || rejecting || suspending || licenseActionLoading;
+  const hasApprovedLicense = (provider?.licenses ?? []).some(
+    (license) => license.status?.toUpperCase() === "APPROVED",
+  );
 
   async function refreshProviderLists() {
     await refetch();
@@ -202,12 +227,46 @@ function ProviderDetailModal({
     try {
       await approveProvider({
         variables: { providerId },
-        refetchQueries: [ADMIN_PROVIDERS_QUERY, ADMIN_PROVIDER_DETAIL_QUERY],
+        refetchQueries: [{ query: ADMIN_PROVIDER_DETAIL_QUERY, variables: { id: providerId } }],
       });
       await refreshProviderLists();
       onActionComplete({ type: "success", message: "Provider approved." });
     } catch (error) {
       onActionComplete({ type: "error", message: getGraphQLErrorMessage(error, "Unable to approve provider.") });
+    }
+  }
+
+  async function handleApproveLicense(licenseId: string) {
+    try {
+      await approveLicense({
+        variables: { licenseId },
+        refetchQueries: [{ query: ADMIN_PROVIDER_DETAIL_QUERY, variables: { id: providerId } }],
+      });
+      await refreshProviderLists();
+      onActionComplete({ type: "success", message: "License approved." });
+    } catch (error) {
+      onActionComplete({ type: "error", message: getGraphQLErrorMessage(error, "Unable to approve license.") });
+    }
+  }
+
+  async function handleRejectLicense(event: FormEvent) {
+    event.preventDefault();
+    if (!licenseRejectId) return;
+
+    try {
+      await rejectLicense({
+        variables: {
+          licenseId: licenseRejectId,
+          reason: licenseRejectReason.trim() || undefined,
+        },
+        refetchQueries: [{ query: ADMIN_PROVIDER_DETAIL_QUERY, variables: { id: providerId } }],
+      });
+      setLicenseRejectId(null);
+      setLicenseRejectReason("");
+      await refreshProviderLists();
+      onActionComplete({ type: "success", message: "License rejected." });
+    } catch (error) {
+      onActionComplete({ type: "error", message: getGraphQLErrorMessage(error, "Unable to reject license.") });
     }
   }
 
@@ -219,13 +278,13 @@ function ProviderDetailModal({
       if (actionMode === "reject") {
         await rejectProvider({
           variables: { providerId, reason },
-          refetchQueries: [ADMIN_PROVIDERS_QUERY, ADMIN_PROVIDER_DETAIL_QUERY],
+          refetchQueries: [{ query: ADMIN_PROVIDER_DETAIL_QUERY, variables: { id: providerId } }],
         });
         onActionComplete({ type: "success", message: "Provider rejected." });
       } else {
         await suspendProvider({
           variables: { providerId, reason },
-          refetchQueries: [ADMIN_PROVIDERS_QUERY, ADMIN_PROVIDER_DETAIL_QUERY],
+          refetchQueries: [{ query: ADMIN_PROVIDER_DETAIL_QUERY, variables: { id: providerId } }],
         });
         onActionComplete({ type: "success", message: "Provider suspended." });
       }
@@ -256,7 +315,11 @@ function ProviderDetailModal({
             Close
           </Button>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" disabled={actionLoading} onClick={() => void handleApprove()}>
+            <Button
+              type="button"
+              disabled={actionLoading || !hasApprovedLicense}
+              onClick={() => void handleApprove()}
+            >
               <BadgeCheck className="size-4" />
               {approving ? "Approving..." : "Approve"}
             </Button>
@@ -401,6 +464,113 @@ function ProviderDetailModal({
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-background px-4 py-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                  Licenses
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Approve at least one unexpired license before approving this provider profile.
+                </p>
+              </div>
+              {hasApprovedLicense ? <Badge variant="success">License approved</Badge> : null}
+            </div>
+
+            {(provider.licenses ?? []).length > 0 ? (
+              <div className="mt-4 space-y-3">
+                {provider.licenses.map((license) => {
+                  const isApproved = license.status?.toUpperCase() === "APPROVED";
+                  const isRejected = license.status?.toUpperCase() === "REJECTED";
+                  return (
+                    <div key={license.id} className="rounded-xl border border-border bg-surface px-4 py-3">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <FileText className="size-4 text-muted" />
+                            <p className="text-sm font-semibold text-text">{formatLabel(license.type)}</p>
+                            <Badge variant={statusVariant(license.status)}>
+                              {formatLabel(license.status)}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted">
+                            Issued {formatDate(license.issuedAt)} · Expires {formatDate(license.expiryDate)}
+                          </p>
+                          {license.fileUrl ? (
+                            <a
+                              href={license.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex text-xs font-medium text-primary underline underline-offset-4"
+                            >
+                              View document
+                            </a>
+                          ) : (
+                            <p className="text-xs text-muted">No document URL available.</p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={licenseActionLoading || isApproved}
+                            onClick={() => void handleApproveLicense(license.id)}
+                          >
+                            {approvingLicense ? "Approving..." : "Approve License"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            disabled={licenseActionLoading || isRejected}
+                            onClick={() => {
+                              setLicenseRejectId(licenseRejectId === license.id ? null : license.id);
+                              setLicenseRejectReason("");
+                            }}
+                          >
+                            Reject License
+                          </Button>
+                        </div>
+                      </div>
+
+                      {licenseRejectId === license.id ? (
+                        <form
+                          onSubmit={(event) => void handleRejectLicense(event)}
+                          className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row"
+                        >
+                          <Input
+                            value={licenseRejectReason}
+                            onChange={(event) => setLicenseRejectReason(event.target.value)}
+                            placeholder="Reason (optional)"
+                            className="flex-1"
+                          />
+                          <Button type="submit" size="sm" disabled={licenseActionLoading}>
+                            {rejectingLicense ? "Rejecting..." : "Confirm Reject"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setLicenseRejectId(null);
+                              setLicenseRejectReason("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </form>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-xl border border-dashed border-border px-4 py-5 text-center text-sm text-muted">
+                No uploaded licenses found for this provider.
+              </p>
+            )}
           </div>
 
           {actionMode ? (

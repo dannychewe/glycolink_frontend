@@ -213,6 +213,14 @@ export const ADMIN_PROVIDER_DETAIL_QUERY = gql`
       consultationFeeFollowup
       specialties
       subSpecialties
+      licenses {
+        id
+        type
+        status
+        expiryDate
+        issuedAt
+        fileUrl
+      }
       organization {
         id
         name
@@ -230,6 +238,36 @@ export const ADMIN_APPROVE_PROVIDER_MUTATION = gql`
         status
         verificationStatus
         eligible
+      }
+    }
+  }
+`;
+
+export const ADMIN_APPROVE_PROVIDER_LICENSE_MUTATION = gql`
+  mutation AdminApproveProviderLicense($licenseId: UUID!) {
+    approveProviderLicense(licenseId: $licenseId) {
+      license {
+        id
+        type
+        status
+        expiryDate
+        issuedAt
+        fileUrl
+      }
+    }
+  }
+`;
+
+export const ADMIN_REJECT_PROVIDER_LICENSE_MUTATION = gql`
+  mutation AdminRejectProviderLicense($licenseId: UUID!, $reason: String) {
+    rejectProviderLicense(licenseId: $licenseId, reason: $reason) {
+      license {
+        id
+        type
+        status
+        expiryDate
+        issuedAt
+        fileUrl
       }
     }
   }
