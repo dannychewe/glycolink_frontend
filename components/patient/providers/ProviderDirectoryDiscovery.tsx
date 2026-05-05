@@ -275,11 +275,6 @@ export function ProviderDirectoryDiscovery() {
             <CardContent className="flex flex-1 flex-col gap-4 pt-5">
               <div className="space-y-1">
                 <p className="text-lg font-semibold text-text">{provider.displayName}</p>
-                {provider.subSpecialties.length > 0 ? (
-                  <p className="text-sm font-medium text-primary">
-                    {provider.subSpecialties.slice(0, 2).join(" · ")}
-                  </p>
-                ) : null}
               </div>
 
               {provider.bio ? (

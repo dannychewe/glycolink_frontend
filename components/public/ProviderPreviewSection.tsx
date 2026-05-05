@@ -28,8 +28,9 @@ type ProviderItem = {
   reviewCount: number;
   specialties: string[];
   subSpecialties: string[];
-  consultationFee: number | null;
-  shortBio: string | null;
+  consultationFeeInitial: string | null;
+  consultationFeeFollowup: string | null;
+  bio: string | null;
 };
 
 export function ProviderPreviewSection() {
@@ -121,25 +122,20 @@ export function ProviderPreviewSection() {
               <CardHeader className="space-y-3 pb-4">
                 <div className="space-y-2">
                   <CardTitle className="text-xl">{provider.displayName}</CardTitle>
-                  {provider.subSpecialties.length > 0 ? (
-                    <p className="text-sm font-medium text-muted">
-                      {provider.subSpecialties.slice(0, 2).join(" · ")}
-                    </p>
-                  ) : null}
                 </div>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-5">
-                {provider.shortBio ? (
+                {provider.bio ? (
                   <p className="overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                    {provider.shortBio}
+                    {provider.bio}
                   </p>
                 ) : null}
                 <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-sm text-muted">Consultation fee</p>
                     <p className="text-base font-semibold text-text">
-                      {provider.consultationFee != null
-                        ? `ZMW ${provider.consultationFee}`
+                      {provider.consultationFeeInitial != null
+                        ? `ZMW ${provider.consultationFeeInitial}`
                         : "On request"}
                     </p>
                   </div>

@@ -30,8 +30,9 @@ type ProviderDetailData = {
     specialties: string[];
     subSpecialties: string[];
     languages: string[];
-    consultationFee: number | null;
-    shortBio: string | null;
+    consultationFeeInitial: string | null;
+    consultationFeeFollowup: string | null;
+    bio: string | null;
     organization: {
       id: string;
       name: string;
@@ -321,10 +322,10 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
         <div className="space-y-10">
           {/* About */}
-          {provider.shortBio ? (
+          {provider.bio ? (
             <section className="space-y-3">
               <h2 className="text-2xl">About</h2>
-              <p className="text-base leading-7 text-muted">{provider.shortBio}</p>
+              <p className="whitespace-pre-line text-base leading-7 text-muted">{provider.bio}</p>
             </section>
           ) : null}
 
@@ -334,6 +335,19 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
               <h2 className="text-2xl">Areas of expertise</h2>
               <div className="flex flex-wrap gap-2">
                 {provider.specialties.map((item) => (
+                  <Badge key={item} variant="secondary" className="bg-primary/5 text-text">
+                    {item}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {provider.subSpecialties.length > 0 ? (
+            <section className="space-y-3 border-t border-border/80 pt-8">
+              <h2 className="text-2xl">Sub-specialties</h2>
+              <div className="flex flex-wrap gap-2">
+                {provider.subSpecialties.map((item) => (
                   <Badge key={item} variant="secondary" className="bg-primary/5 text-text">
                     {item}
                   </Badge>
@@ -442,11 +456,19 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
               <div>
                 <p className="text-xs text-muted">Consultation fee</p>
                 <p className="text-2xl font-semibold text-text">
-                  {provider.consultationFee != null
-                    ? `ZMW ${provider.consultationFee}`
+                  {provider.consultationFeeInitial != null
+                    ? `ZMW ${provider.consultationFeeInitial}`
                     : "On request"}
                 </p>
               </div>
+              {provider.consultationFeeFollowup != null ? (
+                <div>
+                  <p className="text-xs text-muted">Follow-up fee</p>
+                  <p className="text-sm font-medium text-text">
+                    ZMW {provider.consultationFeeFollowup}
+                  </p>
+                </div>
+              ) : null}
               {provider.languages.length > 0 ? (
                 <div>
                   <p className="text-xs text-muted">Languages spoken</p>

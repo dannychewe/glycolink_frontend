@@ -39,8 +39,9 @@ type ProviderItem = {
   specialties: string[];
   subSpecialties: string[];
   languages: string[];
-  consultationFee: number | null;
-  shortBio: string | null;
+  consultationFeeInitial: string | null;
+  consultationFeeFollowup: string | null;
+  bio: string | null;
   organization: {
     id: string;
     name: string;
@@ -106,9 +107,10 @@ export function GraphqlProviderDirectory() {
     const { minFee, maxFee } = feeRangeBounds;
     if (minFee !== undefined || maxFee !== undefined) {
       results = results.filter((p) => {
-        if (p.consultationFee == null) return false;
-        if (minFee !== undefined && p.consultationFee < minFee) return false;
-        if (maxFee !== undefined && p.consultationFee > maxFee) return false;
+        const fee = p.consultationFeeInitial ? Number(p.consultationFeeInitial) : NaN;
+        if (Number.isNaN(fee)) return false;
+        if (minFee !== undefined && fee < minFee) return false;
+        if (maxFee !== undefined && fee > maxFee) return false;
         return true;
       });
     }
@@ -290,14 +292,9 @@ export function GraphqlProviderDirectory() {
             </div>
 
             <CardContent className="flex flex-1 flex-col gap-4 pt-5">
-              {/* Name + sub-specialty */}
+              {/* Name + rating */}
               <div className="space-y-1">
                 <p className="text-xl font-semibold text-text">{provider.displayName}</p>
-                {provider.subSpecialties.length > 0 ? (
-                  <p className="text-sm font-medium text-primary">
-                    {provider.subSpecialties.slice(0, 2).join(" · ")}
-                  </p>
-                ) : null}
                 <p className="flex items-center gap-1 text-sm text-muted">
                   <Star className="size-3.5 text-warning" />
                   {provider.reviewCount > 0 && provider.averageRating != null
@@ -309,9 +306,9 @@ export function GraphqlProviderDirectory() {
               </div>
 
               {/* Bio */}
-              {provider.shortBio ? (
+              {provider.bio ? (
                 <p className="overflow-hidden text-ellipsis text-sm text-muted [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                  {provider.shortBio}
+                  {provider.bio}
                 </p>
               ) : null}
 
@@ -336,8 +333,8 @@ export function GraphqlProviderDirectory() {
                 <div>
                   <p className="text-xs text-muted">Consultation fee</p>
                   <p className="text-lg font-semibold text-text">
-                    {provider.consultationFee != null
-                      ? `ZMW ${provider.consultationFee}`
+                    {provider.consultationFeeInitial != null
+                      ? `ZMW ${provider.consultationFeeInitial}`
                       : "On request"}
                   </p>
                 </div>
