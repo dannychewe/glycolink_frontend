@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils/cn";
 type SpecialtyItem = { id: string; name: string };
 type SubSpecialtyItem = { id: string; name: string; specialtyId: string; specialtyName: string };
 
-function parseNames(csv: string | undefined): string[] {
+function parseCsv(csv: string | undefined): string[] {
   return csv ? csv.split(",").map((s) => s.trim()).filter(Boolean) : [];
 }
 
@@ -29,7 +29,7 @@ function CheckboxList({
 }: {
   items: { id: string; name: string }[];
   selected: Set<string>;
-  onToggle: (name: string) => void;
+  onToggle: (item: { id: string; name: string }) => void;
   emptyText: string;
 }) {
   if (items.length === 0) {
@@ -38,7 +38,7 @@ function CheckboxList({
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {items.map((item) => {
-        const checked = selected.has(item.name);
+        const checked = selected.has(item.id);
         return (
           <label
             key={item.id}
@@ -53,7 +53,7 @@ function CheckboxList({
               type="checkbox"
               className="size-4 accent-primary"
               checked={checked}
-              onChange={() => onToggle(item.name)}
+              onChange={() => onToggle(item)}
             />
             {item.name}
           </label>
@@ -103,14 +103,24 @@ export function StepProfessionalDetails() {
 
   const specialtiesValue = watch("specialties") ?? "";
   const subSpecialtiesValue = watch("subSpecialties") ?? "";
+  const specialtyIdsValue = watch("specialtyIds") ?? "";
+  const subSpecialtyIdsValue = watch("subSpecialtyIds") ?? "";
 
   const selectedSpecialtyNames = useMemo(
-    () => new Set(parseNames(specialtiesValue)),
+    () => new Set(parseCsv(specialtiesValue)),
     [specialtiesValue],
   );
   const selectedSubSpecialtyNames = useMemo(
-    () => new Set(parseNames(subSpecialtiesValue)),
+    () => new Set(parseCsv(subSpecialtiesValue)),
     [subSpecialtiesValue],
+  );
+  const selectedSpecialtyIds = useMemo(
+    () => new Set(parseCsv(specialtyIdsValue)),
+    [specialtyIdsValue],
+  );
+  const selectedSubSpecialtyIds = useMemo(
+    () => new Set(parseCsv(subSpecialtyIdsValue)),
+    [subSpecialtyIdsValue],
   );
 
   const { data: specialtiesData, loading: loadingSpecialties } = useQuery<{
@@ -126,48 +136,86 @@ export function StepProfessionalDetails() {
   const allSpecialties = specialtiesData?.specialties ?? [];
   const allSubSpecialties = subSpecialtiesData?.subSpecialties ?? [];
 
-  const selectedSpecialtyIds = useMemo(() => {
-    return new Set(
-      allSpecialties
-        .filter((s) => selectedSpecialtyNames.has(s.name))
-        .map((s) => s.id),
-    );
-  }, [allSpecialties, selectedSpecialtyNames]);
-
   const visibleSubSpecialties = useMemo(() => {
     if (selectedSpecialtyIds.size === 0) return [];
     return allSubSpecialties.filter((ss) => selectedSpecialtyIds.has(ss.specialtyId));
   }, [allSubSpecialties, selectedSpecialtyIds]);
 
+  useEffect(() => {
+    if (selectedSpecialtyIds.size > 0 || selectedSpecialtyNames.size === 0 || allSpecialties.length === 0) {
+      return;
+    }
+    const matched = allSpecialties.filter((specialty) => selectedSpecialtyNames.has(specialty.name));
+    if (matched.length > 0) {
+      setValue("specialtyIds", matched.map((specialty) => specialty.id).join(", "), { shouldDirty: false });
+    }
+  }, [allSpecialties, selectedSpecialtyIds.size, selectedSpecialtyNames, setValue]);
+
+  useEffect(() => {
+    if (selectedSubSpecialtyIds.size > 0 || selectedSubSpecialtyNames.size === 0 || allSubSpecialties.length === 0) {
+      return;
+    }
+    const matched = allSubSpecialties.filter((subSpecialty) =>
+      selectedSubSpecialtyNames.has(subSpecialty.name),
+    );
+    if (matched.length > 0) {
+      setValue("subSpecialtyIds", matched.map((subSpecialty) => subSpecialty.id).join(", "), {
+        shouldDirty: false,
+      });
+    }
+  }, [allSubSpecialties, selectedSubSpecialtyIds.size, selectedSubSpecialtyNames, setValue]);
+
   // Clear sub-specialty selections that no longer belong to a selected specialty
   useEffect(() => {
-    if (visibleSubSpecialties.length === 0 && selectedSubSpecialtyNames.size > 0) {
+    if (visibleSubSpecialties.length === 0 && selectedSubSpecialtyIds.size > 0) {
       setValue("subSpecialties", "");
+      setValue("subSpecialtyIds", "");
     } else {
-      const validNames = new Set(visibleSubSpecialties.map((ss) => ss.name));
-      const pruned = [...selectedSubSpecialtyNames].filter((n) => validNames.has(n));
-      if (pruned.length !== selectedSubSpecialtyNames.size) {
-        setValue("subSpecialties", pruned.join(", "));
+      const validIds = new Set(visibleSubSpecialties.map((ss) => ss.id));
+      const prunedIds = [...selectedSubSpecialtyIds].filter((id) => validIds.has(id));
+      if (prunedIds.length !== selectedSubSpecialtyIds.size) {
+        const validNames = new Set(visibleSubSpecialties.map((ss) => ss.name));
+        const prunedNames = [...selectedSubSpecialtyNames].filter((name) => validNames.has(name));
+        setValue("subSpecialtyIds", prunedIds.join(", "));
+        setValue("subSpecialties", prunedNames.join(", "));
       }
     }
-  }, [visibleSubSpecialties, selectedSubSpecialtyNames, setValue]);
+  }, [visibleSubSpecialties, selectedSubSpecialtyIds, selectedSubSpecialtyNames, setValue]);
 
-  function toggleSpecialty(name: string) {
-    const next = new Set(selectedSpecialtyNames);
-    if (next.has(name)) next.delete(name);
-    else next.add(name);
-    setValue("specialties", [...next].join(", "), { shouldDirty: true });
+  function toggleSpecialty(item: { id: string; name: string }) {
+    const nextIds = new Set(selectedSpecialtyIds);
+    const nextNames = new Set(selectedSpecialtyNames);
+    if (nextIds.has(item.id)) {
+      nextIds.delete(item.id);
+      nextNames.delete(item.name);
+    } else {
+      nextIds.add(item.id);
+      nextNames.add(item.name);
+    }
+    setValue("specialtyIds", [...nextIds].join(", "), { shouldDirty: true });
+    setValue("specialties", [...nextNames].join(", "), { shouldDirty: true });
   }
 
-  function toggleSubSpecialty(name: string) {
-    const next = new Set(selectedSubSpecialtyNames);
-    if (next.has(name)) next.delete(name);
-    else next.add(name);
-    setValue("subSpecialties", [...next].join(", "), { shouldDirty: true });
+  function toggleSubSpecialty(item: { id: string; name: string }) {
+    const nextIds = new Set(selectedSubSpecialtyIds);
+    const nextNames = new Set(selectedSubSpecialtyNames);
+    if (nextIds.has(item.id)) {
+      nextIds.delete(item.id);
+      nextNames.delete(item.name);
+    } else {
+      nextIds.add(item.id);
+      nextNames.add(item.name);
+    }
+    setValue("subSpecialtyIds", [...nextIds].join(", "), { shouldDirty: true });
+    setValue("subSpecialties", [...nextNames].join(", "), { shouldDirty: true });
   }
 
-  const selectedSpecialtyList = [...selectedSpecialtyNames];
-  const selectedSubSpecialtyList = [...selectedSubSpecialtyNames];
+  const selectedSpecialtyList = allSpecialties
+    .filter((specialty) => selectedSpecialtyIds.has(specialty.id))
+    .map((specialty) => specialty.name);
+  const selectedSubSpecialtyList = allSubSpecialties
+    .filter((subSpecialty) => selectedSubSpecialtyIds.has(subSpecialty.id))
+    .map((subSpecialty) => subSpecialty.name);
 
   return (
     <div className="space-y-6">
@@ -191,7 +239,13 @@ export function StepProfessionalDetails() {
       {/* Specialties */}
       <div className="space-y-3">
         <Label>Specialties</Label>
-        <SelectedPills names={selectedSpecialtyList} onRemove={toggleSpecialty} />
+        <SelectedPills
+          names={selectedSpecialtyList}
+          onRemove={(name) => {
+            const specialty = allSpecialties.find((item) => item.name === name);
+            if (specialty) toggleSpecialty(specialty);
+          }}
+        />
         {loadingSpecialties ? (
           <p className="text-sm text-muted">Loading specialties…</p>
         ) : (
@@ -211,7 +265,13 @@ export function StepProfessionalDetails() {
           <p className="text-xs text-muted">
             Filtered to match your selected {selectedSpecialtyIds.size === 1 ? "specialty" : "specialties"}.
           </p>
-          <SelectedPills names={selectedSubSpecialtyList} onRemove={toggleSubSpecialty} />
+          <SelectedPills
+            names={selectedSubSpecialtyList}
+            onRemove={(name) => {
+              const subSpecialty = allSubSpecialties.find((item) => item.name === name);
+              if (subSpecialty) toggleSubSpecialty(subSpecialty);
+            }}
+          />
           {loadingSubSpecialties ? (
             <p className="text-sm text-muted">Loading sub-specialties…</p>
           ) : (

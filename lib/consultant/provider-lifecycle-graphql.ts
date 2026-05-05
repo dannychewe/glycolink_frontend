@@ -91,6 +91,18 @@ export const UPDATE_PROVIDER_PROFILE_MUTATION = gql`
   }
 `;
 
+export const UPDATE_PROVIDER_SPECIALTIES_MUTATION = gql`
+  mutation ConsultantUpdateProviderSpecialties($specialtyIds: [UUID]!, $subSpecialtyIds: [UUID]!) {
+    updateProviderSpecialties(specialtyIds: $specialtyIds, subSpecialtyIds: $subSpecialtyIds) {
+      providerProfile {
+        id
+        specialties
+        subSpecialties
+      }
+    }
+  }
+`;
+
 export const SUBMIT_PROVIDER_PROFILE_MUTATION = gql`
   mutation SubmitProviderProfile {
     submitProviderProfile {

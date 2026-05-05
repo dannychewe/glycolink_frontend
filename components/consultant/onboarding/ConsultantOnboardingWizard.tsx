@@ -33,6 +33,7 @@ import {
   MY_PROVIDER_PROFILE_QUERY,
   SUBMIT_PROVIDER_PROFILE_MUTATION,
   UPDATE_PROVIDER_PROFILE_MUTATION,
+  UPDATE_PROVIDER_SPECIALTIES_MUTATION,
 } from "@/lib/consultant/provider-lifecycle-graphql";
 import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
@@ -86,8 +87,8 @@ type ExistingProfile = {
   bio: string | null;
   languages: string | null;
   languagesJson: string[] | string | null;
-  specialties: string | null;
-  subSpecialties: string | null;
+  specialties: string[] | string | null;
+  subSpecialties: string[] | string | null;
   consultationFeeInitial: number | null;
   consultationFeeFollowup: number | null;
   certificateExpiryDate: string | null;
@@ -115,6 +116,20 @@ function languagesToCsv(languages: string | string[] | null | undefined) {
   }
 }
 
+function namesToCsv(value: string | string[] | null | undefined) {
+  if (!value) return "";
+  return Array.isArray(value) ? value.join(", ") : value;
+}
+
+function parseCommaSeparatedIds(value: string | undefined) {
+  return value
+    ? value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+}
+
 export function ConsultantOnboardingWizard() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
@@ -127,6 +142,7 @@ export function ConsultantOnboardingWizard() {
 
   const [createProfile] = useMutation(CREATE_PROVIDER_PROFILE_MUTATION);
   const [updateProfile] = useMutation(UPDATE_PROVIDER_PROFILE_MUTATION);
+  const [updateSpecialties] = useMutation(UPDATE_PROVIDER_SPECIALTIES_MUTATION);
   const [submitProfile] = useMutation(SUBMIT_PROVIDER_PROFILE_MUTATION);
 
   const { data: profileData } = useQuery<{ myProviderProfile: ExistingProfile }>(
@@ -159,11 +175,13 @@ export function ConsultantOnboardingWizard() {
     if (languages && !getFieldState("languages").isDirty) {
       setValue("languages", languages);
     }
-    if (p.specialties && !getFieldState("specialties").isDirty) {
-      setValue("specialties", p.specialties);
+    const specialties = namesToCsv(p.specialties);
+    if (specialties && !getFieldState("specialties").isDirty) {
+      setValue("specialties", specialties);
     }
-    if (p.subSpecialties && !getFieldState("subSpecialties").isDirty) {
-      setValue("subSpecialties", p.subSpecialties);
+    const subSpecialties = namesToCsv(p.subSpecialties);
+    if (subSpecialties && !getFieldState("subSpecialties").isDirty) {
+      setValue("subSpecialties", subSpecialties);
     }
     if (p.consultationFeeInitial != null && !getFieldState("consultationFeeInitial").isDirty) {
       setValue("consultationFeeInitial", String(p.consultationFeeInitial));
@@ -190,8 +208,6 @@ export function ConsultantOnboardingWizard() {
       hpczNumber: values.hpczNumber || undefined,
       bio: values.bio || undefined,
       languagesJson: JSON.stringify(parseCommaSeparatedNames(values.languages)),
-      specialties: values.specialties || undefined,
-      subSpecialties: values.subSpecialties || undefined,
       consultationFeeInitial:
         values.consultationFeeInitial ? Number(values.consultationFeeInitial) : undefined,
       consultationFeeFollowup:
@@ -209,6 +225,13 @@ export function ConsultantOnboardingWizard() {
       const profile = result?.createProviderProfile?.providerProfile;
       if (profile?.id) setExistingProfileId(profile.id);
     }
+
+    await updateSpecialties({
+      variables: {
+        specialtyIds: parseCommaSeparatedIds(values.specialtyIds),
+        subSpecialtyIds: parseCommaSeparatedIds(values.subSpecialtyIds),
+      },
+    });
   }
 
   async function handleNext() {

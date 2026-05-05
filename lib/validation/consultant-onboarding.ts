@@ -14,6 +14,8 @@ export const consultantOnboardingSchema = z.object({
   languages: z.string().optional(),
   specialties: z.string().optional(),
   subSpecialties: z.string().optional(),
+  specialtyIds: z.string().optional(),
+  subSpecialtyIds: z.string().optional(),
 
   // Step 2: Fees & Dates
   consultationFeeInitial: z.string().optional(),
@@ -31,6 +33,8 @@ export const consultantOnboardingDefaults: ConsultantOnboardingValues = {
   languages: "",
   specialties: "",
   subSpecialties: "",
+  specialtyIds: "",
+  subSpecialtyIds: "",
   consultationFeeInitial: "",
   consultationFeeFollowup: "",
   certificateExpiryDate: "",

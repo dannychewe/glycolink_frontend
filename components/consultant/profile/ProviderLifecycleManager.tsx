@@ -1,16 +1,19 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { Camera, ShieldCheck, Clock, Upload, CheckCircle, AlertCircle, FileText } from "lucide-react";
 import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   CREATE_PROVIDER_PROFILE_MUTATION,
+  CONSULTANT_SPECIALTIES_QUERY,
+  CONSULTANT_SUB_SPECIALTIES_QUERY,
   MY_PROVIDER_PROFILE_QUERY,
   PROVIDER_LICENSE_TYPE_OPTIONS,
   PROVIDER_STATUS_SUMMARY_QUERY,
   SUBMIT_PROVIDER_PROFILE_MUTATION,
   UPDATE_PROVIDER_PROFILE_MUTATION,
+  UPDATE_PROVIDER_SPECIALTIES_MUTATION,
   UPLOAD_PROVIDER_PROFILE_PICTURE_MUTATION,
   UPLOAD_PROVIDER_LICENSE_MUTATION,
 } from "@/lib/consultant/provider-lifecycle-graphql";
@@ -71,11 +74,20 @@ type StatusSummaryData = {
 };
 
 type AlertState = { type: "success" | "error"; message: string } | null;
+type SpecialtyItem = { id: string; name: string };
+type SubSpecialtyItem = { id: string; name: string; specialtyId: string; specialtyName: string };
 
 // ─── Helpers ─────────────────────────────────────────────
 
 function parseCommaSeparatedNames(value: string) {
   return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseNameList(value: string[] | string | null | undefined) {
+  return namesToCsv(value)
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
@@ -130,6 +142,73 @@ function formatDate(value: string | null) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString("en-ZM", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function SelectedPills({ names, onRemove }: { names: string[]; onRemove: (name: string) => void }) {
+  if (names.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {names.map((name) => (
+        <span
+          key={name}
+          className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/8 px-3 py-1 text-xs font-medium text-primary"
+        >
+          {name}
+          <button
+            type="button"
+            onClick={() => onRemove(name)}
+            className="rounded-full transition hover:text-danger"
+            aria-label={`Remove ${name}`}
+          >
+            x
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function SpecialtyCheckboxList({
+  items,
+  selected,
+  onToggle,
+  emptyText,
+}: {
+  items: { id: string; name: string }[];
+  selected: Set<string>;
+  onToggle: (item: { id: string; name: string }) => void;
+  emptyText: string;
+}) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted">{emptyText}</p>;
+  }
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {items.map((item) => {
+        const checked = selected.has(item.id);
+        return (
+          <label
+            key={item.id}
+            className={cn(
+              "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5 text-sm transition",
+              checked
+                ? "border-primary bg-primary/8 text-text"
+                : "border-border bg-surface text-muted hover:border-primary/40 hover:text-text",
+            )}
+          >
+            <input
+              type="checkbox"
+              className="size-4 accent-primary"
+              checked={checked}
+              onChange={() => onToggle(item)}
+            />
+            {item.name}
+          </label>
+        );
+      })}
+    </div>
+  );
 }
 
 // ─── Sub-components ───────────────────────────────────────
@@ -232,9 +311,22 @@ export function ProviderLifecycleManager() {
     file: null as File | null,
   });
   const [licenseFileKey, setLicenseFileKey] = useState(0);
+  const [selectedSpecialtyIds, setSelectedSpecialtyIds] = useState<Set<string>>(new Set());
+  const [selectedSubSpecialtyIds, setSelectedSubSpecialtyIds] = useState<Set<string>>(new Set());
 
   const { data: providerData, error: providerError, refetch: refetchProvider } =
     useQuery<ProviderProfileData>(MY_PROVIDER_PROFILE_QUERY, { fetchPolicy: "network-only" });
+
+  const { data: specialtiesData, loading: loadingSpecialties } = useQuery<{
+    specialties: SpecialtyItem[];
+  }>(CONSULTANT_SPECIALTIES_QUERY, { fetchPolicy: "cache-first" });
+
+  const { data: subSpecialtiesData, loading: loadingSubSpecialties } = useQuery<{
+    subSpecialties: SubSpecialtyItem[];
+  }>(CONSULTANT_SUB_SPECIALTIES_QUERY, {
+    variables: { specialtyId: null },
+    fetchPolicy: "cache-first",
+  });
 
   const { data: statusData, refetch: refetchStatus } =
     useQuery<StatusSummaryData>(PROVIDER_STATUS_SUMMARY_QUERY, {
@@ -250,8 +342,22 @@ export function ProviderLifecycleManager() {
 
   const profile = providerData?.myProviderProfile ?? null;
   const status = statusData?.providerStatusSummary ?? null;
+  const allSpecialties = specialtiesData?.specialties ?? [];
+  const allSubSpecialties = subSpecialtiesData?.subSpecialties ?? [];
   const providerMissing = getGraphQLErrorCode(providerError) === "PROVIDER_NOT_FOUND";
   const avatarSrc = profile?.profilePictureUrl ?? profile?.avatarUrl ?? null;
+  const visibleSubSpecialties = useMemo(() => {
+    if (selectedSpecialtyIds.size === 0) return [];
+    return allSubSpecialties.filter((subSpecialty) =>
+      selectedSpecialtyIds.has(subSpecialty.specialtyId),
+    );
+  }, [allSubSpecialties, selectedSpecialtyIds]);
+  const selectedSpecialtyNames = allSpecialties
+    .filter((specialty) => selectedSpecialtyIds.has(specialty.id))
+    .map((specialty) => specialty.name);
+  const selectedSubSpecialtyNames = allSubSpecialties
+    .filter((subSpecialty) => selectedSubSpecialtyIds.has(subSpecialty.id))
+    .map((subSpecialty) => subSpecialty.name);
 
   useEffect(() => {
     if (!profile) return;
@@ -269,8 +375,35 @@ export function ProviderLifecycleManager() {
     });
   }, [profile]);
 
+  useEffect(() => {
+    if (!profile || allSpecialties.length === 0) return;
+    const selectedNames = new Set(parseNameList(profile.specialties));
+    setSelectedSpecialtyIds(
+      new Set(
+        allSpecialties
+          .filter((specialty) => selectedNames.has(specialty.name))
+          .map((specialty) => specialty.id),
+      ),
+    );
+  }, [allSpecialties, profile]);
+
+  useEffect(() => {
+    if (!profile || allSubSpecialties.length === 0) return;
+    const selectedNames = new Set(parseNameList(profile.subSpecialties));
+    setSelectedSubSpecialtyIds(
+      new Set(
+        allSubSpecialties
+          .filter((subSpecialty) => selectedNames.has(subSpecialty.name))
+          .map((subSpecialty) => subSpecialty.id),
+      ),
+    );
+  }, [allSubSpecialties, profile]);
+
   const [createProviderProfile, { loading: isCreating }] = useMutation(CREATE_PROVIDER_PROFILE_MUTATION);
   const [updateProviderProfile, { loading: isUpdating }] = useMutation(UPDATE_PROVIDER_PROFILE_MUTATION);
+  const [updateProviderSpecialties, { loading: isUpdatingSpecialties }] = useMutation(
+    UPDATE_PROVIDER_SPECIALTIES_MUTATION,
+  );
   const [submitProviderProfile, { loading: isSubmitting }] = useMutation(SUBMIT_PROVIDER_PROFILE_MUTATION);
   const [uploadProviderLicense, { loading: isUploadingLicense }] = useMutation(UPLOAD_PROVIDER_LICENSE_MUTATION);
   const [uploadProviderProfilePicture, { loading: isUploadingPicture }] = useMutation(UPLOAD_PROVIDER_PROFILE_PICTURE_MUTATION);
@@ -304,10 +437,48 @@ export function ProviderLifecycleManager() {
         await updateProviderProfile({ variables: { data: buildProfileData() } });
         setAlert({ type: "success", message: "Profile saved successfully." });
       }
+      await updateProviderSpecialties({
+        variables: {
+          specialtyIds: Array.from(selectedSpecialtyIds),
+          subSpecialtyIds: Array.from(selectedSubSpecialtyIds),
+        },
+      });
       await refreshAll();
     } catch (error) {
       setAlert({ type: "error", message: mapProviderError(error) });
     }
+  }
+
+  function toggleSpecialty(item: SpecialtyItem) {
+    setSelectedSpecialtyIds((current) => {
+      const next = new Set(current);
+      if (next.has(item.id)) {
+        next.delete(item.id);
+        setSelectedSubSpecialtyIds((subCurrent) => {
+          const pruned = new Set(subCurrent);
+          allSubSpecialties
+            .filter((subSpecialty) => subSpecialty.specialtyId === item.id)
+            .forEach((subSpecialty) => pruned.delete(subSpecialty.id));
+          return pruned;
+        });
+      } else {
+        next.add(item.id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSubSpecialty(item: SubSpecialtyItem) {
+    setSelectedSubSpecialtyIds((current) => {
+      const next = new Set(current);
+      if (next.has(item.id)) {
+        next.delete(item.id);
+      } else {
+        next.add(item.id);
+      }
+      return next;
+    });
+    setSelectedSpecialtyIds((current) => new Set(current).add(item.specialtyId));
   }
 
   async function handleSubmitForReview() {
@@ -622,6 +793,53 @@ export function ProviderLifecycleManager() {
               <p className="text-xs text-muted">Separate multiple languages with commas.</p>
             </div>
 
+            <div className="space-y-3 sm:col-span-2">
+              <Label>Specialties</Label>
+              <SelectedPills
+                names={selectedSpecialtyNames}
+                onRemove={(name) => {
+                  const specialty = allSpecialties.find((item) => item.name === name);
+                  if (specialty) toggleSpecialty(specialty);
+                }}
+              />
+              {loadingSpecialties ? (
+                <p className="text-sm text-muted">Loading specialties...</p>
+              ) : (
+                <SpecialtyCheckboxList
+                  items={allSpecialties}
+                  selected={selectedSpecialtyIds}
+                  onToggle={toggleSpecialty}
+                  emptyText="No specialties available."
+                />
+              )}
+            </div>
+
+            {selectedSpecialtyIds.size > 0 ? (
+              <div className="space-y-3 sm:col-span-2">
+                <Label>Sub-specialties</Label>
+                <SelectedPills
+                  names={selectedSubSpecialtyNames}
+                  onRemove={(name) => {
+                    const subSpecialty = allSubSpecialties.find((item) => item.name === name);
+                    if (subSpecialty) toggleSubSpecialty(subSpecialty);
+                  }}
+                />
+                {loadingSubSpecialties ? (
+                  <p className="text-sm text-muted">Loading sub-specialties...</p>
+                ) : (
+                  <SpecialtyCheckboxList
+                    items={visibleSubSpecialties}
+                    selected={selectedSubSpecialtyIds}
+                    onToggle={(item) => {
+                      const subSpecialty = allSubSpecialties.find((entry) => entry.id === item.id);
+                      if (subSpecialty) toggleSubSpecialty(subSpecialty);
+                    }}
+                    emptyText="No sub-specialties available for the selected specialties."
+                  />
+                )}
+              </div>
+            ) : null}
+
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="bio">Professional bio</Label>
               <Textarea
@@ -635,10 +853,16 @@ export function ProviderLifecycleManager() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" variant="primary" disabled={isCreating || isUpdating}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isCreating || isUpdating || isUpdatingSpecialties}
+            >
               {isCreating
                 ? "Creating profile..."
                 : isUpdating
+                  ? "Saving..."
+                  : isUpdatingSpecialties
                   ? "Saving..."
                   : providerMissing
                     ? "Create Profile"
