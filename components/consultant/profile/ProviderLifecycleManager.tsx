@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { Camera, ShieldCheck, Clock, Upload, CheckCircle, AlertCircle, FileText } from "lucide-react";
-import { getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   CREATE_PROVIDER_PROFILE_MUTATION,
   MY_PROVIDER_PROFILE_QUERY,
@@ -83,7 +83,7 @@ function mapProviderError(error: unknown) {
   if (code === "PROFILE_ALREADY_EXISTS") return "A provider profile already exists for this account.";
   if (code === "PROFILE_INVALID_FOR_APPROVAL") return "Profile is not complete enough for submission.";
   if (code === "HPCZ_ALREADY_EXISTS") return "This HPCZ number is already registered on the platform.";
-  return "Something went wrong. Please try again.";
+  return getGraphQLErrorMessage(error, "Something went wrong. Please try again.");
 }
 
 function statusVariant(status: string | null) {

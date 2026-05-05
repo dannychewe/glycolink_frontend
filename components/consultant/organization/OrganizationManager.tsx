@@ -14,7 +14,7 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   APPROVE_PROVIDER_ORGANIZATION_INVITE_MUTATION,
   CREATE_PROVIDER_ORGANIZATION_MUTATION,
@@ -83,7 +83,7 @@ function mapOrgError(error: unknown) {
   if (code === "INVITE_NOT_PENDING") return "This invite is no longer pending.";
   if (code === "PROVIDER_ALREADY_IN_ORGANIZATION") return "This provider is already part of the organization.";
   if (code === "TENANT_ACCESS_DENIED") return "Access denied.";
-  return "Something went wrong. Please try again.";
+  return getGraphQLErrorMessage(error, "Something went wrong. Please try again.");
 }
 
 function formatDate(value: string) {

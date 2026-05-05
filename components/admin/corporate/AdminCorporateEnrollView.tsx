@@ -12,6 +12,7 @@ import {
   ADMIN_CORPORATE_MEMBERS_QUERY,
   ADMIN_ENROLL_CORPORATE_MEMBER_MUTATION,
 } from "@/lib/admin/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -55,8 +56,8 @@ export function AdminCorporateEnrollView({ corporateId }: Readonly<{ corporateId
         ],
       });
       router.push(`/admin/corporate/${corporateId}`);
-    } catch {
-      setAlert({ type: "error", message: "Unable to enroll member." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to enroll member.") });
     }
   }
 

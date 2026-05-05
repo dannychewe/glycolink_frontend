@@ -12,6 +12,7 @@ import {
   ADMIN_CREATE_CORPORATE_ACCOUNT_MUTATION,
   ADMIN_ORGANIZATIONS_DROPDOWN_QUERY,
 } from "@/lib/admin/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -61,8 +62,8 @@ export function AdminCorporateCreateView() {
       } else {
         setAlert({ type: "error", message: "Account created but ID was not returned." });
       }
-    } catch {
-      setAlert({ type: "error", message: "Unable to create corporate account." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to create corporate account.") });
     }
   }
 

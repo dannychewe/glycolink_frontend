@@ -37,6 +37,7 @@ import {
   CONSULTATION_TYPE_OPTIONS,
   PCQ_QUESTION_TYPE_OPTIONS,
 } from "@/lib/consultant/pcq-graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -147,8 +148,8 @@ function EditTemplateForm({
         ],
       });
       onDone({ type: "success", message: "Template updated." });
-    } catch {
-      onDone({ type: "error", message: "Unable to update template." });
+    } catch (error) {
+      onDone({ type: "error", message: getGraphQLErrorMessage(error, "Unable to update template.") });
     }
   }
 
@@ -243,8 +244,8 @@ function QuestionCard({
       });
       setEditing(false);
       onDone({ type: "success", message: "Question updated." });
-    } catch {
-      onDone({ type: "error", message: "Unable to update question." });
+    } catch (error) {
+      onDone({ type: "error", message: getGraphQLErrorMessage(error, "Unable to update question.") });
     }
   }
 
@@ -252,8 +253,8 @@ function QuestionCard({
     try {
       await deleteQuestion({ variables: { questionId: question.id }, refetchQueries: refetch });
       onDone({ type: "success", message: "Question deleted." });
-    } catch {
-      onDone({ type: "error", message: "Unable to delete question." });
+    } catch (error) {
+      onDone({ type: "error", message: getGraphQLErrorMessage(error, "Unable to delete question.") });
     }
   }
 
@@ -431,8 +432,8 @@ function AddQuestionForm({
       });
       setForm({ questionText: "", questionType: "text", isRequired: false, order: "", optionsCsv: "" });
       onDone({ type: "success", message: "Question added." });
-    } catch {
-      onDone({ type: "error", message: "Unable to add question." });
+    } catch (error) {
+      onDone({ type: "error", message: getGraphQLErrorMessage(error, "Unable to add question.") });
     }
   }
 
@@ -551,8 +552,8 @@ export function AdminPCQTemplateDetailView({ templateId }: Readonly<{ templateId
       const newId = result.data?.createPcqTemplateVersion?.templateVersion?.id;
       if (newId) setSelectedVersionId(newId);
       setAlert({ type: "success", message: "New draft version created." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to create version." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to create version.") });
     }
   }
 
@@ -560,8 +561,8 @@ export function AdminPCQTemplateDetailView({ templateId }: Readonly<{ templateId
     try {
       await publishVersion({ variables: { versionId }, refetchQueries: refetchDetail });
       setAlert({ type: "success", message: "Version published and set as current." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to publish version." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to publish version.") });
     }
   }
 
@@ -572,8 +573,8 @@ export function AdminPCQTemplateDetailView({ templateId }: Readonly<{ templateId
         refetchQueries: [ADMIN_PCQ_TEMPLATES_QUERY],
       });
       router.push("/admin/pcq");
-    } catch {
-      setAlert({ type: "error", message: "Unable to delete template." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to delete template.") });
       setConfirmDeleteTemplate(false);
     }
   }

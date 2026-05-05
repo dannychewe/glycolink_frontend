@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 // ─── Types ───────────────────────────────────────────────
@@ -182,8 +183,8 @@ function CreateLabOrderForm({
       setTests([{ testName: "", priority: "ROUTINE" }]);
       setAlert({ type: "success", message: "Lab order created." });
       setTimeout(onCreated, 1000);
-    } catch {
-      setAlert({ type: "error", message: "Failed to create lab order." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to create lab order.") });
     }
   }
 

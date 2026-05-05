@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 // ─── Types ───────────────────────────────────────────────
@@ -120,8 +121,8 @@ function RevokePanel({
       });
       setAlert({ type: "success", message: "Prescription revoked." });
       setTimeout(onDone, 1000);
-    } catch {
-      setAlert({ type: "error", message: "Failed to revoke prescription." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to revoke prescription.") });
     }
   }
 
@@ -303,8 +304,8 @@ function CreatePrescriptionForm({
       setItems([emptyItem()]);
       setAlert({ type: "success", message: "Prescription created." });
       setTimeout(onCreated, 800);
-    } catch {
-      setAlert({ type: "error", message: "Failed to create prescription." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to create prescription.") });
     }
   }
 

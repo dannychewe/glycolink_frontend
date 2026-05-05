@@ -34,7 +34,7 @@ import {
   SUBMIT_PROVIDER_PROFILE_MUTATION,
   UPDATE_PROVIDER_PROFILE_MUTATION,
 } from "@/lib/consultant/provider-lifecycle-graphql";
-import { getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
 type UploadedLicense = {
   id: string;
@@ -207,12 +207,12 @@ export function ConsultantOnboardingWizard() {
           setExistingProfileId("existing");
           try {
             await persistProfileStep();
-          } catch {
-            setSubmitError("Failed to save profile. Please try again.");
+          } catch (retryError) {
+            setSubmitError(getGraphQLErrorMessage(retryError, "Failed to save profile. Please try again."));
             return;
           }
         } else {
-          setSubmitError("Failed to save. Please try again.");
+          setSubmitError(getGraphQLErrorMessage(error, "Failed to save. Please try again."));
           return;
         }
       }
@@ -245,7 +245,7 @@ export function ConsultantOnboardingWizard() {
     } catch (error) {
       const code = getGraphQLErrorCode(error);
       if (code === "PROFILE_INCOMPLETE") {
-        setSubmitError("Your profile is incomplete. Please review each step.");
+        setSubmitError(getGraphQLErrorMessage(error, "Your profile is incomplete. Please review each step."));
         setErrorStep(0);
       } else if (
         code === "AUTH_TOKEN_EXPIRED" ||
@@ -254,7 +254,7 @@ export function ConsultantOnboardingWizard() {
       ) {
         router.replace("/login?next=/consultant/onboarding");
       } else {
-        setSubmitError("Unable to submit profile right now. Please try again.");
+        setSubmitError(getGraphQLErrorMessage(error, "Unable to submit profile right now. Please try again."));
       }
     } finally {
       setIsSubmitting(false);

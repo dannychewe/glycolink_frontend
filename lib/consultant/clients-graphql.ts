@@ -1,4 +1,5 @@
 import { gql } from "@apollo/client";
+import { getGraphQLErrorMessage } from "@/lib/auth/session";
 
 export const CONSULTANT_CLIENTS_QUERY = gql`
   query ConsultantClients($limit: Int, $search: String) {
@@ -52,5 +53,5 @@ export function mapInviteError(error: unknown): string {
   if (msg.includes("PATIENT_INVITE_EMAIL_REQUIRED")) return "An email address is required to invite a patient.";
   if (msg.includes("PROVIDER_NOT_FOUND")) return "Your provider profile could not be found. Ensure your profile is complete.";
   if (msg.includes("TENANT_NOT_FOUND")) return "Tenant configuration error. Please contact support.";
-  return "Failed to send invitation. Please try again.";
+  return getGraphQLErrorMessage(error, "Failed to send invitation. Please try again.");
 }

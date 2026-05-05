@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ORGANIZATION_TYPE_OPTIONS } from "@/lib/consultant/organization-graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 const ADMIN_TENANTS_QUERY = gql`
@@ -315,8 +316,8 @@ function TenantControls({
       if (tenantId) setActiveTenantId(tenantId);
       setTenantName("");
       setAlert({ type: "success", message: "Tenant created." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to create tenant." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to create tenant.") });
     }
   }
 
@@ -337,8 +338,8 @@ function TenantControls({
       });
       await refetchSystemTenants();
       setAlert({ type: "success", message: "Tenant status updated." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to update tenant status." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to update tenant status.") });
     }
   }
 
@@ -355,8 +356,8 @@ function TenantControls({
       });
       setAssignment((current) => ({ ...current, userId: "" }));
       setAlert({ type: "success", message: "User assigned to tenant." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to assign user to tenant." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to assign user to tenant.") });
     }
   }
 
@@ -415,7 +416,7 @@ function TenantControls({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {systemTenantsError ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">Unable to load system tenants.</p> : null}
+          {systemTenantsError ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{getGraphQLErrorMessage(systemTenantsError, "Unable to load system tenants.")}</p> : null}
           {systemTenantsLoading ? <div className="h-20 animate-pulse rounded-xl bg-border/50" /> : null}
           <div className="overflow-hidden rounded-xl border border-border">
             <div className="hidden grid-cols-[1.2fr_0.9fr_0.8fr_1fr_0.6fr] gap-4 border-b border-border bg-background px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted lg:grid">
@@ -506,7 +507,7 @@ function TenantControls({
             <CardTitle>My Tenant Memberships</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {error ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">Unable to load my tenants.</p> : null}
+            {error ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{getGraphQLErrorMessage(error, "Unable to load my tenants.")}</p> : null}
             {loading ? <div className="h-20 animate-pulse rounded-xl bg-border/50" /> : null}
             {!loading && tenants.length === 0 ? <p className="text-sm text-muted">No tenant memberships available.</p> : null}
             {tenants.map((tenant) => (
@@ -659,8 +660,8 @@ function OrganizationEditor({
       });
       await refetchList();
       setAlert({ type: "success", message: "Organization updated." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to update organization." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to update organization.") });
     }
   }
 
@@ -670,8 +671,8 @@ function OrganizationEditor({
       await deactivateOrganization({ variables: { organizationId: organization.id } });
       await refetchList();
       setAlert({ type: "success", message: "Organization deactivated." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to deactivate organization." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to deactivate organization.") });
     }
   }
 
@@ -856,8 +857,8 @@ function OrganizationsPanel({
       setCreateForm((current) => ({ ...current, name: "", type: "CLINIC" }));
       await refetchLists();
       setAlert({ type: "success", message: "Organization created." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to create organization." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to create organization.") });
     }
   }
 
@@ -986,7 +987,7 @@ function OrganizationsPanel({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {adminOrgsError ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">Unable to load admin organizations.</p> : null}
+          {adminOrgsError ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{getGraphQLErrorMessage(adminOrgsError, "Unable to load admin organizations.")}</p> : null}
           {adminOrgsLoading ? <div className="h-20 animate-pulse rounded-xl bg-border/50" /> : null}
           <OrganizationTable
             organizations={adminOrganizations}
@@ -1050,7 +1051,7 @@ function OrganizationsPanel({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {tenantOrgsError ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">Unable to load tenant organizations.</p> : null}
+          {tenantOrgsError ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{getGraphQLErrorMessage(tenantOrgsError, "Unable to load tenant organizations.")}</p> : null}
           {tenantOrgsLoading ? <div className="h-20 animate-pulse rounded-xl bg-border/50" /> : null}
           <OrganizationTable
             organizations={tenantOrganizations}

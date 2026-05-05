@@ -29,6 +29,7 @@ import {
   ADMIN_REJECT_PROVIDER_MUTATION,
   ADMIN_SUSPEND_PROVIDER_MUTATION,
 } from "@/lib/admin/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -205,8 +206,8 @@ function ProviderDetailModal({
       });
       await refreshProviderLists();
       onActionComplete({ type: "success", message: "Provider approved." });
-    } catch {
-      onActionComplete({ type: "error", message: "Unable to approve provider." });
+    } catch (error) {
+      onActionComplete({ type: "error", message: getGraphQLErrorMessage(error, "Unable to approve provider.") });
     }
   }
 
@@ -232,10 +233,13 @@ function ProviderDetailModal({
       setReason("");
       setActionMode(null);
       await refreshProviderLists();
-    } catch {
+    } catch (error) {
       onActionComplete({
         type: "error",
-        message: actionMode === "reject" ? "Unable to reject provider." : "Unable to suspend provider.",
+        message: getGraphQLErrorMessage(
+          error,
+          actionMode === "reject" ? "Unable to reject provider." : "Unable to suspend provider.",
+        ),
       });
     }
   }
@@ -288,7 +292,7 @@ function ProviderDetailModal({
 
       {error ? (
         <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
-          Unable to load provider detail.
+          {getGraphQLErrorMessage(error, "Unable to load provider detail.")}
         </div>
       ) : null}
 
@@ -529,7 +533,7 @@ export function AdminProvidersManager() {
         <CardContent className="space-y-4">
           {error ? (
             <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
-              Unable to load providers.
+              {getGraphQLErrorMessage(error, "Unable to load providers.")}
             </div>
           ) : null}
 

@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ORGANIZATION_TYPE_OPTIONS } from "@/lib/consultant/organization-graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 const ADMIN_ORGANIZATION_DETAIL_QUERY = gql`
@@ -402,7 +403,7 @@ function SystemOrganizationsTable() {
       <CardContent className="space-y-4">
         {error ? (
           <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
-            Unable to load system organizations.
+            {getGraphQLErrorMessage(error, "Unable to load system organizations.")}
           </p>
         ) : null}
         {loading ? <div className="h-20 animate-pulse rounded-xl bg-border/50" /> : null}
@@ -533,8 +534,8 @@ function OrganizationDetailPanel({
       });
       await refetch();
       setAlert({ type: "success", message: "Organization updated." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to update organization." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to update organization.") });
     }
   }
 
@@ -544,8 +545,8 @@ function OrganizationDetailPanel({
       await deactivateOrganization({ variables: { organizationId } });
       await refetch();
       setAlert({ type: "success", message: "Organization deactivated." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to deactivate organization." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to deactivate organization.") });
     }
   }
 
@@ -557,8 +558,8 @@ function OrganizationDetailPanel({
       setLogoFile(null);
       await refetch();
       setAlert({ type: "success", message: "Organization logo uploaded." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to upload logo." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to upload logo.") });
     }
   }
 
@@ -733,7 +734,7 @@ function OrganizationProvidersPanel({ organizationId }: Readonly<{ organizationI
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {error ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">Unable to load providers.</p> : null}
+        {error ? <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{getGraphQLErrorMessage(error, "Unable to load providers.")}</p> : null}
         {loading ? <div className="h-20 animate-pulse rounded-xl bg-border/50" /> : null}
         {!loading && providers.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
@@ -796,8 +797,8 @@ function OrganizationInvitesPanel({
       setNote("");
       await refetch();
       setAlert({ type: "success", message: "Provider invite created." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to invite provider." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to invite provider.") });
     }
   }
 
@@ -807,8 +808,8 @@ function OrganizationInvitesPanel({
       await approveInvite({ variables: { inviteId } });
       await refetch();
       setAlert({ type: "success", message: "Invite approved." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to approve invite." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to approve invite.") });
     }
   }
 
@@ -824,8 +825,8 @@ function OrganizationInvitesPanel({
       setRejectReason("");
       await refetch();
       setAlert({ type: "success", message: "Invite rejected." });
-    } catch {
-      setAlert({ type: "error", message: "Unable to reject invite." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to reject invite.") });
     }
   }
 

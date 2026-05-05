@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils/cn";
 import { AppointmentPCQReview } from "@/components/consultant/pcq/AppointmentPCQReview";
 import { EncounterLabOrders } from "@/components/consultant/labs/EncounterLabOrders";
 import { EncounterPrescriptions } from "@/components/consultant/prescriptions/EncounterPrescriptions";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -147,8 +148,8 @@ function SoapTab({ encounter, onRefresh }: { encounter: Encounter; onRefresh: ()
       await saveSoap({ variables: { encounterId: encounter.id, data: form } });
       await onRefresh();
       setAlert({ type: "success", message: "SOAP notes saved." });
-    } catch {
-      setAlert({ type: "error", message: "Failed to save SOAP notes." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to save SOAP notes.") });
     }
   }
 
@@ -229,8 +230,8 @@ function DiagnosesTab({ encounter, onRefresh }: { encounter: Encounter; onRefres
       setForm({ codeSystem: "ICD-10", code: "", description: "", isPrimary: false });
       await onRefresh();
       setAlert({ type: "success", message: "Diagnosis added." });
-    } catch {
-      setAlert({ type: "error", message: "Failed to add diagnosis." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to add diagnosis.") });
     }
   }
 
@@ -326,8 +327,8 @@ function ObservationsTab({ encounter, onRefresh }: { encounter: Encounter; onRef
       setForm({ type: "BLOOD_PRESSURE", valueNumeric: "", valueText: "", unit: "mmHg" });
       await onRefresh();
       setAlert({ type: "success", message: "Observation recorded." });
-    } catch {
-      setAlert({ type: "error", message: "Failed to record observation." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to record observation.") });
     }
   }
 
@@ -419,8 +420,8 @@ function CarePlanTab({ encounter, onRefresh }: { encounter: Encounter; onRefresh
       setForm({ type: "MEDICATION", description: "", targetDate: "" });
       await onRefresh();
       setAlert({ type: "success", message: "Care plan action added." });
-    } catch {
-      setAlert({ type: "error", message: "Failed to add care plan action." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to add care plan action.") });
     }
   }
 
@@ -509,8 +510,8 @@ function AmendmentsTab({ encounter, onRefresh }: { encounter: Encounter; onRefre
       setForm({ amendmentText: "", soapNoteVersionNumber: "" });
       await onRefresh();
       setAlert({ type: "success", message: "Amendment added." });
-    } catch {
-      setAlert({ type: "error", message: "Failed to add amendment." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to add amendment.") });
     }
   }
 
@@ -577,8 +578,8 @@ export function GraphqlEncounterWorkspace({ encounterId }: { encounterId: string
       await finalizeEncounter({ variables: { encounterId } });
       await refetch();
       setFinalizeAlert({ type: "success", message: "Encounter finalized. You can now issue prescriptions and lab orders from the appointment." });
-    } catch {
-      setFinalizeAlert({ type: "error", message: "Failed to finalize encounter." });
+    } catch (error) {
+      setFinalizeAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to finalize encounter.") });
     }
   }
 
@@ -594,7 +595,7 @@ export function GraphqlEncounterWorkspace({ encounterId }: { encounterId: string
   if (error || !encounter) {
     return (
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
-        Unable to load encounter. It may not exist or you may not have access.
+        {getGraphQLErrorMessage(error, "Unable to load encounter. It may not exist or you may not have access.")}
       </div>
     );
   }

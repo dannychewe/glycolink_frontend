@@ -13,7 +13,7 @@ import {
   PENDING_ACTIONS_QUERY,
   RESCHEDULE_APPOINTMENT_MUTATION,
 } from "@/lib/bookings/graphql";
-import { getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { PROVIDER_QUERY } from "@/lib/providers/directory-graphql";
 
 type AppointmentDetailViewProps = Readonly<{
@@ -137,7 +137,7 @@ function mapAppointmentError(error: unknown) {
   if (code === "INVALID_SLOT") return "Invalid slot selected.";
   if (code === "INVALID_STATUS_TRANSITION") return "This status transition is not allowed.";
   if (code === "PAYMENT_REQUIRED") return "Payment is required before this action.";
-  return "Unable to process this request right now.";
+  return getGraphQLErrorMessage(error, "Unable to process this request right now.");
 }
 
 export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewProps) {

@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getGraphQLErrorCode, useAuth } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features/auth/auth-context";
 
 type ResetPasswordFormValues = {
   newPassword: string;
@@ -59,16 +59,16 @@ export function ResetPasswordPanel() {
       const code = getGraphQLErrorCode(error);
 
       if (code === "AUTH_PASSWORD_RESET_EXPIRED") {
-        setSubmitError("This reset link has expired. Request a new one.");
+        setSubmitError(getGraphQLErrorMessage(error, "This reset link has expired. Request a new one."));
         return;
       }
 
       if (code === "AUTH_PASSWORD_RESET_INVALID") {
-        setSubmitError("This reset link is invalid or already used.");
+        setSubmitError(getGraphQLErrorMessage(error, "This reset link is invalid or already used."));
         return;
       }
 
-      setSubmitError("Unable to reset password.");
+      setSubmitError(getGraphQLErrorMessage(error, "Unable to reset password."));
     }
   });
 

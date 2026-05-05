@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getGraphQLErrorCode, useAuth } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features/auth/auth-context";
 
 type ForgotPasswordFormValues = {
   email: string;
@@ -48,7 +48,7 @@ export function ForgotPasswordPanel() {
         return;
       }
 
-      setSubmitError("Unable to process password reset right now.");
+      setSubmitError(getGraphQLErrorMessage(error, "Unable to process password reset right now."));
     }
   });
 

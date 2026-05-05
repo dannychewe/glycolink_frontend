@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth, getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { useAuth, getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
 type VerificationState = "idle" | "verifying" | "success" | "expired" | "invalid" | "error";
 
@@ -70,8 +70,8 @@ export function VerifyEmailPanel() {
           ? "A new verification email has been sent. Check your inbox."
           : "Unable to resend the verification email right now.",
       );
-    } catch {
-      setResendMessage("Unable to resend the verification email right now.");
+    } catch (error) {
+      setResendMessage(getGraphQLErrorMessage(error, "Unable to resend the verification email right now."));
     } finally {
       setIsResending(false);
     }

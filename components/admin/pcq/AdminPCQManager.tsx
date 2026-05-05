@@ -25,6 +25,7 @@ import {
   ADMIN_PCQ_TEMPLATES_QUERY,
   ADMIN_REJECT_PCQ_QUESTION_CONTRIBUTION_MUTATION,
 } from "@/lib/admin/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type StatusTab = "pending" | "approved" | "rejected" | "all";
@@ -153,8 +154,8 @@ function ContributionCard({
       });
       setAdminNote("");
       onDone({ type: "success", message: "Contribution approved." });
-    } catch {
-      onDone({ type: "error", message: "Unable to approve contribution." });
+    } catch (error) {
+      onDone({ type: "error", message: getGraphQLErrorMessage(error, "Unable to approve contribution.") });
     }
   }
 
@@ -169,8 +170,8 @@ function ContributionCard({
       });
       setAdminNote("");
       onDone({ type: "error", message: "Contribution rejected." });
-    } catch {
-      onDone({ type: "error", message: "Unable to reject contribution." });
+    } catch (error) {
+      onDone({ type: "error", message: getGraphQLErrorMessage(error, "Unable to reject contribution.") });
     }
   }
 

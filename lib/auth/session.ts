@@ -38,6 +38,35 @@ export function getGraphQLErrorCode(error: unknown) {
   return typeof code === "string" ? code : undefined;
 }
 
+function cleanErrorMessage(message: unknown) {
+  if (typeof message !== "string") return undefined;
+  const trimmed = message.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+export function getGraphQLErrorMessage(error: unknown, fallback = "Something went wrong. Please try again.") {
+  const errorLike = error as
+    | {
+        graphQLErrors?: GraphQLErrorLike[];
+        errors?: GraphQLErrorLike[];
+        networkError?: {
+          result?: {
+            errors?: GraphQLErrorLike[];
+          };
+        };
+        message?: unknown;
+      }
+    | null;
+
+  return (
+    cleanErrorMessage(errorLike?.graphQLErrors?.[0]?.message) ??
+    cleanErrorMessage(errorLike?.errors?.[0]?.message) ??
+    cleanErrorMessage(errorLike?.networkError?.result?.errors?.[0]?.message) ??
+    cleanErrorMessage(errorLike?.message) ??
+    fallback
+  );
+}
+
 export function shouldRefreshFromGraphQLErrors(errors?: readonly GraphQLErrorLike[]) {
   return (
     errors?.some((error) => {

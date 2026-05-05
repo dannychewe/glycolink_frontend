@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { BookingCalendar } from "@/components/patient/BookingCalendar";
 import { BookingSummary } from "@/components/patient/BookingSummary";
 import { TimeSlotPicker } from "@/components/patient/TimeSlotPicker";
-import { getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { AVAILABLE_SLOTS_QUERY, BOOK_APPOINTMENT_MUTATION } from "@/lib/bookings/graphql";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -69,7 +69,7 @@ function mapBookingError(error: unknown) {
   if (code === "SLOT_UNAVAILABLE") return "This slot is no longer available. Please pick another one.";
   if (code === "INVALID_CONSULTATION_TYPE") return "Invalid consultation type selected.";
   if (code === "TENANT_ACCESS_DENIED") return "You do not have access in this tenant.";
-  return "Unable to create appointment right now. Please try again.";
+  return getGraphQLErrorMessage(error, "Unable to create appointment right now. Please try again.");
 }
 
 export function BookingFlow({ provider }: BookingFlowProps) {

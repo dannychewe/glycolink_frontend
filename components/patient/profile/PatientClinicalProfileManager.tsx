@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { getGraphQLErrorCode, useAuth } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features/auth/auth-context";
 import {
   ACCEPT_CONSENT_MUTATION,
   ADD_ALLERGY_MUTATION,
@@ -73,7 +73,7 @@ function mapProfileError(error: unknown) {
     return "Patient profile not found. Create the profile first.";
   }
 
-  return "Request failed. Please try again.";
+  return getGraphQLErrorMessage(error, "Request failed. Please try again.");
 }
 
 export function PatientClinicalProfileManager() {

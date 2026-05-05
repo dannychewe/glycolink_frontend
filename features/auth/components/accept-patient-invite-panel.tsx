@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getGraphQLErrorCode, useAuth } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features/auth/auth-context";
 
 type FormValues = {
   newPassword: string;
@@ -59,16 +59,23 @@ export function AcceptPatientInvitePanel() {
       const code = getGraphQLErrorCode(error);
 
       if (code === "AUTH_PASSWORD_RESET_EXPIRED") {
-        setSubmitError("This invite link has expired. Ask your provider to resend the invitation.");
+        setSubmitError(
+          getGraphQLErrorMessage(
+            error,
+            "This invite link has expired. Ask your provider to resend the invitation.",
+          ),
+        );
         return;
       }
 
       if (code === "AUTH_PASSWORD_RESET_INVALID") {
-        setSubmitError("This invite link is invalid or has already been used.");
+        setSubmitError(
+          getGraphQLErrorMessage(error, "This invite link is invalid or has already been used."),
+        );
         return;
       }
 
-      setSubmitError("Unable to activate your account. Please try again.");
+      setSubmitError(getGraphQLErrorMessage(error, "Unable to activate your account. Please try again."));
     }
   });
 

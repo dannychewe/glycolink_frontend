@@ -19,6 +19,7 @@ import {
   ADMIN_MODERATE_REVIEW_MUTATION,
   ADMIN_REVIEW_QUEUE_QUERY,
 } from "@/lib/admin/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -143,8 +144,8 @@ export function AdminReviewsManager() {
         ],
       });
       setAlert({ type: "success", message: `Review marked ${decision}.` });
-    } catch {
-      setAlert({ type: "error", message: "Unable to moderate review." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to moderate review.") });
     }
   }
 
@@ -198,7 +199,7 @@ export function AdminReviewsManager() {
         <CardContent className="space-y-4">
           {error ? (
             <p className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
-              Unable to load review queue.
+              {getGraphQLErrorMessage(error, "Unable to load review queue.")}
             </p>
           ) : null}
           {loading && reviews.length === 0 ? (
@@ -311,4 +312,3 @@ export function AdminReviewsManager() {
     </div>
   );
 }
-

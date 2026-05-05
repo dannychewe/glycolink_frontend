@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useQuery, useMutation, useLazyQuery } from "@apollo/client";
 import { CalendarClock, CalendarX, Eye, Trash2, CheckCircle, AlertCircle } from "lucide-react";
-import { getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   CONSULTANT_AVAILABILITY_QUERY,
   DELETE_AVAILABILITY_RULE_MUTATION,
@@ -81,7 +81,7 @@ function mapError(error: unknown) {
   if (code === "PROVIDER_NOT_FOUND") return "Provider profile not found.";
   if (code === "INVALID_PROVIDER_STATE" || code === "INVALID_STATE_TRANSITION")
     return "This action is not allowed in your current profile state.";
-  return "Unable to save. Please try again.";
+  return getGraphQLErrorMessage(error, "Unable to save. Please try again.");
 }
 
 function SectionHeader({ icon, title, description }: {

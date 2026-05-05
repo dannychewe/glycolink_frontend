@@ -14,6 +14,7 @@ import {
   TODAYS_APPOINTMENTS_QUERY,
   UPCOMING_APPOINTMENTS_QUERY,
 } from "@/lib/bookings/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 // ─── Types ───────────────────────────────────────────────
@@ -153,8 +154,8 @@ function ReschedulePanel({
       });
       setAlert({ type: "success", message: "Appointment rescheduled." });
       setTimeout(onDone, 1200);
-    } catch {
-      setAlert({ type: "error", message: "Failed to reschedule. Check the new times and try again." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to reschedule. Check the new times and try again.") });
     }
   }
 
@@ -223,8 +224,8 @@ function CancelPanel({
       });
       setAlert({ type: "success", message: "Appointment cancelled." });
       setTimeout(onDone, 1200);
-    } catch {
-      setAlert({ type: "error", message: "Failed to cancel appointment." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to cancel appointment.") });
     }
   }
 

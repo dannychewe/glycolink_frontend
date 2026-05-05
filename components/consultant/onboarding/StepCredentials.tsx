@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
 type UploadedLicense = {
   id: string;
@@ -55,8 +56,8 @@ export function StepCredentials({ uploads, onUploaded, onRemove }: StepCredentia
         setExpiryDate("");
         if (fileRef.current) fileRef.current.value = "";
       }
-    } catch {
-      setUploadError("Upload failed. Please try again.");
+    } catch (error) {
+      setUploadError(getGraphQLErrorMessage(error, "Upload failed. Please try again."));
     }
   }
 

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { MY_ENCOUNTERS_QUERY, START_ENCOUNTER_MUTATION } from "@/lib/consultant/consultation-graphql";
 import { TODAYS_APPOINTMENTS_QUERY } from "@/lib/bookings/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
 type Encounter = {
   id: string;
@@ -62,8 +63,8 @@ function StartEncounterButton({ appointmentId }: { appointmentId: string }) {
       if (encounterId) {
         router.push(`/consultant/consultations/${encounterId}`);
       }
-    } catch {
-      setError("Unable to start encounter. Please try again.");
+    } catch (error) {
+      setError(getGraphQLErrorMessage(error, "Unable to start encounter. Please try again."));
     }
   }
 

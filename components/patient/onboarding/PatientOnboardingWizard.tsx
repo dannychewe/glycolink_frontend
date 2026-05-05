@@ -36,7 +36,7 @@ import {
   MY_PATIENT_PROFILE_QUERY,
   UPDATE_PATIENT_CONTACT_MUTATION,
 } from "@/lib/patient/clinical-profile-graphql";
-import { getGraphQLErrorCode, useAuth } from "@/features/auth/auth-context";
+import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features/auth/auth-context";
 
 const steps = [
   {
@@ -305,16 +305,16 @@ export function PatientOnboardingWizard() {
       const code = getGraphQLErrorCode(error);
 
       if (code === "INVALID_DIABETES_TYPE" || code === "INVALID_DIAGNOSIS_DATE") {
-        setSubmitError("Please check your diabetes profile details.");
+        setSubmitError(getGraphQLErrorMessage(error, "Please check your diabetes profile details."));
         setErrorStep(1);
       } else if (code === "INVALID_DATE_OF_BIRTH" || code === "INVALID_PHONE") {
-        setSubmitError("Please check your basic information.");
+        setSubmitError(getGraphQLErrorMessage(error, "Please check your basic information."));
         setErrorStep(0);
       } else if (code === "DUPLICATE_CONTACT" || code === "INVALID_CONTACT") {
-        setSubmitError("There was an issue with your emergency contact details.");
+        setSubmitError(getGraphQLErrorMessage(error, "There was an issue with your emergency contact details."));
         setErrorStep(3);
       } else if (code === "PATIENT_ACCESS_DENIED" || code === "TENANT_ACCESS_DENIED") {
-        setSubmitError("You do not have access to update this patient profile.");
+        setSubmitError(getGraphQLErrorMessage(error, "You do not have access to update this patient profile."));
       } else if (
         code === "AUTH_TOKEN_EXPIRED" ||
         code === "AUTH_TOKEN_INVALID" ||
@@ -323,7 +323,7 @@ export function PatientOnboardingWizard() {
       ) {
         router.replace("/login?next=/patient/onboarding");
       } else {
-        setSubmitError("Unable to complete onboarding right now. Please try again.");
+        setSubmitError(getGraphQLErrorMessage(error, "Unable to complete onboarding right now. Please try again."));
       }
     } finally {
       setIsSubmitting(false);

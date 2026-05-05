@@ -14,6 +14,7 @@ import {
   SPECIALTIES_QUERY,
 } from "@/lib/admin/graphql";
 import { CONSULTATION_TYPE_OPTIONS } from "@/lib/consultant/pcq-graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -73,8 +74,8 @@ export function AdminPCQTemplateCreateView() {
       } else {
         setAlert({ type: "error", message: "Template created but ID was not returned." });
       }
-    } catch {
-      setAlert({ type: "error", message: "Unable to create PCQ template." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to create PCQ template.") });
     }
   }
 

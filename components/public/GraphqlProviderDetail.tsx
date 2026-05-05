@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import Image from "next/image";
 import { BadgeCheck, Globe2, MapPin, Star, X } from "lucide-react";
-import { useAuth, getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { useAuth, getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   MY_APPOINTMENTS_FOR_REVIEWS_QUERY,
   PROVIDER_QUERY,
@@ -90,7 +90,7 @@ function mapSubmitReviewError(error: unknown) {
   if (code === "FORBIDDEN") return "You cannot submit a review for this appointment.";
   if (code === "VALIDATION_ERROR") return "Please check the form values and try again.";
 
-  return "Unable to submit your review right now. Please try again.";
+  return getGraphQLErrorMessage(error, "Unable to submit your review right now. Please try again.");
 }
 
 function formatAppointmentDateLabel(appointment: ReviewableAppointment) {
@@ -238,9 +238,9 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-5 py-4 text-sm text-warning">
         {code === "PROVIDER_NOT_FOUND"
           ? "This provider profile could not be found."
-          : accessDenied
-            ? "Please sign in with a verified account to view provider details."
-            : "Unable to load this provider right now. Please try again."}
+            : accessDenied
+              ? "Please sign in with a verified account to view provider details."
+              : getGraphQLErrorMessage(error, "Unable to load this provider right now. Please try again.")}
       </div>
     );
   }
@@ -349,7 +349,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
               <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
                 {reviewsAccessDenied
                   ? "Sign in to view provider reviews."
-                  : "Unable to load provider reviews right now."}
+                  : getGraphQLErrorMessage(reviewsError, "Unable to load provider reviews right now.")}
               </div>
             ) : null}
 
@@ -550,7 +550,10 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
                     </select>
                     {reviewableAppointmentsError ? (
                       <p className="text-xs text-warning">
-                        Unable to load completed appointments right now.
+                        {getGraphQLErrorMessage(
+                          reviewableAppointmentsError,
+                          "Unable to load completed appointments right now.",
+                        )}
                       </p>
                     ) : null}
                   </div>

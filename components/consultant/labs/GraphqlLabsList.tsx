@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 // ─── Types ───────────────────────────────────────────────
@@ -119,8 +120,8 @@ function ReviewPanel({
       });
       setAlert({ type: "success", message: "Review notes saved." });
       setTimeout(onDone, 1200);
-    } catch {
-      setAlert({ type: "error", message: "Failed to save review notes." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to save review notes.") });
     }
   }
 
@@ -170,8 +171,8 @@ function LabOrderCard({ item, onRefetch: _onRefetch }: { item: PendingLabReview;
         variables: { labOrderId: item.labOrder.id },
         refetchQueries: [{ query: PENDING_LAB_REVIEWS_QUERY, variables: { limit: 50 } }],
       });
-    } catch {
-      setCloseAlert({ type: "error", message: "Failed to close lab order." });
+    } catch (error) {
+      setCloseAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to close lab order.") });
     }
   }
 

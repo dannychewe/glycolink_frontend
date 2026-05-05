@@ -17,7 +17,7 @@ import {
   VERIFY_EMAIL_MUTATION,
 } from "@/lib/auth/graphql";
 import { clearStoredTokens, getStoredTokens, setStoredTokens, subscribeToAuthChanges } from "@/lib/auth/storage";
-import { getGraphQLErrorCode, refreshSessionTokens } from "@/lib/auth/session";
+import { getGraphQLErrorCode, getGraphQLErrorMessage, refreshSessionTokens } from "@/lib/auth/session";
 
 const USER_CACHE_KEY = "glycolink.user";
 
@@ -679,4 +679,4 @@ export function useAuth() {
   return context;
 }
 
-export { getGraphQLErrorCode };
+export { getGraphQLErrorCode, getGraphQLErrorMessage };

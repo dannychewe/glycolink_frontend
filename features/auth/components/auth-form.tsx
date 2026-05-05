@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth, getGraphQLErrorCode } from "@/features/auth/auth-context";
+import { useAuth, getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   loginSchema,
   registerSchema,
@@ -113,7 +113,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       const code = getGraphQLErrorCode(error);
 
       if (code === "AUTH_INVALID_CREDENTIALS") {
-        setSubmitError("Incorrect email or password.");
+        setSubmitError(getGraphQLErrorMessage(error, "Incorrect email or password."));
         return;
       }
 
@@ -133,7 +133,10 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       setSubmitError(
-        isRegister ? "Unable to create your account right now." : "Unable to sign in right now.",
+        getGraphQLErrorMessage(
+          error,
+          isRegister ? "Unable to create your account right now." : "Unable to sign in right now.",
+        ),
       );
     }
   });

@@ -10,6 +10,7 @@ import {
   SET_AVAILABILITY_RULE_MUTATION,
 } from "@/lib/consultant/provider-lifecycle-graphql";
 import { Label } from "@/components/ui/label";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AvailabilityRule = {
@@ -104,8 +105,8 @@ export function StepAvailability() {
       }
 
       setSavedDays(new Set(selectedDays));
-    } catch {
-      setSaveError("Failed to save availability. Please try again.");
+    } catch (error) {
+      setSaveError(getGraphQLErrorMessage(error, "Failed to save availability. Please try again."));
     } finally {
       setSaving(false);
     }

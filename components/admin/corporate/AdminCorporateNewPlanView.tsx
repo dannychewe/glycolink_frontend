@@ -13,6 +13,7 @@ import {
   ADMIN_CREATE_BENEFIT_PLAN_MUTATION,
   SPECIALTIES_QUERY,
 } from "@/lib/admin/graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -80,8 +81,8 @@ export function AdminCorporateNewPlanView({ corporateId }: Readonly<{ corporateI
         ],
       });
       router.push(`/admin/corporate/${corporateId}`);
-    } catch {
-      setAlert({ type: "error", message: "Unable to create benefit plan." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to create benefit plan.") });
     }
   }
 
