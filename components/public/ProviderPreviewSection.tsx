@@ -122,6 +122,11 @@ export function ProviderPreviewSection() {
               <CardHeader className="space-y-3 pb-4">
                 <div className="space-y-2">
                   <CardTitle className="text-xl">{provider.displayName}</CardTitle>
+                  {provider.subSpecialties.length > 0 ? (
+                    <p className="text-sm font-medium text-muted">
+                      {provider.subSpecialties.slice(0, 2).join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-5">

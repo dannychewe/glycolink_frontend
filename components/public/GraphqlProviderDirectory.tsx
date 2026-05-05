@@ -292,9 +292,14 @@ export function GraphqlProviderDirectory() {
             </div>
 
             <CardContent className="flex flex-1 flex-col gap-4 pt-5">
-              {/* Name + rating */}
+              {/* Name + sub-specialties */}
               <div className="space-y-1">
                 <p className="text-xl font-semibold text-text">{provider.displayName}</p>
+                {provider.subSpecialties.length > 0 ? (
+                  <p className="text-sm font-medium text-primary">
+                    {provider.subSpecialties.slice(0, 2).join(" · ")}
+                  </p>
+                ) : null}
                 <p className="flex items-center gap-1 text-sm text-muted">
                   <Star className="size-3.5 text-warning" />
                   {provider.reviewCount > 0 && provider.averageRating != null
