@@ -48,6 +48,8 @@ export const PROVIDER_QUERY = gql`
       id
       displayName
       bio
+      avatarUrl
+      profilePictureUrl
       consultationFeeInitial
       consultationFeeFollowup
       languages

@@ -721,3 +721,39 @@ export const ADMIN_ACCESS_LOGS_QUERY = gql`
     }
   }
 `;
+
+export const ADMIN_PLATFORM_SETTINGS_QUERY = gql`
+  query AdminPlatformSettings {
+    platformSettings {
+      id
+      platformName
+      supportEmail
+      supportPhone
+      defaultCountry
+      defaultTimezone
+      brandingJson
+      securityPolicyJson
+      notificationTemplatesJson
+      integrationSettingsJson
+      featureFlagsJson
+      maintenanceModeEnabled
+      maintenanceMessage
+      updatedAt
+    }
+  }
+`;
+
+export const ADMIN_UPDATE_PLATFORM_SETTINGS_MUTATION = gql`
+  mutation AdminUpdatePlatformSettings($data: PlatformSettingsInput!) {
+    updatePlatformSettings(data: $data) {
+      settings {
+        id
+        platformName
+        supportEmail
+        featureFlagsJson
+        maintenanceModeEnabled
+        updatedAt
+      }
+    }
+  }
+`;

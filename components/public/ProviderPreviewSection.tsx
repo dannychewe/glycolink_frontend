@@ -23,6 +23,8 @@ type ProviderDirectoryData = {
 type ProviderItem = {
   id: string;
   displayName: string;
+  avatarUrl: string | null;
+  profilePictureUrl: string | null;
   eligible: boolean;
   averageRating: number | null;
   reviewCount: number;
@@ -95,13 +97,21 @@ export function ProviderPreviewSection() {
               className="flex h-full flex-col overflow-hidden border-border/80 transition-all duration-200 hover:-translate-y-1 hover:shadow-subtle"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-white to-primary/5">
-                <Image
-                  src={getProviderFallbackImage(provider.id)}
-                  alt={provider.displayName}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                  className="object-cover"
-                />
+                {(provider.profilePictureUrl ?? provider.avatarUrl) ? (
+                  <img
+                    src={provider.profilePictureUrl ?? provider.avatarUrl!}
+                    alt={provider.displayName}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={getProviderFallbackImage(provider.id)}
+                    alt={provider.displayName}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                    className="object-cover"
+                  />
+                )}
                 <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
                   <Badge variant="secondary" className="bg-white/90 text-text shadow-soft backdrop-blur">
                     {provider.specialties[0] ?? "Specialist"}

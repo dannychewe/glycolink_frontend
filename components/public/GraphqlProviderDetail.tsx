@@ -22,6 +22,8 @@ type ProviderDetailData = {
   provider: {
     id: string;
     displayName: string;
+    avatarUrl: string | null;
+    profilePictureUrl: string | null;
     status: string;
     verificationStatus: string;
     eligible: boolean;
@@ -251,13 +253,21 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
       {/* Profile header */}
       <div className="grid gap-5 rounded-[2rem] border border-border bg-surface p-5 shadow-soft md:grid-cols-[200px_minmax(0,1fr)] md:items-start md:p-8">
         <div className="relative aspect-[3/4] overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary/10 via-white to-primary/5">
-          <Image
-            src={getProviderFallbackImage(provider.id)}
-            alt={`${provider.displayName} profile photo`}
-            fill
-            sizes="(max-width: 768px) 100vw, 200px"
-            className="object-cover"
-          />
+          {(provider.profilePictureUrl ?? provider.avatarUrl) ? (
+            <img
+              src={provider.profilePictureUrl ?? provider.avatarUrl!}
+              alt={`${provider.displayName} profile photo`}
+              className="size-full object-cover"
+            />
+          ) : (
+            <Image
+              src={getProviderFallbackImage(provider.id)}
+              alt={`${provider.displayName} profile photo`}
+              fill
+              sizes="(max-width: 768px) 100vw, 200px"
+              className="object-cover"
+            />
+          )}
         </div>
 
         <div className="space-y-4">
