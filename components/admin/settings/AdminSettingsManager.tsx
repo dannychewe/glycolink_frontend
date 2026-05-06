@@ -498,7 +498,7 @@ export function AdminSettingsManager() {
                 >
                   <option value="manual">Manual</option>
                   <option value="twilio">Twilio</option>
-                  <option value="africas_talking">Africa's Talking</option>
+                  <option value="africas_talking">Africa&apos;s Talking</option>
                   <option value="vonage">Vonage</option>
                 </select>
               </div>
