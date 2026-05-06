@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useQuery } from "@apollo/client";
 import { MY_PROVIDER_PROFILE_QUERY } from "@/lib/consultant/provider-lifecycle-graphql";
 import { NOTIFICATIONS_PREVIEW_QUERY } from "@/lib/consultant/notifications-graphql";
@@ -124,12 +123,10 @@ export function ConsultantHeader({ title, onMenuClick }: ConsultantHeaderProps) 
           >
             <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/15">
               {avatarUrl ? (
-                <Image
+                <img
                   src={avatarUrl}
                   alt={profile?.displayName ?? "Profile"}
-                  fill
-                  className="object-cover"
-                  sizes="32px"
+                  className="size-full object-cover"
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-primary">

@@ -176,23 +176,32 @@ function MessageBubble({ message, currentUserId }: { message: Message; currentUs
 
         {message.attachments.length > 0 ? (
           <div className="space-y-1 pt-1">
-            {message.attachments.map((att) => (
-              <a
-                key={att.id}
-                href={att.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition",
-                  fromMe
-                    ? "bg-white/20 text-white hover:bg-white/30"
-                    : "bg-background text-primary hover:underline",
-                )}
-              >
-                <Paperclip className="size-3 shrink-0" />
-                <span className="truncate">{att.originalName}</span>
-              </a>
-            ))}
+            {message.attachments.map((att) =>
+              att.contentType.startsWith("image/") ? (
+                <img
+                  key={att.fileUrl}
+                  src={att.fileUrl}
+                  alt={att.originalName}
+                  className="max-w-full rounded-lg"
+                />
+              ) : (
+                <a
+                  key={att.fileUrl}
+                  href={att.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition",
+                    fromMe
+                      ? "bg-white/20 text-white hover:bg-white/30"
+                      : "bg-background text-primary hover:underline",
+                  )}
+                >
+                  <Paperclip className="size-3 shrink-0" />
+                  <span className="truncate">{att.originalName}</span>
+                </a>
+              )
+            )}
           </div>
         ) : null}
 

@@ -24,13 +24,16 @@ const config: Config = {
     },
     extend: {
       colors: {
-        primary: "#2563eb",
+        primary: "#1565C0",
+        secondary: "#2E7D32",
+        accent: "#00ACC1",
         success: "#16a34a",
         warning: "#f59e0b",
         danger: "#dc2626",
+        info: "#0284C7",
         background: "#f9fafb",
         surface: "#ffffff",
-        text: "#111827",
+        text: "#1E293B",
         muted: "#6b7280",
         border: "#e5e7eb",
       },
@@ -47,7 +50,7 @@ const config: Config = {
       },
       backgroundImage: {
         "hero-grid":
-          "radial-gradient(circle at top right, rgba(37,99,235,0.16), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.95), rgba(249,250,251,1))",
+          "radial-gradient(circle at top right, rgba(21,101,192,0.16), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.95), rgba(249,250,251,1))",
       },
     },
   },

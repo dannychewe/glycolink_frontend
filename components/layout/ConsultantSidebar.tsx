@@ -158,9 +158,6 @@ export function ConsultantSidebar({
     >
       <div className="border-b border-border px-5 py-5">
         <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-[13px] font-bold text-white">
-            G
-          </span>
           <div>
             <p className="text-sm font-semibold tracking-tight text-text">Naje Health</p>
             <p className="text-xs text-muted">Consultant workspace</p>

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import {
@@ -365,12 +364,10 @@ function ProviderDetailModal({
             <div className="space-y-3">
               <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-background">
                 {provider.profilePictureUrl ? (
-                  <Image
+                  <img
                     src={provider.profilePictureUrl}
                     alt={provider.displayName ?? "Provider"}
-                    fill
-                    className="object-cover"
-                    sizes="220px"
+                    className="size-full object-cover"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-primary">
