@@ -31,6 +31,8 @@ type ProviderDirectoryData = {
 type ProviderItem = {
   id: string;
   displayName: string;
+  avatarUrl: string | null;
+  profilePictureUrl: string | null;
   status: string;
   verificationStatus: string;
   eligible: boolean;
@@ -265,16 +267,27 @@ export function GraphqlProviderDirectory() {
           >
             {/* Photo */}
             <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-white to-primary/5">
-              <Image
-                src={getProviderFallbackImage(provider.id)}
-                alt={provider.displayName}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                className={cn(
-                  "object-cover transition-transform duration-300",
-                  provider.eligible && "group-hover:scale-[1.03]",
-                )}
-              />
+              {(provider.profilePictureUrl ?? provider.avatarUrl) ? (
+                <img
+                  src={provider.profilePictureUrl ?? provider.avatarUrl!}
+                  alt={provider.displayName}
+                  className={cn(
+                    "size-full object-cover transition-transform duration-300",
+                    provider.eligible && "group-hover:scale-[1.03]",
+                  )}
+                />
+              ) : (
+                <Image
+                  src={getProviderFallbackImage(provider.id)}
+                  alt={provider.displayName}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                  className={cn(
+                    "object-cover transition-transform duration-300",
+                    provider.eligible && "group-hover:scale-[1.03]",
+                  )}
+                />
+              )}
               <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
                 {provider.specialties[0] ? (
                   <Badge variant="secondary" className="bg-white/90 text-text shadow-soft backdrop-blur">
