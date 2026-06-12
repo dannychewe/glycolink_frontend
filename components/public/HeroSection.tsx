@@ -102,8 +102,8 @@ export function HeroSection() {
                   <p className="text-sm text-white/70">avg mg/dL this week</p>
                 </div>
                 <div className="mt-4 flex items-end gap-1.5">
-                  {weeklyGlucose.map(({ day, value, out }) => (
-                    <div key={day} className="flex flex-1 flex-col items-center gap-1.5">
+                  {weeklyGlucose.map(({ day, value, out }, i) => (
+                    <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
                       <div
                         className={cn("w-full rounded-sm", out ? "bg-warning/80" : "bg-white/35")}
                         style={{ height: `${Math.round((value / 160) * 36)}px` }}

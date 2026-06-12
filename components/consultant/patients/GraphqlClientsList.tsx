@@ -119,8 +119,8 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
       });
       const payload = res.data?.invitePatient;
       setInvited({
-        fullName: payload?.patient?.fullName ?? (form.fullName || form.email),
-        email: payload?.patient?.email ?? form.email,
+        fullName: payload?.patientProfile?.fullName ?? (form.fullName || form.email),
+        email: payload?.patientProfile?.email ?? form.email,
         debugSetupToken: payload?.setupToken ?? null,
       });
       setForm({ email: "", fullName: "", phone: "", note: "" });
