@@ -1,4 +1,5 @@
 import { OnboardingBanner } from "@/components/patient/dashboard/OnboardingBanner";
+import { ConsultantInvitesSection } from "@/components/patient/dashboard/ConsultantInvitesSection";
 import { GraphqlBookingOverview } from "@/components/patient/dashboard/GraphqlBookingOverview";
 import { HealthSummarySection } from "@/components/patient/dashboard/HealthSummarySection";
 import { LabSummarySection } from "@/components/patient/dashboard/LabSummarySection";
@@ -15,6 +16,8 @@ export default function PatientDashboardPage() {
       </header>
 
       <OnboardingBanner />
+
+      <ConsultantInvitesSection />
 
       <GraphqlBookingOverview />
       <HealthSummarySection />

@@ -20,6 +20,10 @@ export function AcceptPatientInvitePanel() {
   const searchParams = useSearchParams();
   const { resetPassword } = useAuth();
   const token = searchParams?.get("token") ?? null;
+  // After activation, head to `next` (typically the invite-accept route) so the
+  // patient can accept once authenticated. Only allow internal paths.
+  const rawNext = searchParams?.get("next") ?? null;
+  const nextPath = rawNext && rawNext.startsWith("/") ? rawNext : null;
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -53,8 +57,10 @@ export function AcceptPatientInvitePanel() {
         return;
       }
 
-      setSuccessMessage("Account activated! Taking you to setup…");
-      window.setTimeout(() => router.replace("/patient/onboarding"), 1200);
+      setSuccessMessage(
+        nextPath ? "Account activated! Taking you to your invitation…" : "Account activated! Taking you to setup…",
+      );
+      window.setTimeout(() => router.replace(nextPath ?? "/patient/onboarding"), 1200);
     } catch (error) {
       const code = getGraphQLErrorCode(error);
 

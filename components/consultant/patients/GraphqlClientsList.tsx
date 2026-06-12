@@ -35,6 +35,8 @@ type ConsultantClient = {
   pendingPcqCount: number;
   pendingLabReviewCount: number;
   latestAlertSeverity: string | null;
+  inviteId: string | null;
+  inviteStatus: "INVITED" | "ACCEPTED" | "REJECTED" | null;
 };
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -62,6 +64,13 @@ function onboardingVariant(status: string | null): "success" | "warning" | "seco
   if (s === "COMPLETE" || s === "COMPLETED") return "success";
   if (s === "PENDING" || s === "IN_PROGRESS") return "warning";
   return "secondary";
+}
+
+/** Pending/declined invites get a badge; accepted invites read as normal clients. */
+function inviteBadge(status: ConsultantClient["inviteStatus"]): { variant: "warning" | "secondary"; label: string } | null {
+  if (status === "INVITED") return { variant: "warning", label: "Invite pending" };
+  if (status === "REJECTED") return { variant: "secondary", label: "Invite declined" };
+  return null;
 }
 
 function formatDiabetesType(value: string | null) {
@@ -231,6 +240,7 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
 // ─── Client Row ───────────────────────────────────────────
 
 function ClientRow({ client }: { client: ConsultantClient }) {
+  const invite = inviteBadge(client.inviteStatus);
   const hasActivity =
     client.unreadMessageCount > 0 ||
     client.pendingPcqCount > 0 ||
@@ -277,6 +287,7 @@ function ClientRow({ client }: { client: ConsultantClient }) {
 
           {/* Right: status + activity */}
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+            {invite ? <Badge variant={invite.variant}>{invite.label}</Badge> : null}
             <Badge variant={onboardingVariant(client.onboardingStatus)}>
               {client.profileComplete ? "Profile complete" : (client.onboardingStatus?.replace(/_/g, " ") ?? "Pending setup")}
             </Badge>
