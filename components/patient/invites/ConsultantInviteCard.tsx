@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useMutation } from "@apollo/client";
 import { Check, X, Stethoscope, AlertCircle } from "lucide-react";
 import {
@@ -47,6 +46,13 @@ export function ConsultantInviteCard({ invite, onChanged, onAccepted }: Props) {
   const provider = invite.provider;
   const avatar = provider.avatarUrl ?? getProviderFallbackImage(provider.id);
   const specialty = provider.specialties[0] ?? "Healthcare provider";
+  const initials = provider.displayName
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   async function handleAccept() {
     setError(null);
@@ -73,8 +79,18 @@ export function ConsultantInviteCard({ invite, onChanged, onAccepted }: Props) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle">
       <div className="flex items-start gap-4">
-        <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-primary/5 ring-1 ring-border">
-          <Image src={avatar} alt={provider.displayName} fill sizes="56px" className="object-cover" />
+        <div className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10 ring-1 ring-border">
+          {/* Initials placeholder always renders; the image covers it when it loads. */}
+          <span className="font-display text-base font-semibold text-primary">{initials || "Dr"}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- avoids next/image SVG/remote config */}
+          <img
+            src={avatar}
+            alt={provider.displayName}
+            className="absolute inset-0 size-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
         </div>
 
         <div className="min-w-0 flex-1 space-y-1">

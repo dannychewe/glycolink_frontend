@@ -319,9 +319,18 @@ function ClientRow({ client }: { client: ConsultantClient }) {
 
         {/* Actions */}
         <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-          <Button href={`/consultant/patients/${client.patientId}`} variant="secondary" size="sm">
-            View Profile
-          </Button>
+          {/* TODO: restore "View Profile" → /consultant/patients/{id} once the real
+              patient-detail GraphQL contract exists (page is currently mock-only). */}
+          {client.activeConversationId ? (
+            <Button
+              href={`/consultant/messages/${client.activeConversationId}`}
+              variant="secondary"
+              size="sm"
+            >
+              <MessageSquare className="size-4" />
+              Message
+            </Button>
+          ) : null}
           {client.nextAppointmentAt ? (
             <Button href="/consultant/appointments" variant="ghost" size="sm">
               View Appointment
