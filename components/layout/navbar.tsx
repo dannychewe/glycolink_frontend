@@ -34,7 +34,7 @@ export function Navbar() {
       <Container className="flex h-16 items-center justify-between gap-6">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <span className="text-base font-bold tracking-tight text-text">NAJE Health</span>
+          <span className="font-display text-xl font-bold tracking-tight text-ink">Naje Health</span>
         </Link>
 
         {/* Desktop nav links */}

@@ -31,11 +31,17 @@ const config: Config = {
         warning: "#f59e0b",
         danger: "#dc2626",
         info: "#0284C7",
+        ink: "#0B2942",
         background: "#f9fafb",
         surface: "#ffffff",
         text: "#1E293B",
         muted: "#6b7280",
         border: "#e5e7eb",
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: {
         xl: "0.875rem",
@@ -51,6 +57,15 @@ const config: Config = {
       backgroundImage: {
         "hero-grid":
           "radial-gradient(circle at top right, rgba(21,101,192,0.16), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.95), rgba(249,250,251,1))",
+      },
+      keyframes: {
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "fade-up": "fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both",
       },
     },
   },

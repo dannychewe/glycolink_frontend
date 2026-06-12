@@ -1,6 +1,7 @@
 import { CalendarCheck2, ClipboardPlus, HeartPulse, UserRoundPlus } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionLabel } from "@/components/public/SectionLabel";
 
 const steps = [
   {
@@ -29,10 +30,8 @@ export function HowItWorksSection() {
   return (
     <section className="py-10 sm:py-14 lg:py-16">
       <Container className="space-y-8">
-        <div className="max-w-2xl space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-            How it works
-          </p>
+        <div className="max-w-2xl space-y-4">
+          <SectionLabel index="01">How it works</SectionLabel>
           <h2 className="text-3xl sm:text-4xl">Four steps to better diabetes care</h2>
           <p>
             Naje Health removes friction from everyday diabetes support with a guided care journey
@@ -48,7 +47,7 @@ export function HowItWorksSection() {
               <CardHeader className="space-y-4 pb-3">
                 <div className="relative flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Icon className="size-5" />
-                  <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white shadow-soft">
+                  <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-semibold tabular-nums text-white shadow-soft">
                     {index + 1}
                   </span>
                 </div>

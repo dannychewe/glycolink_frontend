@@ -1,11 +1,26 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { AppProviders } from "@/features/providers/app-providers";
 import "./globals.css";
 
-const inter = Inter({
+const display = Fraunces({
   subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const sans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
+  display: "swap",
+});
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -38,7 +53,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} min-h-screen bg-background font-sans text-text`}
+        className={`${display.variable} ${sans.variable} ${mono.variable} min-h-screen bg-background font-sans text-text`}
         suppressHydrationWarning
       >
         <AppProviders>{children}</AppProviders>

@@ -1,6 +1,7 @@
 import { BadgeCheck, HeartHandshake, ShieldCheck, Waves } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionLabel } from "@/components/public/SectionLabel";
 
 const trustItems = [
   {
@@ -38,10 +39,8 @@ export function TrustSection() {
     <section className="py-10 sm:py-14 lg:py-16">
       <Container className="space-y-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl space-y-3">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-              Trust and safety
-            </p>
+          <div className="max-w-2xl space-y-4">
+            <SectionLabel index="02">Trust and safety</SectionLabel>
             <h2 className="text-3xl sm:text-4xl">Manage Your Diabetes with Confidence</h2>
             <p>
               Every touchpoint is designed to feel calm, dependable, and appropriate for real
@@ -49,7 +48,7 @@ export function TrustSection() {
             </p>
           </div>
           <div className="shrink-0 rounded-2xl border border-success/20 bg-success/5 px-5 py-4 lg:text-right">
-            <p className="text-2xl font-semibold text-text">98%</p>
+            <p className="font-mono text-3xl font-medium tabular-nums text-secondary">98%</p>
             <p className="mt-0.5 text-sm text-muted">patient satisfaction rate</p>
           </div>
         </div>

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionLabel } from "@/components/public/SectionLabel";
 
 type ProviderDirectoryData = {
   providers: {
@@ -58,10 +59,8 @@ export function ProviderPreviewSection() {
     <section className="py-10 sm:py-14 lg:py-16">
       <Container className="space-y-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-2xl space-y-3">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-              Provider directory
-            </p>
+          <div className="max-w-2xl space-y-4">
+            <SectionLabel index="03">Provider directory</SectionLabel>
             <h2 className="text-3xl sm:text-4xl">Find Verified Healthcare Providers</h2>
             <p>
               Browse specialists prepared to support diabetes care with clear communication and a
@@ -148,7 +147,7 @@ export function ProviderPreviewSection() {
                 <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-sm text-muted">Consultation fee</p>
-                    <p className="text-base font-semibold text-text">
+                    <p className="font-mono text-base font-medium tabular-nums text-ink">
                       {provider.consultationFeeInitial != null
                         ? `ZMW ${provider.consultationFeeInitial}`
                         : "On request"}

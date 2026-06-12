@@ -49,8 +49,8 @@ function statusLabel(s: string) {
 function bucketBarColor(status: string | null) {
   const s = status?.toLowerCase();
   if (s === "low") return "bg-danger/70";
-  if (s === "high") return "bg-warning/80";
-  return "bg-white/35";
+  if (s === "high") return "bg-warning";
+  return "bg-white/80";
 }
 
 export function HealthSummarySection() {
@@ -96,22 +96,25 @@ export function HealthSummarySection() {
         <RangeSelector range={range} onChange={setRange} />
       </div>
 
-      <div className="rounded-2xl bg-gradient-to-br from-primary to-blue-500 p-5 text-white shadow-soft sm:p-6">
+      <div className="relative overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-soft sm:p-6">
+        <div className="clinical-grid-light absolute inset-0 opacity-60" />
+        <div className="relative">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-white/80">
+          <div className="flex items-center gap-2 text-sm text-white/70">
             <Activity className="size-4" />
             Glucose · {unit}
           </div>
-          <div className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs text-white/90">
+          <div className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/85 ring-1 ring-inset ring-white/15">
+            <span className="size-1.5 rounded-full bg-success" />
             {statusLabel(overallStatus)}
           </div>
         </div>
 
-        <div className="mt-3 flex items-baseline gap-1.5">
-          <p className="text-4xl font-semibold">
+        <div className="mt-3 flex items-baseline gap-2">
+          <p className="font-mono text-4xl font-medium tabular-nums tracking-tight">
             {stats.average != null ? Number(stats.average).toFixed(1) : "—"}
           </p>
-          <p className="text-sm text-white/70">avg {unit}</p>
+          <p className="font-mono text-xs text-white/55">avg {unit}</p>
         </div>
 
         {/* Bucket bar chart */}
@@ -161,56 +164,57 @@ export function HealthSummarySection() {
                     height: `${Math.max(4, Math.round(((bucket.average ?? 0) / maxAvg) * 52))}px`,
                   }}
                 />
-                <p className="w-full truncate text-center text-[9px] text-white/50">{bucket.label}</p>
+                <p className="w-full truncate text-center font-mono text-[9px] text-white/50">{bucket.label}</p>
               </div>
             ))}
           </div>
         ) : null}
 
-        <div className="mt-3 flex gap-4 text-xs text-white/60">
+        <div className="mt-3 flex gap-4 font-mono text-[0.7rem] text-white/55">
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-sm bg-danger/70" />
             Low
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block size-2 rounded-sm bg-white/35" />
+            <span className="inline-block size-2 rounded-sm bg-white/80" />
             In range
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block size-2 rounded-sm bg-warning/80" />
+            <span className="inline-block size-2 rounded-sm bg-warning" />
             High
           </span>
+        </div>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Highest</p>
-          <p className="mt-1.5 text-2xl font-semibold text-text">
+        <div className="rounded-xl border border-border bg-surface px-5 py-4">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">Highest</p>
+          <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums text-ink">
             {stats.highest != null ? Number(stats.highest).toFixed(1) : "—"}
           </p>
-          <p className="text-xs text-muted">{unit}</p>
+          <p className="font-mono text-xs text-muted">{unit}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Lowest</p>
-          <p className="mt-1.5 text-2xl font-semibold text-text">
+        <div className="rounded-xl border border-border bg-surface px-5 py-4">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">Lowest</p>
+          <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums text-ink">
             {stats.lowest != null ? Number(stats.lowest).toFixed(1) : "—"}
           </p>
-          <p className="text-xs text-muted">{unit}</p>
+          <p className="font-mono text-xs text-muted">{unit}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">In range</p>
-          <p className="mt-1.5 text-2xl font-semibold text-text">
+        <div className="rounded-xl border border-border bg-surface px-5 py-4">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">In range</p>
+          <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums text-ink">
             {stats.inRangeCount}/{stats.totalCount}
           </p>
-          <p className="text-xs text-muted">readings</p>
+          <p className="font-mono text-xs text-muted">readings</p>
         </div>
-        <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">In range %</p>
-          <p className="mt-1.5 text-2xl font-semibold text-text">
+        <div className="rounded-xl border border-border bg-surface px-5 py-4">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">In range %</p>
+          <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums text-secondary">
             {stats.inRangePercent != null ? `${Math.round(stats.inRangePercent)}%` : "—"}
           </p>
-          <p className="text-xs text-muted">of readings</p>
+          <p className="font-mono text-xs text-muted">of readings</p>
         </div>
       </div>
     </section>

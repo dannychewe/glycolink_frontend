@@ -67,52 +67,57 @@ export function MonitoringSnapshotCard() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl bg-gradient-to-br from-primary to-blue-500 p-5 text-white shadow-soft sm:p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-white/80">
-            <Activity className="size-4" />
-            Latest glucose reading
-          </div>
-          {trend?.average7Days != null ? (
-            <div className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs text-white/90">
-              <TrendingUp className="size-3" />
-              {Number(trend.average7Days).toFixed(1)} {unit} avg (7d)
+      <div className="relative overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-soft sm:p-6">
+        <div className="clinical-grid-light absolute inset-0 opacity-60" />
+        <div className="relative">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-white/70">
+              <Activity className="size-4" />
+              Latest glucose reading
             </div>
-          ) : null}
-        </div>
+            {trend?.average7Days != null ? (
+              <div className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 font-mono text-xs text-white/85 ring-1 ring-inset ring-white/15">
+                <TrendingUp className="size-3 text-success" />
+                {Number(trend.average7Days).toFixed(1)} {unit} avg · 7d
+              </div>
+            ) : null}
+          </div>
 
-        <div className="mt-4 flex items-baseline gap-2">
-          <p className="text-5xl font-semibold">{Number(latest.value).toFixed(1)}</p>
-          <p className="text-sm text-white/70">{unit}</p>
-        </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <p className="font-mono text-5xl font-medium tabular-nums tracking-tight">
+              {Number(latest.value).toFixed(1)}
+            </p>
+            <p className="font-mono text-xs text-white/55">{unit}</p>
+          </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/70">
-          <span>{formatRecordedAt(latest.recordedAt)}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-3 font-mono text-[0.7rem] text-white/55">
+            <span>{formatRecordedAt(latest.recordedAt)}</span>
+          </div>
         </div>
       </div>
 
       {trend ? (
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Latest</p>
-            <p className="mt-1.5 text-2xl font-semibold text-text">
+          <div className="rounded-xl border border-border bg-surface px-5 py-4">
+            <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">Latest</p>
+            <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums text-ink">
               {trend.latestValue != null ? Number(trend.latestValue).toFixed(1) : "—"}
             </p>
-            <p className="text-xs text-muted">{unit}</p>
+            <p className="font-mono text-xs text-muted">{unit}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">7-day avg</p>
-            <p className="mt-1.5 text-2xl font-semibold text-text">
+          <div className="rounded-xl border border-border bg-surface px-5 py-4">
+            <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">7-day avg</p>
+            <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums text-ink">
               {trend.average7Days != null ? Number(trend.average7Days).toFixed(1) : "—"}
             </p>
-            <p className="text-xs text-muted">{unit}</p>
+            <p className="font-mono text-xs text-muted">{unit}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">30-day avg</p>
-            <p className="mt-1.5 text-2xl font-semibold text-text">
+          <div className="rounded-xl border border-border bg-surface px-5 py-4">
+            <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">30-day avg</p>
+            <p className="mt-1.5 font-mono text-2xl font-medium tabular-nums text-ink">
               {trend.average30Days != null ? Number(trend.average30Days).toFixed(1) : "—"}
             </p>
-            <p className="text-xs text-muted">{unit}</p>
+            <p className="font-mono text-xs text-muted">{unit}</p>
           </div>
         </div>
       ) : null}
