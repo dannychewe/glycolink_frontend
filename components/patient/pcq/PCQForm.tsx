@@ -7,6 +7,7 @@ import {
   PATIENT_SUBMIT_PCQ_MUTATION,
 } from "@/lib/patient/pcq-graphql";
 import { PCQQuestionField } from "@/components/patient/pcq/PCQQuestionField";
+import { usePcqExplicitSave } from "@/components/patient/pcq/use-pcq-explicit-save";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -71,6 +72,7 @@ function statusVariant(status: string): "success" | "secondary" | "warning" {
 
 export function PCQForm({ appointmentId }: { appointmentId: string }) {
   const router = useRouter();
+  const explicitSave = usePcqExplicitSave();
 
   const { data, loading, error } = useQuery<PCQData>(
     PATIENT_PCQ_FOR_APPOINTMENT_QUERY,
@@ -157,6 +159,7 @@ export function PCQForm({ appointmentId }: { appointmentId: string }) {
                 answers={pcq.answers}
                 responseId={pcq.id}
                 disabled={isReadOnly}
+                register={explicitSave.register}
               />
             ))}
           </CardContent>
@@ -170,16 +173,37 @@ export function PCQForm({ appointmentId }: { appointmentId: string }) {
         </p>
       ) : null}
 
+      {explicitSave.error ? (
+        <p className="text-sm text-danger">
+          Couldn&apos;t save your answers. Please check your connection and try again.
+        </p>
+      ) : null}
+
       {/* Actions */}
       {!isReadOnly ? (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={submitting || questions.length === 0}
-          >
-            {submitting ? "Submitting…" : "Submit Questionnaire"}
-          </Button>
+        <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted">
+            {explicitSave.savedAt
+              ? `Answers saved ${formatDateTime(explicitSave.savedAt)}`
+              : "Your answers autosave as you go."}
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void explicitSave.saveAll()}
+              disabled={explicitSave.saving || questions.length === 0}
+            >
+              {explicitSave.saving ? "Saving…" : "Save answers"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={submitting || questions.length === 0}
+            >
+              {submitting ? "Submitting…" : "Submit Questionnaire"}
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="flex justify-end">

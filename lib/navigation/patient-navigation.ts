@@ -6,6 +6,7 @@ export type PatientNavigationItem = {
     | "appointments"
     | "questionnaires"
     | "providers"
+    | "consultants"
     | "messages"
     | "records"
     | "prescriptions"
@@ -34,7 +35,12 @@ export const patientMainNavigation: PatientNavigationItem[] = [
     icon: "questionnaires",
   },
   {
-    label: "Providers",
+    label: "My Consultants",
+    href: "/patient/consultants",
+    icon: "consultants",
+  },
+  {
+    label: "Find Providers",
     href: "/patient/providers",
     icon: "providers",
   },

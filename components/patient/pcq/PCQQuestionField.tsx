@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@apollo/client";
-import { PATIENT_SAVE_PCQ_DRAFT_MUTATION } from "@/lib/patient/pcq-graphql";
+import {
+  PATIENT_SAVE_PCQ_ANSWER_MUTATION,
+  PATIENT_SAVE_PCQ_DRAFT_MUTATION,
+} from "@/lib/patient/pcq-graphql";
+import type { PcqExplicitSave } from "@/components/patient/pcq/use-pcq-explicit-save";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +28,77 @@ type PCQAnswer = {
   answerBoolean: boolean | null;
   answerJson: unknown;
 };
+
+// The backend / seeded templates and the consultant builder use slightly
+// different names for the same input ("select" vs "single_select", "textarea"
+// vs "long_text", and sometimes UPPERCASE). Normalize to one canonical set so
+// every question renders an input the patient can actually fill.
+type CanonicalType =
+  | "text"
+  | "long_text"
+  | "number"
+  | "date"
+  | "single_select"
+  | "multi_select"
+  | "boolean"
+  | "json";
+
+function normalizeQuestionType(raw: string | null | undefined): CanonicalType {
+  const t = (raw ?? "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+  switch (t) {
+    case "text":
+    case "short_text":
+    case "string":
+    case "input":
+      return "text";
+    case "long_text":
+    case "longtext":
+    case "textarea":
+    case "multiline":
+    case "paragraph":
+      return "long_text";
+    case "number":
+    case "numeric":
+    case "integer":
+    case "int":
+    case "float":
+    case "decimal":
+      return "number";
+    case "date":
+    case "datetime":
+    case "datetime_local":
+      return "date";
+    case "single_select":
+    case "singleselect":
+    case "select":
+    case "dropdown":
+    case "radio":
+    case "choice":
+    case "single_choice":
+      return "single_select";
+    case "multi_select":
+    case "multiselect":
+    case "multi_choice":
+    case "checkbox":
+    case "checkboxes":
+    case "checklist":
+      return "multi_select";
+    case "boolean":
+    case "bool":
+    case "yes_no":
+    case "yesno":
+    case "toggle":
+      return "boolean";
+    case "json":
+    case "file":
+    case "upload":
+      return "json";
+    default:
+      // Unknown type — fall back to a free-text input so the patient can still
+      // answer rather than seeing a label with no field.
+      return "text";
+  }
+}
 
 function parseOptions(raw: string[] | string | null | undefined): string[] {
   if (!raw) return [];
@@ -53,7 +128,7 @@ function parseJsonArray(raw: unknown): string[] {
 function getInitialValue(question: PCQQuestion, answers: PCQAnswer[]): string {
   const answer = answers.find((a) => a.questionId === question.id);
   if (!answer) return "";
-  switch (question.questionType) {
+  switch (normalizeQuestionType(question.questionType)) {
     case "boolean":
       return answer.answerBoolean != null ? String(answer.answerBoolean) : "";
     case "number":
@@ -91,22 +166,33 @@ export function PCQQuestionField({
   answers,
   responseId,
   disabled,
+  register,
 }: {
   question: PCQQuestion;
   answers: PCQAnswer[];
   responseId: string;
   disabled: boolean;
+  /** When present, the field registers an explicit savePcqAnswer saver. */
+  register?: PcqExplicitSave["register"];
 }) {
+  const type = normalizeQuestionType(question.questionType);
   const initialAnswer = answers.find((a) => a.questionId === question.id);
   const [value, setValue] = useState(() => getInitialValue(question, answers));
   const [selected, setSelected] = useState<string[]>(() =>
-    question.questionType === "multi_select" ? parseJsonArray(initialAnswer?.answerJson) : [],
+    type === "multi_select" ? parseJsonArray(initialAnswer?.answerJson) : [],
   );
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saveDraft] = useMutation(PATIENT_SAVE_PCQ_DRAFT_MUTATION);
+  const [saveAnswer] = useMutation(PATIENT_SAVE_PCQ_ANSWER_MUTATION);
 
-  const type = question.questionType;
   const options = parseOptions(question.options);
+
+  // Latest serialized value, kept in a ref so the registered saver closure
+  // (registered once on mount) always flushes the current answer.
+  const currentSerialized = () =>
+    type === "multi_select" ? JSON.stringify(selected) : serializeScalar(value, type);
+  const serializedRef = useRef(currentSerialized());
+  serializedRef.current = currentSerialized();
 
   async function persist(serialized: string) {
     if (disabled) return;
@@ -117,6 +203,19 @@ export function PCQQuestionField({
       // autosave failures are silent — the patient can still submit
     }
   }
+
+  // Explicit save (savePcqAnswer) — surfaces errors so the parent can react.
+  useEffect(() => {
+    if (disabled || !register) return;
+    return register(question.id, async () => {
+      await saveAnswer({
+        variables: { responseId, questionId: question.id, value: serializedRef.current },
+      });
+      setSavedAt(new Date().toISOString());
+    });
+    // saveAnswer/responseId are stable for the life of this field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [register, disabled, question.id, responseId]);
 
   function handleScalarBlur() {
     void persist(serializeScalar(value, type));

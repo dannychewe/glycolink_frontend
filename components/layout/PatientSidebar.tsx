@@ -60,6 +60,14 @@ function NavIcon({
     );
   }
 
+  if (icon === "consultants") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">
+        <path d="M8 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-5 9v-1a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1M16 4l1.2 2.4L20 6.8l-1.8 1.8.4 2.6L16 10l-2.6 1.2.4-2.6L12 6.8l2.8-.4L16 4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
   if (icon === "messages") {
     return (
       <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">
