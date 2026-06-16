@@ -1,22 +1,29 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   MessageSquare, Send, Archive, X, RotateCcw, ChevronLeft,
   Paperclip, AlertCircle, CheckCheck, Check,
+  CalendarPlus, Stethoscope, FileText,
 } from "lucide-react";
 import {
   ARCHIVE_CONVERSATION_MUTATION,
   CLOSE_CONVERSATION_MUTATION,
+  CONSULTATION_TYPE_OPTIONS,
   CONVERSATION_MESSAGES_QUERY,
+  CREATE_CLINICAL_NOTE_FROM_THREAD_MUTATION,
   MARK_CONVERSATION_READ_MUTATION,
   MESSAGE_PRIORITY_OPTIONS,
   MESSAGE_THREADS_QUERY,
   REOPEN_CONVERSATION_MUTATION,
+  SCHEDULE_FOLLOWUP_FROM_THREAD_MUTATION,
   SEND_MESSAGE_MUTATION,
+  START_CONSULTATION_FROM_THREAD_MUTATION,
 } from "@/lib/consultant/messages-graphql";
 import { Badge } from "@/components/ui/badge";
+import { DetailModal } from "@/components/ui/detail-modal";
 import { cn } from "@/lib/utils/cn";
 
 // ─── Types ───────────────────────────────────────────────
@@ -234,10 +241,13 @@ function ConversationView({
   onBack: () => void;
   onThreadUpdated: () => void;
 }) {
+  const router = useRouter();
   const [body, setBody] = useState("");
   const [priority, setPriority] = useState("NORMAL");
-  const [_loadBefore, _setLoadBefore] = useState<string | undefined>(undefined);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [activeAction, setActiveAction] = useState<null | "followup" | "note">(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data, loading, fetchMore, refetch } = useQuery<{ conversationMessages: Message[] }>(
     CONVERSATION_MESSAGES_QUERY,
@@ -252,6 +262,9 @@ function ConversationView({
   const [archiveConversation, { loading: archiving }] = useMutation(ARCHIVE_CONVERSATION_MUTATION);
   const [closeConversation, { loading: closing }] = useMutation(CLOSE_CONVERSATION_MUTATION);
   const [reopenConversation, { loading: reopening }] = useMutation(REOPEN_CONVERSATION_MUTATION);
+  const [startConsultation, { loading: startingConsult }] = useMutation(
+    START_CONSULTATION_FROM_THREAD_MUTATION,
+  );
 
   const messages = [...(data?.conversationMessages ?? [])].sort(
     (a, b) => a.sequenceNumber - b.sequenceNumber,
@@ -268,19 +281,49 @@ function ConversationView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    if (picked.length > 0) {
+      setAttachments((prev) => [...prev, ...picked]);
+    }
+    // reset so the same file can be re-selected after removal
+    e.target.value = "";
+  }
+
+  function removeAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSend(e: FormEvent) {
     e.preventDefault();
-    if (!body.trim()) return;
+    if (!body.trim() && attachments.length === 0) return;
     try {
       await sendMessage({
-        variables: { conversationId: thread.id, body: body.trim(), priority },
+        variables: {
+          conversationId: thread.id,
+          body: body.trim() || null,
+          priority,
+          attachments: attachments.length > 0 ? attachments : undefined,
+        },
       });
       setBody("");
       setPriority("NORMAL");
+      setAttachments([]);
       await refetch();
       onThreadUpdated();
     } catch {
       /* handled silently — no alert needed for send failures here */
+    }
+  }
+
+  async function handleStartConsultation() {
+    try {
+      const res = await startConsultation({ variables: { conversationId: thread.id } });
+      const encounterId = res.data?.startConsultationFromThread?.id;
+      onThreadUpdated();
+      if (encounterId) router.push(`/consultant/consultations/${encounterId}`);
+    } catch {
+      /* handled silently */
     }
   }
 
@@ -342,6 +385,38 @@ function ConversationView({
 
         {/* Thread actions */}
         <div className="flex shrink-0 items-center gap-1.5">
+          {!isArchived ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveAction("followup")}
+                title="Schedule follow-up appointment"
+                className="rounded-lg p-1.5 text-muted hover:bg-background hover:text-primary transition"
+              >
+                <CalendarPlus className="size-4" />
+              </button>
+              {thread.appointmentId ? (
+                <button
+                  type="button"
+                  onClick={() => void handleStartConsultation()}
+                  disabled={startingConsult}
+                  title="Start consultation from this thread"
+                  className="rounded-lg p-1.5 text-muted hover:bg-background hover:text-primary transition disabled:opacity-50"
+                >
+                  <Stethoscope className="size-4" />
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setActiveAction("note")}
+                title="Create clinical note from thread"
+                className="rounded-lg p-1.5 text-muted hover:bg-background hover:text-primary transition"
+              >
+                <FileText className="size-4" />
+              </button>
+              <span className="mx-0.5 h-5 w-px bg-border" aria-hidden />
+            </>
+          ) : null}
           {!isClosed && !isArchived ? (
             <>
               <button
@@ -430,6 +505,28 @@ function ConversationView({
           onSubmit={(e) => void handleSend(e)}
           className="border-t border-border bg-surface px-4 py-3 space-y-2"
         >
+          {attachments.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {attachments.map((file, i) => (
+                <span
+                  key={`${file.name}-${i}`}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 text-xs text-text"
+                >
+                  <Paperclip className="size-3 shrink-0 text-muted" />
+                  <span className="truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(i)}
+                    className="shrink-0 text-muted transition hover:text-danger"
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
           <textarea
             placeholder="Type a message…"
             rows={2}
@@ -441,18 +538,37 @@ function ConversationView({
             className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none placeholder:text-muted transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <div className="flex items-center justify-between gap-2">
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              className="h-9 rounded-xl border border-border bg-background px-3 text-xs text-text outline-none transition focus:border-primary"
-            >
-              {MESSAGE_PRIORITY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFilesSelected}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Attach files"
+                aria-label="Attach files"
+                className="inline-flex size-9 items-center justify-center rounded-xl border border-border bg-background text-muted transition hover:text-text hover:bg-surface"
+              >
+                <Paperclip className="size-4" />
+              </button>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                aria-label="Message priority"
+                className="h-9 rounded-xl border border-border bg-background px-3 text-xs text-text outline-none transition focus:border-primary"
+              >
+                {MESSAGE_PRIORITY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
             <button
               type="submit"
-              disabled={sending || !body.trim()}
+              disabled={sending || (!body.trim() && attachments.length === 0)}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-medium text-white transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
             >
               <Send className="size-3.5" />
@@ -462,7 +578,273 @@ function ConversationView({
           <p className="text-xs text-muted">Ctrl+Enter to send · Patient is notified by email and in-app</p>
         </form>
       )}
+
+      {activeAction === "followup" ? (
+        <ScheduleFollowUpModal
+          thread={thread}
+          onClose={() => setActiveAction(null)}
+          onDone={() => {
+            setActiveAction(null);
+            onThreadUpdated();
+          }}
+        />
+      ) : null}
+
+      {activeAction === "note" ? (
+        <ClinicalNoteModal
+          thread={thread}
+          onClose={() => setActiveAction(null)}
+          onDone={(encounterId) => {
+            setActiveAction(null);
+            onThreadUpdated();
+            if (encounterId) router.push(`/consultant/consultations/${encounterId}`);
+          }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+// ─── Schedule Follow-Up Modal ─────────────────────────────
+
+function toLocalInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function ScheduleFollowUpModal({
+  thread,
+  onClose,
+  onDone,
+}: {
+  thread: Thread;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const defaultStart = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  defaultStart.setMinutes(0, 0, 0);
+  const defaultEnd = new Date(defaultStart.getTime() + 30 * 60 * 1000);
+
+  const [startTime, setStartTime] = useState(toLocalInputValue(defaultStart));
+  const [endTime, setEndTime] = useState(toLocalInputValue(defaultEnd));
+  const [consultationType, setConsultationType] = useState("telemedicine");
+  const [error, setError] = useState<string | null>(null);
+
+  const [scheduleFollowUp, { loading }] = useMutation(SCHEDULE_FOLLOWUP_FROM_THREAD_MUTATION);
+
+  async function handleSubmit() {
+    setError(null);
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      setError("Please provide valid start and end times.");
+      return;
+    }
+    if (end <= start) {
+      setError("End time must be after the start time.");
+      return;
+    }
+    try {
+      await scheduleFollowUp({
+        variables: {
+          conversationId: thread.id,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          consultationType,
+        },
+      });
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to schedule follow-up.");
+    }
+  }
+
+  return (
+    <DetailModal
+      title="Schedule follow-up"
+      subtitle={`A confirmed appointment will be created for ${thread.patientName ?? "this patient"}.`}
+      onClose={onClose}
+      className="sm:max-w-md"
+      footer={
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-text transition hover:bg-surface"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:opacity-50"
+          >
+            <CalendarPlus className="size-4" />
+            {loading ? "Scheduling…" : "Schedule"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {error ? (
+          <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger">
+            <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        ) : null}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-text">Start time</label>
+          <input
+            type="datetime-local"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-text">End time</label>
+          <input
+            type="datetime-local"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-text">Consultation type</label>
+          <select
+            value={consultationType}
+            onChange={(e) => setConsultationType(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary"
+          >
+            {CONSULTATION_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </DetailModal>
+  );
+}
+
+// ─── Clinical Note Modal ──────────────────────────────────
+
+function ClinicalNoteModal({
+  thread,
+  onClose,
+  onDone,
+}: {
+  thread: Thread;
+  onClose: () => void;
+  onDone: (encounterId?: string) => void;
+}) {
+  const [encounterId, setEncounterId] = useState(thread.encounterId ?? "");
+  const [subjective, setSubjective] = useState("");
+  const [objective, setObjective] = useState("");
+  const [assessment, setAssessment] = useState("");
+  const [plan, setPlan] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const [createNote, { loading }] = useMutation(CREATE_CLINICAL_NOTE_FROM_THREAD_MUTATION);
+
+  const needsEncounterId = !thread.encounterId;
+
+  async function handleSubmit() {
+    setError(null);
+    if (needsEncounterId && !encounterId.trim()) {
+      setError("This thread isn't linked to an encounter — provide an encounter ID.");
+      return;
+    }
+    // Only send provided SOAP fields; omit empties so the backend can
+    // fall back to thread messages for the subjective draft.
+    const data: Record<string, string> = {};
+    if (subjective.trim()) data.subjective = subjective.trim();
+    if (objective.trim()) data.objective = objective.trim();
+    if (assessment.trim()) data.assessment = assessment.trim();
+    if (plan.trim()) data.plan = plan.trim();
+
+    const targetEncounterId = thread.encounterId ?? (encounterId.trim() || undefined);
+
+    try {
+      const res = await createNote({
+        variables: {
+          conversationId: thread.id,
+          encounterId: targetEncounterId ?? null,
+          data: Object.keys(data).length > 0 ? data : null,
+        },
+      });
+      onDone(res.data?.createClinicalNoteFromThread ? targetEncounterId : undefined);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to create clinical note.");
+    }
+  }
+
+  return (
+    <DetailModal
+      title="Create clinical note"
+      subtitle="Creates an append-only SOAP version. Leave subjective blank to draft from recent thread messages."
+      onClose={onClose}
+      className="sm:max-w-lg"
+      footer={
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-text transition hover:bg-surface"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:opacity-50"
+          >
+            <FileText className="size-4" />
+            {loading ? "Saving…" : "Create note"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {error ? (
+          <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger">
+            <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        ) : null}
+        {needsEncounterId ? (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-text">Encounter ID</label>
+            <input
+              type="text"
+              value={encounterId}
+              onChange={(e) => setEncounterId(e.target.value)}
+              placeholder="Target encounter UUID"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        ) : null}
+        {([
+          ["Subjective", subjective, setSubjective, "Symptoms and history (blank = use thread messages)"],
+          ["Objective", objective, setObjective, "Exam findings, vitals"],
+          ["Assessment", assessment, setAssessment, "Diagnosis / clinical impression"],
+          ["Plan", plan, setPlan, "Treatment and follow-up plan"],
+        ] as const).map(([label, value, setter, placeholder]) => (
+          <div key={label} className="space-y-1.5">
+            <label className="text-xs font-medium text-text">{label}</label>
+            <textarea
+              rows={2}
+              value={value}
+              onChange={(e) => setter(e.target.value)}
+              placeholder={placeholder}
+              className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none placeholder:text-muted transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        ))}
+      </div>
+    </DetailModal>
   );
 }
 

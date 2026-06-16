@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { AppointmentActionModal } from "@/components/patient/appointments/AppointmentActionModal";
+import { PaymentsComingSoonNotice } from "@/components/patient/payments/PaymentsComingSoonNotice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -143,6 +144,7 @@ function mapAppointmentError(error: unknown) {
 export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewProps) {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedRescheduleDate, setSelectedRescheduleDate] = useState("");
   const [selectedRescheduleStartTime, setSelectedRescheduleStartTime] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -351,7 +353,14 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           ) : null}
 
           {canPay ? (
-            <Button href="/patient/payments" fullWidth>
+            <Button
+              type="button"
+              fullWidth
+              onClick={() => {
+                setActionError(null);
+                setIsPaymentModalOpen(true);
+              }}
+            >
               Proceed to Payment
             </Button>
           ) : null}
@@ -397,6 +406,22 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           ) : null}
         </CardContent>
       </Card>
+
+      {isPaymentModalOpen ? (
+        <AppointmentActionModal
+          title="Payment"
+          onClose={() => setIsPaymentModalOpen(false)}
+          cancelLabel="Close"
+          showFooterActions={false}
+        >
+          <PaymentsComingSoonNotice />
+          <div className="mt-4 flex justify-end">
+            <Button type="button" variant="secondary" onClick={() => setIsPaymentModalOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </AppointmentActionModal>
+      ) : null}
 
       {isCancelModalOpen ? (
         <AppointmentActionModal

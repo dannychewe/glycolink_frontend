@@ -1,21 +1,35 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@apollo/client";
-import { CheckCircle, AlertCircle, Send, ClipboardList } from "lucide-react";
+import { CheckCircle, AlertCircle, Send, ClipboardList, Plus, ChevronRight, Globe } from "lucide-react";
 import {
   ACTIVE_PCQ_TEMPLATE_QUERY,
   ACTIVE_PCQ_TEMPLATE_VERSION_QUERY,
   CONSULTATION_TYPE_OPTIONS,
+  CREATE_PCQ_TEMPLATE_MUTATION,
+  DEFAULT_CONSULTATION_TYPE,
   MY_PCQ_QUESTION_CONTRIBUTIONS_QUERY,
   PCQ_QUESTION_TYPE_OPTIONS,
+  PCQ_TEMPLATES_QUERY,
   SUBMIT_PCQ_QUESTION_CONTRIBUTION_MUTATION,
 } from "@/lib/consultant/pcq-graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
+
+function formatLabel(value: string | null | undefined) {
+  if (!value) return "Unknown";
+  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function needsOptionsFor(type: string) {
+  return type === "single_select" || type === "multi_select";
+}
 
 type AlertState = { type: "success" | "error"; message: string } | null;
 
@@ -166,7 +180,7 @@ function ActiveTemplateView({ consultationType }: { consultationType: string }) 
 // ─── Contribution Form ────────────────────────────────────
 
 const BLANK_FORM = {
-  consultationType: "initial",
+  consultationType: DEFAULT_CONSULTATION_TYPE,
   questionText: "",
   questionType: "text",
   isRequired: false,
@@ -178,7 +192,7 @@ function ContributionForm() {
   const [form, setForm] = useState(BLANK_FORM);
   const [submit, { loading }] = useMutation(SUBMIT_PCQ_QUESTION_CONTRIBUTION_MUTATION);
 
-  const needsOptions = form.questionType === "select" || form.questionType === "single_select";
+  const needsOptions = needsOptionsFor(form.questionType);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -201,8 +215,8 @@ function ContributionForm() {
       });
       setAlert({ type: "success", message: "Contribution submitted for admin review." });
       setForm(BLANK_FORM);
-    } catch {
-      setAlert({ type: "error", message: "Failed to submit contribution. Please try again." });
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to submit contribution. Please try again.") });
     }
   }
 
@@ -388,15 +402,170 @@ function MyContributions() {
   );
 }
 
+// ─── My Templates (supplemental) ──────────────────────────
+
+type TemplateListItem = {
+  id: string;
+  name: string;
+  consultationType: string;
+  status: string;
+  specialtyId: string | null;
+  isGlobal: boolean;
+  versions: { id: string; isCurrent: boolean }[];
+};
+
+const TEMPLATE_STATUS_VARIANT: Record<string, "primary" | "secondary" | "success" | "danger" | "warning"> = {
+  draft: "secondary",
+  active: "success",
+  archived: "warning",
+};
+
+function CreateTemplateForm({ onCreated }: { onCreated: (alert: AlertState) => void }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [consultationType, setConsultationType] = useState(DEFAULT_CONSULTATION_TYPE);
+  const [create, { loading }] = useMutation(CREATE_PCQ_TEMPLATE_MUTATION);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    try {
+      const result = await create({
+        variables: { name, consultationType },
+        refetchQueries: [PCQ_TEMPLATES_QUERY],
+      });
+      const id = result.data?.createPcqTemplate?.template?.id;
+      if (id) {
+        router.push(`/consultant/pcq/${id}`);
+      } else {
+        onCreated({ type: "success", message: "Template created." });
+        setOpen(false);
+        setName("");
+      }
+    } catch (error) {
+      onCreated({ type: "error", message: getGraphQLErrorMessage(error, "Unable to create template.") });
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button type="button" variant="primary" onClick={() => setOpen(true)}>
+        <Plus className="size-4" />
+        New Supplemental Template
+      </Button>
+    );
+  }
+
+  return (
+    <form onSubmit={(e) => void handleSubmit(e)} className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
+      <p className="text-sm font-semibold text-text">New supplemental template</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="tpl-name">Name <span className="text-danger">*</span></Label>
+          <Input
+            id="tpl-name"
+            placeholder="e.g. Neuropathy follow-up"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="tpl-type">Consultation type</Label>
+          <select
+            id="tpl-type"
+            className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            value={consultationType}
+            onChange={(e) => setConsultationType(e.target.value)}
+          >
+            {CONSULTATION_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button type="submit" variant="primary" disabled={loading}>
+          {loading ? "Creating…" : "Create & open builder"}
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
+      </div>
+    </form>
+  );
+}
+
+function MyTemplates() {
+  const [alert, setAlert] = useState<AlertState>(null);
+  const { data, loading } = useQuery<{ pcqTemplates: TemplateListItem[] }>(
+    PCQ_TEMPLATES_QUERY,
+    { fetchPolicy: "cache-and-network" },
+  );
+
+  const templates = data?.pcqTemplates ?? [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-muted max-w-xl">
+          Supplemental tenant-scoped questionnaires for follow-up workflows. Assign an active
+          template to an accepted patient to make it patient-visible.
+        </p>
+      </div>
+
+      <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
+      <CreateTemplateForm onCreated={setAlert} />
+
+      {loading && templates.length === 0 ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 rounded-xl bg-surface animate-pulse" />
+          ))}
+        </div>
+      ) : templates.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-10 text-center">
+          <ClipboardList className="size-8 text-muted" />
+          <p className="text-sm text-muted">No templates yet. Create your first supplemental template above.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {templates.map((t) => (
+            <Button
+              key={t.id}
+              href={`/consultant/pcq/${t.id}`}
+              variant="ghost"
+              className="flex h-auto w-full items-center gap-3 rounded-xl border border-border px-4 py-3 text-left hover:border-primary/40 hover:bg-primary/5"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-text">{t.name}</p>
+                <p className="text-xs text-muted">
+                  {formatLabel(t.consultationType)} · {t.versions.length} version{t.versions.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {t.isGlobal ? <Globe className="size-3.5 text-primary" /> : null}
+                <Badge variant={TEMPLATE_STATUS_VARIANT[t.status] ?? "secondary"} className="capitalize">
+                  {t.status}
+                </Badge>
+                <ChevronRight className="size-4 text-muted" />
+              </div>
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────
 
-type ActiveTab = "template" | "contribute" | "contributions";
+type ActiveTab = "templates" | "template" | "contribute" | "contributions";
 
 export function PCQTemplateManager() {
-  const [activeConsultationType, setActiveConsultationType] = useState("initial");
-  const [activeTab, setActiveTab] = useState<ActiveTab>("template");
+  const [activeConsultationType, setActiveConsultationType] = useState<string>(DEFAULT_CONSULTATION_TYPE);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("templates");
 
   const tabs: { key: ActiveTab; label: string }[] = [
+    { key: "templates", label: "My Templates" },
     { key: "template", label: "Active Template" },
     { key: "contribute", label: "Suggest Question" },
     { key: "contributions", label: "My Contributions" },
@@ -422,6 +591,9 @@ export function PCQTemplateManager() {
           </button>
         ))}
       </div>
+
+      {/* My Templates */}
+      {activeTab === "templates" ? <MyTemplates /> : null}
 
       {/* Active Template */}
       {activeTab === "template" ? (

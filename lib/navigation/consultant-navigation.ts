@@ -11,6 +11,7 @@ export type ConsultantNavigationItem = {
     | "monitoring"
     | "organization"
     | "pcq"
+    | "clinical-rules"
     | "messages"
     | "notifications"
     | "availability"
@@ -86,6 +87,11 @@ export const consultantSecondaryNavigation: ConsultantNavigationItem[] = [
     label: "Profile",
     href: "/consultant/profile",
     icon: "profile",
+  },
+  {
+    label: "Clinical Rules",
+    href: "/consultant/clinical-rules",
+    icon: "clinical-rules",
   },
   {
     label: "Settings",

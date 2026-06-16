@@ -5,6 +5,8 @@ export const PCQ_FOR_APPOINTMENT_QUERY = gql`
     getPcqForAppointment(appointmentId: $appointmentId) {
       id
       appointmentId
+      patientId
+      responseScope
       status
       submittedAt
       lockedAt
@@ -121,10 +123,237 @@ export const PCQ_QUESTION_TYPE_OPTIONS = [
   { value: "json", label: "JSON / File" },
 ] as const;
 
+// Accepted consultationType values per the PCQ contract.
 export const CONSULTATION_TYPE_OPTIONS = [
-  { value: "initial", label: "Initial" },
-  { value: "follow_up", label: "Follow-up" },
-  { value: "review", label: "Review" },
-  { value: "urgent", label: "Urgent" },
   { value: "telemedicine", label: "Telemedicine" },
+  { value: "in_person", label: "In Person" },
+  { value: "home_visit", label: "Home Visit" },
 ] as const;
+
+export const DEFAULT_CONSULTATION_TYPE = "telemedicine";
+
+// ─── Supplemental Template Management ─────────────────────
+
+export const PCQ_TEMPLATES_QUERY = gql`
+  query ConsultantPCQTemplates {
+    pcqTemplates {
+      id
+      name
+      consultationType
+      status
+      specialtyId
+      isGlobal
+      versions {
+        id
+        versionNumber
+        isCurrent
+        publishedAt
+      }
+    }
+  }
+`;
+
+export const PCQ_TEMPLATE_DETAIL_QUERY = gql`
+  query ConsultantPCQTemplate($id: UUID!) {
+    pcqTemplate(id: $id) {
+      id
+      name
+      consultationType
+      status
+      specialtyId
+      isGlobal
+      versions {
+        id
+        versionNumber
+        isCurrent
+        publishedAt
+        questions {
+          id
+          questionText
+          questionType
+          isRequired
+          order
+          options
+        }
+      }
+    }
+  }
+`;
+
+export const CREATE_PCQ_TEMPLATE_MUTATION = gql`
+  mutation ConsultantCreatePCQTemplate($name: String!, $consultationType: String!) {
+    createPcqTemplate(name: $name, consultationType: $consultationType) {
+      template {
+        id
+        name
+        consultationType
+        status
+        specialtyId
+        isGlobal
+      }
+    }
+  }
+`;
+
+export const UPDATE_PCQ_TEMPLATE_MUTATION = gql`
+  mutation ConsultantUpdatePCQTemplate($templateId: UUID!, $data: PCQTemplateUpdateInput!) {
+    updatePcqTemplate(templateId: $templateId, data: $data) {
+      template {
+        id
+        name
+        consultationType
+        status
+      }
+    }
+  }
+`;
+
+export const DELETE_PCQ_TEMPLATE_MUTATION = gql`
+  mutation ConsultantDeletePCQTemplate($templateId: UUID!) {
+    deletePcqTemplate(templateId: $templateId) {
+      ok
+    }
+  }
+`;
+
+export const CREATE_PCQ_TEMPLATE_VERSION_MUTATION = gql`
+  mutation ConsultantCreatePCQTemplateVersion($templateId: UUID!) {
+    createPcqTemplateVersion(templateId: $templateId) {
+      templateVersion {
+        id
+        versionNumber
+        isCurrent
+        publishedAt
+        questions {
+          id
+          questionText
+          questionType
+          isRequired
+          order
+          options
+        }
+      }
+    }
+  }
+`;
+
+export const PUBLISH_PCQ_TEMPLATE_VERSION_MUTATION = gql`
+  mutation ConsultantPublishPCQTemplateVersion($versionId: UUID!) {
+    publishPcqTemplateVersion(versionId: $versionId) {
+      templateVersion {
+        id
+        versionNumber
+        isCurrent
+        publishedAt
+      }
+    }
+  }
+`;
+
+export const ADD_PCQ_QUESTION_MUTATION = gql`
+  mutation ConsultantAddPCQQuestion($versionId: UUID!, $data: PCQQuestionInput!) {
+    addPcqQuestion(versionId: $versionId, data: $data) {
+      question {
+        id
+        questionText
+        questionType
+        isRequired
+        order
+        options
+      }
+    }
+  }
+`;
+
+export const UPDATE_PCQ_QUESTION_MUTATION = gql`
+  mutation ConsultantUpdatePCQQuestion($questionId: UUID!, $data: PCQQuestionUpdateInput!) {
+    updatePcqQuestion(questionId: $questionId, data: $data) {
+      question {
+        id
+        questionText
+        questionType
+        isRequired
+        order
+        options
+      }
+    }
+  }
+`;
+
+export const DELETE_PCQ_QUESTION_MUTATION = gql`
+  mutation ConsultantDeletePCQQuestion($questionId: UUID!) {
+    deletePcqQuestion(questionId: $questionId) {
+      ok
+    }
+  }
+`;
+
+// ─── Assignment & Response Review ─────────────────────────
+
+export const ASSIGN_PCQ_TO_PATIENT_MUTATION = gql`
+  mutation ConsultantAssignPCQ($data: AssignPCQInput!) {
+    assignPcqToPatient(data: $data) {
+      response {
+        id
+        patientId
+        assignedByProviderId
+        assignedByProviderName
+        responseScope
+        status
+        assignmentReason
+        dueAt
+        template {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+
+export const PCQ_RESPONSE_QUERY = gql`
+  query ConsultantPCQResponse($id: UUID!) {
+    pcqResponse(id: $id) {
+      id
+      appointmentId
+      patientId
+      assignedByProviderId
+      assignedByProviderName
+      responseScope
+      status
+      assignmentReason
+      dueAt
+      submittedAt
+      lockedAt
+      template {
+        id
+        name
+        consultationType
+        status
+        isGlobal
+      }
+      templateVersion {
+        id
+        versionNumber
+        isCurrent
+        publishedAt
+      }
+      questions {
+        id
+        questionText
+        questionType
+        isRequired
+        order
+        options
+      }
+      answers {
+        id
+        questionId
+        answerText
+        answerNumeric
+        answerBoolean
+        answerJson
+      }
+    }
+  }
+`;

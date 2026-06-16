@@ -2,8 +2,9 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { MessageSquare, Send, ChevronLeft, Paperclip, AlertCircle, CheckCheck, Check, Archive, RotateCcw } from "lucide-react";
+import { MessageSquare, Send, ChevronLeft, Paperclip, AlertCircle, CheckCheck, Check, Archive, RotateCcw, X } from "lucide-react";
 import {
+  MESSAGE_PRIORITY_OPTIONS,
   PATIENT_ARCHIVE_CONVERSATION_MUTATION,
   PATIENT_CONVERSATION_MESSAGES_QUERY,
   PATIENT_MARK_CONVERSATION_READ_MUTATION,
@@ -235,7 +236,10 @@ function ConversationView({
   onThreadUpdated: () => void;
 }) {
   const [body, setBody] = useState("");
+  const [priority, setPriority] = useState("NORMAL");
+  const [attachments, setAttachments] = useState<File[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data, loading, fetchMore, refetch } = useQuery<{ conversationMessages: Message[] }>(
     PATIENT_CONVERSATION_MESSAGES_QUERY,
@@ -272,14 +276,34 @@ function ConversationView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    if (picked.length > 0) {
+      setAttachments((prev) => [...prev, ...picked]);
+    }
+    // reset so the same file can be re-selected after removal
+    e.target.value = "";
+  }
+
+  function removeAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSend(e: FormEvent) {
     e.preventDefault();
-    if (!body.trim()) return;
+    if (!body.trim() && attachments.length === 0) return;
     try {
       await sendMessage({
-        variables: { conversationId: thread.id, body: body.trim(), priority: "NORMAL" },
+        variables: {
+          conversationId: thread.id,
+          body: body.trim() || null,
+          priority,
+          attachments: attachments.length > 0 ? attachments : undefined,
+        },
       });
       setBody("");
+      setPriority("NORMAL");
+      setAttachments([]);
       await refetch();
       onThreadUpdated();
     } catch {
@@ -394,6 +418,28 @@ function ConversationView({
           onSubmit={(e) => void handleSend(e)}
           className="border-t border-border bg-surface px-4 py-3 space-y-2"
         >
+          {attachments.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {attachments.map((file, i) => (
+                <span
+                  key={`${file.name}-${i}`}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 text-xs text-text"
+                >
+                  <Paperclip className="size-3 shrink-0 text-muted" />
+                  <span className="truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(i)}
+                    className="shrink-0 text-muted transition hover:text-danger"
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
           <textarea
             placeholder="Type a message…"
             rows={2}
@@ -404,17 +450,45 @@ function ConversationView({
             }}
             className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none placeholder:text-muted transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFilesSelected}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Attach files"
+                aria-label="Attach files"
+                className="inline-flex size-9 items-center justify-center rounded-xl border border-border bg-background text-muted transition hover:text-text hover:bg-surface"
+              >
+                <Paperclip className="size-4" />
+              </button>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                aria-label="Message priority"
+                className="h-9 rounded-xl border border-border bg-background px-3 text-xs text-text outline-none transition focus:border-primary"
+              >
+                {MESSAGE_PRIORITY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
             <button
               type="submit"
-              disabled={sending || !body.trim()}
+              disabled={sending || (!body.trim() && attachments.length === 0)}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-medium text-white transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
             >
               <Send className="size-3.5" />
               {sending ? "Sending…" : "Send"}
             </button>
           </div>
-          <p className="text-xs text-muted">Ctrl+Enter to send</p>
+          <p className="text-xs text-muted">Ctrl+Enter to send · Your care team is notified by email and in-app</p>
         </form>
       )}
     </div>

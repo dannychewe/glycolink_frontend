@@ -3,19 +3,15 @@ import { gql } from "@apollo/client";
 export const MY_PATIENT_PROFILE_QUERY = gql`
   query MyPatientProfile {
     myPatientProfile {
-      baselineBpDiastolic
-      baselineBpSystolic
-      baselineWeight
+      id
+      fullName
+      email
       dateOfBirth
       diabetesType
       diagnosisDate
-      email
-      fullName
-      id
-      notes
-      onboardingStatus
       phone
       profileComplete
+      onboardingStatus
     }
   }
 `;
@@ -24,8 +20,87 @@ export const PROFILE_COMPLETION_STATUS_QUERY = gql`
   query ProfileCompletionStatus {
     profileCompletionStatus {
       isComplete
+      pcqComplete
+      consultationReady
       percentComplete
       missingItems
+    }
+  }
+`;
+
+// Hydrates the full clinical profile screen in a single round trip. The
+// allergies / currentMedications / additionalNotes summary fields live on
+// PatientSummary; structured records are read from the dedicated list fields below.
+export const PATIENT_CLINICAL_WORKSPACE_QUERY = gql`
+  query PatientClinicalProfileWorkspace {
+    myPatientProfile {
+      id
+      fullName
+      email
+      dateOfBirth
+      diabetesType
+      diagnosisDate
+      phone
+      allergies
+      currentMedications
+      additionalNotes
+      profileComplete
+      onboardingStatus
+      baselineWeight
+      baselineBpSystolic
+      baselineBpDiastolic
+      notes
+    }
+    profileCompletionStatus {
+      isComplete
+      pcqComplete
+      consultationReady
+      percentComplete
+      missingItems
+    }
+    myPatientAllergies {
+      id
+      substance
+      reaction
+      severity
+      status
+    }
+    myPatientConditions {
+      id
+      description
+      codeSystem
+      code
+      diagnosedAt
+      status
+    }
+    myPatientMedications {
+      id
+      drugName
+      dose
+      frequency
+      route
+      status
+    }
+    myPatientContacts {
+      id
+      name
+      relationship
+      phone
+      email
+      isPrimary
+    }
+    myPatientDocuments {
+      id
+      docType
+      recordedDate
+      originalName
+      fileUrl
+    }
+    myPatientConsents {
+      id
+      policyType
+      version
+      acceptedAt
     }
   }
 `;
@@ -48,9 +123,14 @@ export const COMPLETE_PATIENT_PROFILE_MUTATION = gql`
       patientProfile {
         id
         fullName
+        email
         dateOfBirth
         diabetesType
         diagnosisDate
+        phone
+        allergies
+        currentMedications
+        additionalNotes
         profileComplete
         onboardingStatus
       }
@@ -65,9 +145,14 @@ export const UPDATE_PATIENT_PROFILE_MUTATION = gql`
       patientProfile {
         id
         fullName
+        email
         dateOfBirth
         diabetesType
         diagnosisDate
+        phone
+        allergies
+        currentMedications
+        additionalNotes
         profileComplete
         onboardingStatus
       }

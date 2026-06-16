@@ -66,6 +66,13 @@ type CarePlanAction = {
   status: string;
 };
 
+type Amendment = {
+  id: string;
+  soapNoteVersionNumber: number;
+  amendmentText: string;
+  createdAt: string;
+};
+
 type Encounter = {
   id: string;
   appointmentId: string;
@@ -80,6 +87,7 @@ type Encounter = {
   diagnoses: Diagnosis[];
   observations: Observation[];
   carePlanActions: CarePlanAction[];
+  amendments: Amendment[];
 };
 
 type AlertState = { type: "success" | "error"; message: string } | null;
@@ -489,10 +497,8 @@ function CarePlanTab({ encounter, onRefresh }: { encounter: Encounter; onRefresh
 
 function AmendmentsTab({ encounter, onRefresh }: { encounter: Encounter; onRefresh: () => void }) {
   const [alert, setAlert] = useState<AlertState>(null);
-  const [form, setForm] = useState({ amendmentText: "", soapNoteVersionNumber: "" });
+  const [form, setForm] = useState({ amendmentText: "" });
   const [addAmendment, { loading }] = useMutation(ADD_AMENDMENT_MUTATION);
-
-  const latestSoapVersion = encounter.soapVersions.at(-1)?.versionNumber ?? 1;
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
@@ -501,13 +507,10 @@ function AmendmentsTab({ encounter, onRefresh }: { encounter: Encounter; onRefre
       await addAmendment({
         variables: {
           encounterId: encounter.id,
-          data: {
-            amendmentText: form.amendmentText,
-            soapNoteVersionNumber: Number(form.soapNoteVersionNumber) || latestSoapVersion,
-          },
+          data: { amendmentText: form.amendmentText },
         },
       });
-      setForm({ amendmentText: "", soapNoteVersionNumber: "" });
+      setForm({ amendmentText: "" });
       await onRefresh();
       setAlert({ type: "success", message: "Amendment added." });
     } catch (error) {
@@ -522,20 +525,27 @@ function AmendmentsTab({ encounter, onRefresh }: { encounter: Encounter; onRefre
         Amendments allow corrections to finalized encounter notes without altering the original record.
       </p>
 
+      {encounter.amendments.length > 0 ? (
+        <div className="space-y-2">
+          {[...encounter.amendments].reverse().map((am) => (
+            <div key={am.id} className="rounded-xl border-l-4 border-l-primary/40 bg-surface px-4 py-3 shadow-subtle">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">SOAP v{am.soapNoteVersionNumber}</Badge>
+                <span className="text-xs text-muted">{formatTime(am.createdAt)}</span>
+              </div>
+              <p className="mt-1.5 text-sm text-text">{am.amendmentText}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted">No amendments recorded yet.</p>
+      )}
+
       <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
         <p className="text-sm font-semibold text-text">Add Amendment</p>
-        <div className="space-y-2">
-          <Label htmlFor="amendSoapVersion">SOAP version number</Label>
-          <Input
-            id="amendSoapVersion"
-            type="number"
-            min={1}
-            placeholder={String(latestSoapVersion)}
-            value={form.soapNoteVersionNumber}
-            onChange={(e) => setForm((p) => ({ ...p, soapNoteVersionNumber: e.target.value }))}
-          />
-          <p className="text-xs text-muted">Latest SOAP version: {latestSoapVersion}</p>
-        </div>
+        <p className="text-xs text-muted">
+          The amendment is recorded against the latest finalized SOAP note version.
+        </p>
         <div className="space-y-2">
           <Label htmlFor="amendText">Amendment <span className="text-danger">*</span></Label>
           <Textarea

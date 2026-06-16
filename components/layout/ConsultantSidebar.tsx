@@ -132,6 +132,14 @@ function NavIcon({
     );
   }
 
+  if (icon === "clinical-rules") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">
+        <path d="M4 6h10M4 12h7M4 18h12M17 4v6m0 0-2-2m2 2 2-2M14 14v6m0 0-2-2m2 2 2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
   if (icon === "settings") {
     return (
       <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">

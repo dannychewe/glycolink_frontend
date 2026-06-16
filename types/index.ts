@@ -82,17 +82,6 @@ export type ConsultantNotification = {
   isRead: boolean;
 };
 
-export type PaymentStatus = "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED";
-
-export type PaymentRecord = {
-  id: string;
-  appointmentId: string;
-  providerName: string;
-  amount: number;
-  status: PaymentStatus;
-  createdAt: string;
-};
-
 export type AppointmentPaymentStatus = "AWAITING_PAYMENT" | "PAID";
 
 export type PrescriptionStatus = "ACTIVE" | "COMPLETED" | "REVOKED";

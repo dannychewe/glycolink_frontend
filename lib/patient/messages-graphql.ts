@@ -136,3 +136,8 @@ export const PATIENT_REOPEN_CONVERSATION_MUTATION = gql`
     }
   }
 `;
+
+export const MESSAGE_PRIORITY_OPTIONS = [
+  { value: "NORMAL", label: "Normal" },
+  { value: "URGENT", label: "Urgent" },
+] as const;

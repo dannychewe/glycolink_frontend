@@ -13,7 +13,7 @@ import {
   ADMIN_PCQ_TEMPLATES_QUERY,
   SPECIALTIES_QUERY,
 } from "@/lib/admin/graphql";
-import { CONSULTATION_TYPE_OPTIONS } from "@/lib/consultant/pcq-graphql";
+import { CONSULTATION_TYPE_OPTIONS, DEFAULT_CONSULTATION_TYPE } from "@/lib/consultant/pcq-graphql";
 import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
@@ -44,7 +44,7 @@ export function AdminPCQTemplateCreateView() {
   const [alert, setAlert] = useState<AlertState>(null);
   const [form, setForm] = useState({
     name: "",
-    consultationType: "initial",
+    consultationType: DEFAULT_CONSULTATION_TYPE,
     specialtyId: "",
   });
 

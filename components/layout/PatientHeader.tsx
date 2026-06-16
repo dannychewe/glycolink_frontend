@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@apollo/client";
 import { MY_PATIENT_PROFILE_QUERY } from "@/lib/patient/clinical-profile-graphql";
+import { PATIENT_UNREAD_MESSAGES_PREVIEW_QUERY } from "@/lib/patient/messages-graphql";
 
 type PatientHeaderProps = Readonly<{
   title: string;
@@ -36,7 +37,13 @@ export function PatientHeader({ title, onMenuClick }: PatientHeaderProps) {
     fetchPolicy: "cache-first",
   });
 
+  const { data: msgData } = useQuery(PATIENT_UNREAD_MESSAGES_PREVIEW_QUERY, {
+    variables: { limit: 1 },
+    fetchPolicy: "cache-and-network",
+  });
+
   const profile = data?.myPatientProfile;
+  const unreadMessages: number = msgData?.unreadMessagesPreview?.unreadCount ?? 0;
   const initials = getInitials(profile?.fullName);
   const shortName = profile?.fullName
     ? profile.fullName.split(" ").slice(0, 2).join(" ")
@@ -67,6 +74,22 @@ export function PatientHeader({ title, onMenuClick }: PatientHeaderProps) {
           <h1 className="truncate text-base font-semibold text-text md:text-lg">{title}</h1>
           <span className="hidden text-xs text-muted md:block">{formatDate()}</span>
         </div>
+
+        {/* Messages shortcut */}
+        <Link
+          href="/patient/messages"
+          aria-label={unreadMessages > 0 ? `${unreadMessages} unread messages` : "Messages"}
+          className="relative inline-flex size-10 items-center justify-center rounded-xl text-muted transition hover:bg-surface hover:text-text"
+        >
+          <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10ZM9 10h6M9 14h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {unreadMessages > 0 ? (
+            <span className="absolute right-1.5 top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-4 text-white">
+              {unreadMessages > 99 ? "99+" : unreadMessages}
+            </span>
+          ) : null}
+        </Link>
 
         {/* Notifications shortcut */}
         <Link

@@ -60,6 +60,12 @@ export const ENCOUNTER_QUERY = gql`
         targetDate
         status
       }
+      amendments {
+        id
+        soapNoteVersionNumber
+        amendmentText
+        createdAt
+      }
     }
   }
 `;
@@ -82,6 +88,7 @@ export const SAVE_SOAP_MUTATION = gql`
       soapVersion {
         id
         versionNumber
+        isFinalized
         subjective
         objective
         assessment

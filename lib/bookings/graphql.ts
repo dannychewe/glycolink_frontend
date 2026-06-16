@@ -22,6 +22,9 @@ export const UPCOMING_APPOINTMENT_QUERY = gql`
       provider {
         id
         displayName
+        specialties
+        consultationFee
+        shortBio
       }
     }
   }
@@ -31,15 +34,18 @@ export const MY_APPOINTMENTS_QUERY = gql`
   query PatientAppointments($limit: Int, $status: String) {
     myAppointments(limit: $limit, status: $status) {
       id
-      status
+      patientId
+      providerId
+      organizationId
+      consultationType
+      source
       startsAt
       endsAt
-      consultationType
-      providerId
-      patientId
+      status
       cancelReason
       cancelledAt
       completedAt
+      rescheduledFromAppointmentId
     }
   }
 `;
@@ -54,8 +60,40 @@ export const PENDING_ACTIONS_QUERY = gql`
       dueAt
       appointment {
         id
+        startsAt
+        endsAt
+        status
+      }
+      provider {
+        id
+        displayName
+        specialties
+      }
+    }
+  }
+`;
+
+export const CREATE_APPOINTMENT_MUTATION = gql`
+  mutation PatientCreateAppointment(
+    $providerId: UUID!
+    $startTime: DateTime!
+    $endTime: DateTime!
+    $consultationType: String
+  ) {
+    createAppointment(
+      providerId: $providerId
+      startTime: $startTime
+      endTime: $endTime
+      consultationType: $consultationType
+    ) {
+      appointment {
+        id
         status
         startsAt
+        endsAt
+        consultationType
+        providerId
+        patientId
       }
     }
   }
@@ -103,6 +141,7 @@ export const RESCHEDULE_APPOINTMENT_MUTATION = gql`
         status
         startsAt
         endsAt
+        rescheduledFromAppointmentId
       }
     }
   }

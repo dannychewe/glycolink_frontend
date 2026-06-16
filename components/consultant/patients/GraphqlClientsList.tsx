@@ -319,8 +319,17 @@ function ClientRow({ client }: { client: ConsultantClient }) {
 
         {/* Actions */}
         <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-          {/* TODO: restore "View Profile" → /consultant/patients/{id} once the real
-              patient-detail GraphQL contract exists (page is currently mock-only). */}
+          {/* View Profile opens the consultantPatientWorkspace detail screen.
+              Only meaningful once the invite is accepted (workspace requires it). */}
+          {client.inviteStatus !== "INVITED" && client.inviteStatus !== "REJECTED" ? (
+            <Button
+              href={`/consultant/patients/${client.patientId}`}
+              variant="primary"
+              size="sm"
+            >
+              View Profile
+            </Button>
+          ) : null}
           {client.activeConversationId ? (
             <Button
               href={`/consultant/messages/${client.activeConversationId}`}

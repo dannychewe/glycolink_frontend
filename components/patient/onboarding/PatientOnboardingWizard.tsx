@@ -259,7 +259,8 @@ export function PatientOnboardingWizard() {
             fullName: values.fullName,
             dateOfBirth: values.dateOfBirth,
             phone: values.phone || undefined,
-            diabetesType: values.diabetesType,
+            // diabetesType is a GraphQL enum (TYPE_1, TYPE_2, …); send the uppercase name.
+            diabetesType: values.diabetesType.toUpperCase(),
             diagnosisDate: values.diagnosisDate,
             allergies: values.allergies || undefined,
             currentMedications: values.currentMedications || undefined,
