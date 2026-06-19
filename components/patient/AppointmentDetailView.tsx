@@ -16,6 +16,7 @@ import {
 } from "@/lib/bookings/graphql";
 import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { PROVIDER_QUERY } from "@/lib/providers/directory-graphql";
+import { canJoinVideoConsultation } from "@/lib/video-consultation-graphql";
 
 type AppointmentDetailViewProps = Readonly<{
   appointmentId: string;
@@ -212,7 +213,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     status === "AWAITING_PAYMENT" ||
     status === "CONFIRMED" ||
     status === "CHECKED_IN";
-  const canJoin = status === "CONFIRMED" || status === "CHECKED_IN" || status === "IN_PROGRESS";
+  const canJoin = canJoinVideoConsultation(appointment?.consultationType, status);
   const canPay = status === "AWAITING_PAYMENT";
 
   const hasPendingPcq = (pendingActionsData?.pendingActions ?? []).some(
@@ -366,8 +367,8 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           ) : null}
 
           {canJoin ? (
-            <Button href={`/patient/bookings/${appointment.id}`} fullWidth>
-              Join Consultation
+            <Button href={`/patient/bookings/${appointment.id}/video`} fullWidth>
+              Join video consultation
             </Button>
           ) : null}
 

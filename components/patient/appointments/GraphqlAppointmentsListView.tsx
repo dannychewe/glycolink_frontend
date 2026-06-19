@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MY_APPOINTMENTS_QUERY } from "@/lib/bookings/graphql";
 import { cn } from "@/lib/utils/cn";
+import { canJoinVideoConsultation } from "@/lib/video-consultation-graphql";
 
 type MyAppointmentsData = {
   myAppointments: AppointmentItem[];
@@ -237,7 +238,12 @@ export function GraphqlAppointmentsListView() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="flex flex-col gap-2 pt-0 sm:flex-row">
+                {canJoinVideoConsultation(appointment.consultationType, appointment.status) ? (
+                  <Button href={`/patient/bookings/${appointment.id}/video`} className="sm:w-auto" fullWidth>
+                    Join video consultation
+                  </Button>
+                ) : null}
                 <Button href={`/patient/bookings/${appointment.id}`} variant="secondary" className="sm:w-auto" fullWidth>
                   View Details
                 </Button>

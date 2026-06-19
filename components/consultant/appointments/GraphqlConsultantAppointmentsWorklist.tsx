@@ -16,6 +16,7 @@ import {
 } from "@/lib/bookings/graphql";
 import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
+import { canJoinVideoConsultation } from "@/lib/video-consultation-graphql";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -272,6 +273,7 @@ function AppointmentCard({
   const actionable = isActionable(appointment.status);
   const isCompleted = normalizeStatus(appointment.status) === "COMPLETED";
   const isCancelled = ["CANCELLED", "NO_SHOW", "RESCHEDULED"].includes(normalizeStatus(appointment.status));
+  const canJoinVideo = canJoinVideoConsultation(appointment.consultationType, appointment.status);
 
   return (
     <div className={cn(
@@ -311,6 +313,12 @@ function AppointmentCard({
 
         {/* Actions row */}
         <div className="mt-4 flex flex-wrap gap-2">
+          {canJoinVideo ? (
+            <Button href={`/consultant/appointments/${appointment.id}/video`} size="sm">
+              Join video consultation
+            </Button>
+          ) : null}
+
           {isCompleted ? (
             <Button href={`/consultant/consultations`} variant="secondary" size="sm">
               View Consultation

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PENDING_ACTIONS_QUERY, UPCOMING_APPOINTMENT_QUERY } from "@/lib/bookings/graphql";
+import { canJoinVideoConsultation } from "@/lib/video-consultation-graphql";
 
 type UpcomingAppointmentData = {
   upcomingAppointment: {
@@ -211,9 +212,9 @@ export function GraphqlBookingOverview() {
                 >
                   View Details
                 </Button>
-                {nextAppointment.status === "CONFIRMED" ? (
-                  <Button href={`/patient/bookings/${nextAppointment.id}`} fullWidth>
-                    Join Consultation
+                {canJoinVideoConsultation(nextAppointment.consultationType, nextAppointment.status) ? (
+                  <Button href={`/patient/bookings/${nextAppointment.id}/video`} fullWidth>
+                    Join video consultation
                   </Button>
                 ) : null}
               </div>

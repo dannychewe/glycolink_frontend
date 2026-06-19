@@ -170,6 +170,7 @@ export const TODAYS_APPOINTMENTS_QUERY = gql`
         endsAt
         status
         consultationType
+        patientId
       }
     }
   }
@@ -185,6 +186,7 @@ export const UPCOMING_APPOINTMENTS_QUERY = gql`
         endsAt
         status
         consultationType
+        patientId
       }
     }
   }
