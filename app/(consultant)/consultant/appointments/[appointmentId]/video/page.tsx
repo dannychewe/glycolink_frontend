@@ -20,7 +20,7 @@ export default async function ConsultantVideoConsultationPage({
         appointmentId={appointmentId}
         backHref="/consultant/appointments"
         backLabel="Back to appointments"
-        pcqHref={`/consultant/consultations/${appointmentId}`}
+        pcqHref="/consultant/consultations"
         companion={
           <Card>
             <CardHeader>
@@ -30,8 +30,8 @@ export default async function ConsultantVideoConsultationPage({
               <p className="text-sm leading-6 text-muted">
                 Keep prescriptions, labs, SOAP notes, and PCQ review in the consultation workspace.
               </p>
-              <Button href={`/consultant/consultations/${appointmentId}`} variant="secondary" fullWidth>
-                Open consultation workspace
+              <Button href="/consultant/consultations" variant="secondary" fullWidth>
+                Open consultations
               </Button>
             </CardContent>
           </Card>
