@@ -14,10 +14,18 @@ export const UPCOMING_APPOINTMENT_QUERY = gql`
     upcomingAppointment {
       appointment {
         id
+        patientId
+        providerId
+        organizationId
         status
         startsAt
         endsAt
         consultationType
+        source
+        cancelReason
+        cancelledAt
+        completedAt
+        rescheduledFromAppointmentId
       }
       provider {
         id
@@ -60,14 +68,21 @@ export const PENDING_ACTIONS_QUERY = gql`
       dueAt
       appointment {
         id
+        patientId
+        providerId
+        organizationId
         startsAt
         endsAt
         status
+        consultationType
+        source
       }
       provider {
         id
         displayName
         specialties
+        consultationFee
+        shortBio
       }
     }
   }
@@ -94,6 +109,12 @@ export const CREATE_APPOINTMENT_MUTATION = gql`
         consultationType
         providerId
         patientId
+        organizationId
+        source
+        cancelReason
+        cancelledAt
+        completedAt
+        rescheduledFromAppointmentId
       }
     }
   }
@@ -120,6 +141,12 @@ export const BOOK_APPOINTMENT_MUTATION = gql`
         consultationType
         providerId
         patientId
+        organizationId
+        source
+        cancelReason
+        cancelledAt
+        completedAt
+        rescheduledFromAppointmentId
       }
     }
   }

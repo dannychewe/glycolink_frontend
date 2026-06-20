@@ -58,7 +58,7 @@ export function AdminShell({ children }: AdminShellProps) {
             isDrawerOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <AdminSidebar onNavigate={() => setIsDrawerOpen(false)} className="shadow-subtle" />
+          <AdminSidebar onNavigate={() => setIsDrawerOpen(false)} className="" />
         </div>
       </div>
     </div>

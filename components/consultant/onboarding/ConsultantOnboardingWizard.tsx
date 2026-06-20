@@ -34,6 +34,7 @@ import {
   SUBMIT_PROVIDER_PROFILE_MUTATION,
   UPDATE_PROVIDER_PROFILE_MUTATION,
   UPDATE_PROVIDER_SPECIALTIES_MUTATION,
+  PROVIDER_ONBOARDING_READINESS_QUERY,
 } from "@/lib/consultant/provider-lifecycle-graphql";
 import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
@@ -44,6 +45,27 @@ type UploadedLicense = {
   expiryDate: string | null;
   issuedAt: string | null;
 };
+
+type ReadinessItem = {
+  code: string;
+  label: string;
+  complete: boolean;
+  action: string | null;
+};
+
+type ProviderOnboardingReadiness = {
+  status: string | null;
+  verificationStatus: string | null;
+  canSubmit: boolean;
+  canResubmit: boolean;
+  submitted: boolean;
+  approved: boolean;
+  missingRequired: string[];
+  missingSetup: string[];
+  nextAction: string | null;
+  requiredItems: ReadinessItem[];
+  setupItems: ReadinessItem[];
+} | null;
 
 const steps = [
   {
@@ -94,7 +116,26 @@ type ExistingProfile = {
   certificateExpiryDate: string | null;
   telemedApprovalExpiryDate: string | null;
   status: string;
+  licenses?: UploadedLicense[] | null;
 } | null;
+
+const nextActionLabels: Record<string, string> = {
+  UPDATE_PROFILE: "Save profile",
+  UPLOAD_LICENSE: "Upload document",
+  UPDATE_SPECIALTIES: "Choose specialties",
+  SET_AVAILABILITY: "Set availability",
+  SUBMIT_PROFILE: "Submit for review",
+  AWAIT_ADMIN_REVIEW: "Awaiting review",
+  OPEN_DASHBOARD: "Go to dashboard",
+};
+
+const nextActionSteps: Record<string, number> = {
+  UPDATE_PROFILE: 0,
+  UPDATE_SPECIALTIES: 1,
+  UPLOAD_LICENSE: 3,
+  SET_AVAILABILITY: 4,
+  SUBMIT_PROFILE: REVIEW_STEP,
+};
 
 function parseCommaSeparatedNames(value: string | undefined) {
   return value
@@ -149,6 +190,9 @@ export function ConsultantOnboardingWizard() {
     MY_PROVIDER_PROFILE_QUERY,
     { fetchPolicy: "network-only" },
   );
+  const { data: readinessData, refetch: refetchReadiness } = useQuery<{
+    providerOnboardingReadiness: ProviderOnboardingReadiness;
+  }>(PROVIDER_ONBOARDING_READINESS_QUERY, { fetchPolicy: "network-only" });
 
   const methods = useForm<ConsultantOnboardingValues>({
     resolver: zodResolver(consultantOnboardingSchema),
@@ -195,11 +239,24 @@ export function ConsultantOnboardingWizard() {
     if (p.telemedApprovalExpiryDate && !getFieldState("telemedApprovalExpiryDate").isDirty) {
       setValue("telemedApprovalExpiryDate", p.telemedApprovalExpiryDate);
     }
+    if (p.licenses?.length) {
+      setUploads((current) => {
+        const knownIds = new Set(current.map((license) => license.id));
+        const newUploads = p.licenses?.filter((license) => !knownIds.has(license.id)) ?? [];
+        return newUploads.length ? [...current, ...newUploads] : current;
+      });
+    }
   }, [profileData, getFieldState, setValue]);
 
   const isLastStep = currentStep === REVIEW_STEP;
   const isFirstStep = currentStep === 0;
   const currentStepMeta = steps[currentStep];
+  const readiness = readinessData?.providerOnboardingReadiness ?? null;
+  const nextAction = readiness?.nextAction ?? null;
+  const primaryLabel = nextAction ? nextActionLabels[nextAction] ?? "Continue" : isLastStep ? "Submit for review" : "Continue";
+  const isAwaitingReview = nextAction === "AWAIT_ADMIN_REVIEW";
+  const incompleteRequiredItems = readiness?.requiredItems.filter((item) => !item.complete) ?? [];
+  const incompleteSetupItems = readiness?.setupItems.filter((item) => !item.complete) ?? [];
 
   async function persistProfileStep() {
     const values = methods.getValues();
@@ -232,6 +289,8 @@ export function ConsultantOnboardingWizard() {
         subSpecialtyIds: parseCommaSeparatedIds(values.subSpecialtyIds),
       },
     });
+
+    await refetchReadiness();
   }
 
   async function handleNext() {
@@ -263,6 +322,7 @@ export function ConsultantOnboardingWizard() {
       }
     }
 
+    await refetchReadiness();
     setCurrentStep((step) => Math.min(step + 1, REVIEW_STEP));
   }
 
@@ -281,12 +341,19 @@ export function ConsultantOnboardingWizard() {
   async function handleSubmit() {
     setSubmitError(null);
     setErrorStep(null);
+
+    if (readiness && !readiness.canSubmit && !readiness.canResubmit) {
+      setSubmitError("Complete the required items before submitting your profile for review.");
+      setErrorStep(nextAction ? nextActionSteps[nextAction] ?? 0 : 0);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       await submitProfile();
+      await refetchReadiness();
       setSubmitMessage("Profile submitted for verification.");
-      router.push("/consultant/dashboard");
     } catch (error) {
       const code = getGraphQLErrorCode(error);
       if (code === "PROFILE_INCOMPLETE") {
@@ -303,6 +370,47 @@ export function ConsultantOnboardingWizard() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handlePrimaryAction() {
+    if (nextAction === "OPEN_DASHBOARD") {
+      router.push("/consultant/dashboard");
+      return;
+    }
+
+    if (nextAction === "AWAIT_ADMIN_REVIEW") {
+      return;
+    }
+
+    if (nextAction === "SUBMIT_PROFILE") {
+      if (!isLastStep) {
+        setCurrentStep(REVIEW_STEP);
+        return;
+      }
+      await handleSubmit();
+      return;
+    }
+
+    if (nextAction === "UPLOAD_LICENSE" || nextAction === "UPDATE_SPECIALTIES" || nextAction === "SET_AVAILABILITY") {
+      setCurrentStep(nextActionSteps[nextAction]);
+      return;
+    }
+
+    if (nextAction === "UPDATE_PROFILE") {
+      try {
+        await persistProfileStep();
+        setSubmitMessage("Profile saved.");
+      } catch (error) {
+        setSubmitError(getGraphQLErrorMessage(error, "Failed to save profile. Please try again."));
+      }
+      return;
+    }
+
+    if (isLastStep) {
+      await handleSubmit();
+    } else {
+      await handleNext();
     }
   }
 
@@ -340,6 +448,48 @@ export function ConsultantOnboardingWizard() {
           </div>
         ) : null}
 
+        {readiness ? (
+          <div className="grid gap-3 rounded-xl border border-border bg-surface p-4 text-sm md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="font-semibold text-text">Required before review</p>
+              {readiness.requiredItems.map((item) => (
+                <div key={item.code} className="flex items-center justify-between gap-3">
+                  <span className={item.complete ? "text-muted line-through" : "text-text"}>
+                    {item.label}
+                  </span>
+                  <span className={item.complete ? "text-success" : "text-danger"}>
+                    {item.complete ? "Done" : "Required"}
+                  </span>
+                </div>
+              ))}
+              {incompleteRequiredItems.length ? (
+                <p className="text-xs text-muted">
+                  Complete these items before submitting. Required items cannot be skipped.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <p className="font-semibold text-text">Recommended setup</p>
+              {readiness.setupItems.map((item) => (
+                <div key={item.code} className="flex items-center justify-between gap-3">
+                  <span className={item.complete ? "text-muted line-through" : "text-text"}>
+                    {item.label}
+                  </span>
+                  <span className={item.complete ? "text-success" : "text-muted"}>
+                    {item.complete ? "Done" : "Can add later"}
+                  </span>
+                </div>
+              ))}
+              {incompleteSetupItems.length ? (
+                <p className="text-xs text-muted">
+                  Recommended items can be finished now or added after review.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <Card>
           <CardHeader className="border-b border-border pb-5">
             <div className="space-y-1">
@@ -360,7 +510,10 @@ export function ConsultantOnboardingWizard() {
             ) : currentStep === 3 ? (
               <StepCredentials
                 uploads={uploads}
-                onUploaded={(lic) => setUploads((prev) => [...prev, lic])}
+                onUploaded={(lic) => {
+                  setUploads((prev) => [...prev, lic]);
+                  void refetchReadiness();
+                }}
                 onRemove={(id) => setUploads((prev) => prev.filter((l) => l.id !== id))}
               />
             ) : currentStep === 4 ? (
@@ -386,8 +539,8 @@ export function ConsultantOnboardingWizard() {
           {isLastStep ? (
             <Button
               type="button"
-              disabled={isSubmitting}
-              onClick={() => void handleSubmit()}
+              disabled={isSubmitting || isAwaitingReview}
+              onClick={() => void handlePrimaryAction()}
               className="gap-1.5 px-6"
             >
               {isSubmitting ? (
@@ -398,18 +551,18 @@ export function ConsultantOnboardingWizard() {
               ) : (
                 <>
                   <Send className="size-4" />
-                  Submit for Verification
+                  {primaryLabel}
                 </>
               )}
             </Button>
           ) : (
             <Button
               type="button"
-              onClick={() => void handleNext()}
-              disabled={isSubmitting}
+              onClick={() => void handlePrimaryAction()}
+              disabled={isSubmitting || isAwaitingReview}
               className="gap-1.5 px-6"
             >
-              Continue
+              {primaryLabel}
               <ArrowRight className="size-4" />
             </Button>
           )}

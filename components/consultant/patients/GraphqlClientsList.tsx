@@ -140,7 +140,7 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
 
   if (invited) {
     return (
-      <div className="rounded-2xl border border-success/25 bg-success/5 px-5 py-5 space-y-3">
+      <div className="rounded-lg border border-success/25 bg-success/5 px-5 py-5 space-y-3">
         <div className="flex items-center gap-2 text-success">
           <CheckCircle className="size-5" />
           <p className="text-sm font-semibold">Invite sent</p>
@@ -172,7 +172,7 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
+    <div className="rounded-lg border border-border bg-surface p-5 space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-text">Invite Patient</p>
         <button type="button" onClick={onClose} className="text-xs text-muted hover:text-text transition">✕</button>
@@ -249,7 +249,7 @@ function ClientRow({ client }: { client: ConsultantClient }) {
 
   return (
     <div className={cn(
-      "rounded-2xl border-l-4 bg-surface shadow-subtle",
+      "rounded-lg border-l-4 bg-surface",
       alertBorderClass(client.latestAlertSeverity),
     )}>
       <div className="px-5 py-4">
@@ -444,7 +444,7 @@ export function GraphqlClientsList() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-border/40" />
+            <div key={i} className="h-28 animate-pulse rounded-lg bg-border/40" />
           ))}
         </div>
       ) : null}
@@ -460,7 +460,7 @@ export function GraphqlClientsList() {
 
       {/* Empty state */}
       {!loading && clients.length === 0 && !error ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
           <Users className="size-8 text-muted/40" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-text">

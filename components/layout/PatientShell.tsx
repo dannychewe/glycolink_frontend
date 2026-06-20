@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PatientHeader } from "@/components/layout/PatientHeader";
 import { PatientSidebar } from "@/components/layout/PatientSidebar";
-import { getPatientPageTitle } from "@/lib/navigation/patient-navigation";
 import { cn } from "@/lib/utils/cn";
 
 type PatientShellProps = Readonly<{
@@ -19,8 +18,6 @@ export function PatientShell({ children }: PatientShellProps) {
     setIsDrawerOpen(false);
   }, [pathname]);
 
-  const pageTitle = getPatientPageTitle(pathname ?? null);
-
   return (
     <div className="min-h-screen bg-background text-text">
       <div className="hidden md:fixed md:inset-y-0 md:left-0 md:z-30 md:block md:w-60">
@@ -28,7 +25,7 @@ export function PatientShell({ children }: PatientShellProps) {
       </div>
 
       <div className="md:pl-60">
-        <PatientHeader title={pageTitle} onMenuClick={() => setIsDrawerOpen(true)} />
+        <PatientHeader onMenuClick={() => setIsDrawerOpen(true)} />
 
         <main className="min-h-screen px-4 py-5 sm:px-6 md:px-8 md:py-8">
           {children}
@@ -58,7 +55,7 @@ export function PatientShell({ children }: PatientShellProps) {
             isDrawerOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <PatientSidebar onNavigate={() => setIsDrawerOpen(false)} className="shadow-subtle" />
+          <PatientSidebar onNavigate={() => setIsDrawerOpen(false)} className="" />
         </div>
       </div>
     </div>

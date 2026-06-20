@@ -616,7 +616,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     }
 
     if (postLoginRedirect?.reason === "PROVIDER_ONBOARDING" && accountType === "CONSULTANT") {
-      return "/consultant/dashboard";
+      return "/consultant/onboarding";
     }
 
     if (

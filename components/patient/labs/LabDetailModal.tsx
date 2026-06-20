@@ -28,7 +28,7 @@ export function LabDetailModal({ labOrder, onClose }: LabDetailModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-[1.75rem] bg-surface shadow-subtle"
+        className="w-full max-w-2xl rounded-lg bg-surface"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">

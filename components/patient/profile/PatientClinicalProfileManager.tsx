@@ -134,7 +134,7 @@ type AlertState = {
 } | null;
 
 const SELECT_CLASS =
-  "flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 type ProfileTab = "overview" | "profile" | "clinical" | "contacts" | "documents";
 
@@ -669,7 +669,7 @@ export function PatientClinicalProfileManager() {
       {alert ? (
         <div
           className={cn(
-            "flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-soft",
+            "flex items-start gap-3 rounded-xl border px-4 py-3 text-sm",
             alert.type === "error"
               ? "border-danger/30 bg-danger/5 text-danger"
               : "border-success/30 bg-success/5 text-success",
@@ -746,7 +746,7 @@ export function PatientClinicalProfileManager() {
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition",
               tab === id
-                ? "bg-primary text-white shadow-soft"
+                ? "bg-primary text-white"
                 : "text-muted hover:bg-background hover:text-text",
             )}
           >
@@ -830,7 +830,7 @@ export function PatientClinicalProfileManager() {
             key={stat.label}
             type="button"
             onClick={stat.onClick}
-            className="rounded-xl border border-border bg-surface p-4 text-left shadow-subtle transition hover:border-primary/40"
+            className="rounded-xl border border-border bg-surface p-4 text-left transition hover:border-primary/40"
           >
             <p className="text-2xl font-semibold text-text">{stat.value}</p>
             <p className="text-xs text-muted">{stat.label}</p>
@@ -1516,10 +1516,10 @@ function PageHeader({
 }) {
   const displayName = name?.trim() || "Your profile";
   return (
-    <header className="rounded-2xl border border-border bg-surface p-6 shadow-subtle">
+    <header className="rounded-lg border border-border bg-surface p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Stethoscope className="h-7 w-7" />
           </span>
           <div className="space-y-1">

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ConsultantSidebar } from "@/components/layout/ConsultantSidebar";
 import { ConsultantHeader } from "@/components/layout/ConsultantHeader";
-import { getConsultantPageTitle } from "@/lib/navigation/consultant-navigation";
 import { cn } from "@/lib/utils/cn";
 
 type ConsultantShellProps = Readonly<{
@@ -19,8 +18,6 @@ export function ConsultantShell({ children }: ConsultantShellProps) {
     setIsDrawerOpen(false);
   }, [pathname]);
 
-  const pageTitle = getConsultantPageTitle(pathname ?? "/");
-
   return (
     <div className="min-h-screen bg-background text-text">
       <div className="hidden md:fixed md:inset-y-0 md:left-0 md:z-30 md:block md:w-60">
@@ -28,7 +25,7 @@ export function ConsultantShell({ children }: ConsultantShellProps) {
       </div>
 
       <div className="md:pl-60">
-        <ConsultantHeader title={pageTitle} onMenuClick={() => setIsDrawerOpen(true)} />
+        <ConsultantHeader onMenuClick={() => setIsDrawerOpen(true)} />
 
         <main className="min-h-screen px-4 py-5 sm:px-6 md:px-8 md:py-8">
           {children}
@@ -60,7 +57,7 @@ export function ConsultantShell({ children }: ConsultantShellProps) {
         >
           <ConsultantSidebar
             onNavigate={() => setIsDrawerOpen(false)}
-            className="shadow-subtle"
+            className=""
           />
         </div>
       </div>

@@ -126,7 +126,7 @@ export function GraphqlConsultationsList() {
             ))}
           </div>
         ) : appointments.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
+          <div className="rounded-lg border border-dashed border-border bg-surface px-5 py-6 text-center">
             <p className="text-sm text-muted">No appointments scheduled for today.</p>
           </div>
         ) : (
@@ -139,7 +139,7 @@ export function GraphqlConsultationsList() {
                 <div
                   key={item.appointment.id}
                   className={cn(
-                    "flex flex-col gap-3 rounded-xl border-l-4 bg-surface px-4 py-3.5 shadow-subtle sm:flex-row sm:items-center sm:justify-between",
+                    "flex flex-col gap-3 rounded-xl border-l-4 bg-surface px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between",
                     hasEncounter ? "border-l-primary/50" : "border-l-border",
                   )}
                 >
@@ -202,7 +202,7 @@ export function GraphqlConsultationsList() {
             {activeEncounters.map((encounter) => (
               <div
                 key={encounter.id}
-                className="flex flex-col gap-3 rounded-xl border-l-4 border-l-warning/50 bg-surface px-4 py-3.5 shadow-subtle sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-xl border-l-4 border-l-warning/50 bg-surface px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="space-y-0.5">
                   <p className="text-sm font-semibold text-text">
@@ -245,7 +245,7 @@ export function GraphqlConsultationsList() {
             {finalizedEncounters.map((encounter) => (
               <div
                 key={encounter.id}
-                className="flex flex-col gap-3 rounded-xl border-l-4 border-l-success/40 bg-surface px-4 py-3.5 shadow-subtle sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-xl border-l-4 border-l-success/40 bg-surface px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="space-y-0.5">
                   <p className="text-sm font-semibold text-text">
@@ -272,7 +272,7 @@ export function GraphqlConsultationsList() {
       ) : null}
 
       {!loading && encounters.length === 0 && appointments.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
+        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
           <p className="text-base font-medium text-text">No encounters yet</p>
           <p className="mt-1 text-sm text-muted">
             Encounters are created when you start a consultation from today&apos;s appointments.

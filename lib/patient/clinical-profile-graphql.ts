@@ -12,6 +12,7 @@ export const MY_PATIENT_PROFILE_QUERY = gql`
       phone
       profileComplete
       onboardingStatus
+      onboardingComplete
     }
   }
 `;
@@ -46,6 +47,7 @@ export const PATIENT_CLINICAL_WORKSPACE_QUERY = gql`
       additionalNotes
       profileComplete
       onboardingStatus
+      onboardingComplete
       baselineWeight
       baselineBpSystolic
       baselineBpDiastolic
@@ -133,6 +135,48 @@ export const COMPLETE_PATIENT_PROFILE_MUTATION = gql`
         additionalNotes
         profileComplete
         onboardingStatus
+        onboardingComplete
+      }
+    }
+  }
+`;
+
+export const PATIENT_ONBOARDING_READINESS_QUERY = gql`
+  query PatientOnboardingReadiness {
+    patientOnboardingReadiness {
+      isComplete
+      pcqComplete
+      consultationReady
+      percentComplete
+      missingRequired
+      missingSetup
+      nextAction
+      requiredItems {
+        code
+        label
+        complete
+        action
+      }
+      setupItems {
+        code
+        label
+        complete
+        action
+      }
+      patientProfile {
+        id
+        fullName
+        email
+        dateOfBirth
+        diabetesType
+        diagnosisDate
+        phone
+        allergies
+        currentMedications
+        additionalNotes
+        profileComplete
+        onboardingStatus
+        onboardingComplete
       }
     }
   }
@@ -155,6 +199,7 @@ export const UPDATE_PATIENT_PROFILE_MUTATION = gql`
         additionalNotes
         profileComplete
         onboardingStatus
+        onboardingComplete
       }
     }
   }
@@ -330,4 +375,3 @@ export const DOCUMENT_TYPE_OPTIONS = [
   { value: "discharge_summary", label: "Discharge Summary" },
   { value: "other", label: "Other" },
 ] as const;
-

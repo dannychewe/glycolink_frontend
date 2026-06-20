@@ -43,7 +43,20 @@ type PCQResponse = {
   dueAt: string | null;
   submittedAt: string | null;
   lockedAt: string | null;
-  template: { id: string; name: string; consultationType: string; status: string; isGlobal: boolean } | null;
+  template: {
+    id: string;
+    name: string;
+    consultationType: string;
+    status: string;
+    specialtyId: string | null;
+    isGlobal: boolean;
+  } | null;
+  templateVersion: {
+    id: string;
+    versionNumber: number;
+    isCurrent: boolean;
+    publishedAt: string | null;
+  } | null;
   questions: PCQQuestion[];
   answers: PCQAnswer[];
 };
@@ -117,6 +130,13 @@ export function PCQResponseForm({ responseId }: { responseId: string }) {
   const questions = [...pcq.questions].sort((a, b) => a.order - b.order);
 
   async function handleSubmit() {
+    // Flush every field through savePcqAnswer before submitting. This is what
+    // makes untouched required booleans persist their "false" answer (an
+    // unchecked box never fires onChange, so no draft row exists for it) — the
+    // backend would otherwise reject the submit as a missing required answer.
+    // Only submit once the save is clean so we never lock in a half-saved form.
+    const saved = await explicitSave.saveAll();
+    if (!saved) return;
     await submitPcq({ variables: { responseId: pcq.id } });
   }
 
@@ -127,7 +147,7 @@ export function PCQResponseForm({ responseId }: { responseId: string }) {
       </Button>
 
       {/* Status / context bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-5 py-4 shadow-soft sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
             {SCOPE_LABEL[pcq.responseScope] ?? pcq.responseScope}
@@ -138,9 +158,12 @@ export function PCQResponseForm({ responseId }: { responseId: string }) {
               ? `Submitted ${formatDateTime(pcq.submittedAt)}`
               : pcq.lockedAt
                 ? `Locked ${formatDateTime(pcq.lockedAt)}`
-                : "Fill in all required fields and submit."}
+                : pcq.responseScope === "BASELINE"
+                  ? "Submit this baseline questionnaire to become consultation-ready."
+                  : "Fill in all required fields and submit."}
           </p>
           <div className="flex flex-wrap gap-3 pt-0.5 text-xs text-muted">
+            {pcq.templateVersion ? <span>Version {pcq.templateVersion.versionNumber}</span> : null}
             {pcq.assignedByProviderName ? (
               <span className="inline-flex items-center gap-1">
                 <UserRound className="size-3.5" /> {pcq.assignedByProviderName}
@@ -164,7 +187,7 @@ export function PCQResponseForm({ responseId }: { responseId: string }) {
 
       {/* Questions */}
       {questions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
+        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
           <p className="text-sm text-muted">No questions available for this questionnaire.</p>
         </div>
       ) : (
@@ -221,10 +244,10 @@ export function PCQResponseForm({ responseId }: { responseId: string }) {
               onClick={() => void explicitSave.saveAll()}
               disabled={explicitSave.saving || questions.length === 0}
             >
-              {explicitSave.saving ? "Saving…" : "Save answers"}
+              {explicitSave.saving ? "Saving…" : "Save and continue later"}
             </Button>
-            <Button type="button" onClick={() => void handleSubmit()} disabled={submitting || questions.length === 0}>
-              {submitting ? "Submitting…" : "Submit Questionnaire"}
+            <Button type="button" onClick={() => void handleSubmit()} disabled={submitting || explicitSave.saving || questions.length === 0}>
+              {submitting ? "Submitting…" : "Submit questionnaire"}
             </Button>
           </div>
         ) : (

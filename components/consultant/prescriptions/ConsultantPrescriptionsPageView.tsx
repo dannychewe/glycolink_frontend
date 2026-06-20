@@ -6,6 +6,7 @@ import { ConsultantPrescriptionRevokeModal } from "@/components/consultant/presc
 import { ConsultantPrescriptionStatusBadge } from "@/components/consultant/prescriptions/ConsultantPrescriptionStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import type { ConsultantPrescription } from "@/types";
 
 type ConsultantPrescriptionsPageViewProps = Readonly<{
@@ -48,12 +49,11 @@ export function ConsultantPrescriptionsPageView({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Clinical Orders
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Prescriptions</h1>
-      </header>
+      <PageHeader
+        eyebrow="Clinical Orders"
+        title="Prescriptions"
+        description="Prescriptions you've issued to patients during consultations."
+      />
 
       {items.length > 0 ? (
         <div className="grid gap-4">
@@ -111,7 +111,7 @@ export function ConsultantPrescriptionsPageView({
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No prescriptions available</p>
         </div>
       )}

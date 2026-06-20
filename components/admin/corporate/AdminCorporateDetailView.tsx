@@ -72,7 +72,7 @@ function MembersPanel({ corporateId }: Readonly<{ corporateId: string }>) {
   }
   if (members.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
+      <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
         No members enrolled yet.
       </p>
     );
@@ -133,7 +133,7 @@ function PlansPanel({ corporateId }: Readonly<{ corporateId: string }>) {
   }
   if (plans.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
+      <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
         No benefit plans created yet.
       </p>
     );

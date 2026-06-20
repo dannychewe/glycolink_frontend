@@ -6,7 +6,6 @@ import { MY_PATIENT_PROFILE_QUERY } from "@/lib/patient/clinical-profile-graphql
 import { PATIENT_UNREAD_MESSAGES_PREVIEW_QUERY } from "@/lib/patient/messages-graphql";
 
 type PatientHeaderProps = Readonly<{
-  title: string;
   onMenuClick: () => void;
 }>;
 
@@ -32,7 +31,7 @@ function formatDate() {
   }).format(new Date());
 }
 
-export function PatientHeader({ title, onMenuClick }: PatientHeaderProps) {
+export function PatientHeader({ onMenuClick }: PatientHeaderProps) {
   const { data } = useQuery(MY_PATIENT_PROFILE_QUERY, {
     fetchPolicy: "cache-first",
   });
@@ -57,7 +56,7 @@ export function PatientHeader({ title, onMenuClick }: PatientHeaderProps) {
           type="button"
           onClick={onMenuClick}
           aria-label="Open navigation menu"
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-text shadow-soft md:hidden"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-text md:hidden"
         >
           <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
             <path
@@ -69,10 +68,9 @@ export function PatientHeader({ title, onMenuClick }: PatientHeaderProps) {
           </svg>
         </button>
 
-        {/* Title + date */}
-        <div className="flex min-w-0 flex-1 flex-col justify-center md:flex-row md:items-baseline md:gap-3">
-          <h1 className="truncate text-base font-semibold text-text md:text-lg">{title}</h1>
-          <span className="hidden text-xs text-muted md:block">{formatDate()}</span>
+        {/* Date */}
+        <div className="flex min-w-0 flex-1 items-center">
+          <span className="hidden text-sm font-medium text-muted md:block">{formatDate()}</span>
         </div>
 
         {/* Messages shortcut */}

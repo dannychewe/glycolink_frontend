@@ -322,7 +322,7 @@ export function AdminSettingsManager() {
       {loading || !form ? (
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-36 animate-pulse rounded-2xl bg-border/40" />
+            <div key={i} className="h-36 animate-pulse rounded-lg bg-border/40" />
           ))}
         </div>
       ) : (
@@ -479,7 +479,7 @@ export function AdminSettingsManager() {
                   id="emailProvider"
                   value={form.integrationSettings.emailProvider}
                   onChange={(e) => setIntegration("emailProvider", e.target.value)}
-                  className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="smtp">SMTP</option>
                   <option value="sendgrid">SendGrid</option>
@@ -494,7 +494,7 @@ export function AdminSettingsManager() {
                   id="smsProvider"
                   value={form.integrationSettings.smsProvider}
                   onChange={(e) => setIntegration("smsProvider", e.target.value)}
-                  className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="manual">Manual</option>
                   <option value="twilio">Twilio</option>
@@ -551,7 +551,7 @@ export function AdminSettingsManager() {
           </Card>
 
           {/* Save */}
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface px-5 py-4">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface px-5 py-4">
             <p className="text-sm text-muted">
               Changes are applied globally across all tenants and take effect immediately.
             </p>

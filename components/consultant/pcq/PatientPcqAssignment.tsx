@@ -23,6 +23,11 @@ type TemplateItem = {
   consultationType: string;
   status: string;
   isGlobal: boolean;
+  versions: {
+    id: string;
+    isCurrent: boolean;
+    publishedAt: string | null;
+  }[];
 };
 
 const selectClass = "flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -41,7 +46,13 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
 
   // Only active, tenant-scoped (non-global) templates are assignable.
   const assignable = useMemo(
-    () => (data?.pcqTemplates ?? []).filter((t) => !t.isGlobal && t.status.toLowerCase() === "active"),
+    () =>
+      (data?.pcqTemplates ?? []).filter(
+        (t) =>
+          !t.isGlobal &&
+          t.status.toLowerCase() === "active" &&
+          t.versions.some((version) => version.isCurrent && version.publishedAt),
+      ),
     [data],
   );
 
@@ -117,7 +128,8 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
             </select>
             {!loading && assignable.length === 0 ? (
               <p className="text-xs text-muted">
-                No active supplemental templates yet. Create and activate one under PCQ Templates first.
+                No active supplemental templates with a published version yet. Create a template,
+                add at least one question, and publish it under PCQ Templates first.
               </p>
             ) : null}
           </div>

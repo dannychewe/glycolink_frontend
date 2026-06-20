@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { NotificationTypeBadge } from "@/components/patient/notifications/NotificationTypeBadge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import type { NotificationType } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -66,30 +67,28 @@ export function NotificationsPageView() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-            Patient Inbox
-          </p>
-          <h1 className="text-3xl font-semibold text-text sm:text-4xl">Notifications</h1>
-          <p className="text-sm text-muted">
-            {loading
-              ? "Loading…"
-              : unreadCount > 0
-                ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-                : "All notifications have been read"}
-          </p>
-        </div>
-
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => markAllRead()}
-          disabled={loading || notifications.length === 0 || unreadCount === 0 || markingAll}
-        >
-          Mark all as read
-        </Button>
-      </header>
+      <PageHeader
+        eyebrow="Patient Inbox"
+        title="Notifications"
+        description={
+          loading
+            ? "Loading…"
+            : unreadCount > 0
+              ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
+              : "All notifications have been read"
+        }
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => markAllRead()}
+            disabled={loading || notifications.length === 0 || unreadCount === 0 || markingAll}
+          >
+            Mark all as read
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="space-y-2">
@@ -146,7 +145,7 @@ export function NotificationsPageView() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No notifications available</p>
         </div>
       )}

@@ -24,7 +24,15 @@ const PCQ_TEMPLATE_FIELDS = `
   name
   consultationType
   status
+  specialtyId
   isGlobal
+`;
+
+const PCQ_TEMPLATE_VERSION_FIELDS = `
+  id
+  versionNumber
+  isCurrent
+  publishedAt
 `;
 
 export const PATIENT_PCQ_LIST_QUERY = gql`
@@ -43,6 +51,9 @@ export const PATIENT_PCQ_LIST_QUERY = gql`
       lockedAt
       template {
         ${PCQ_TEMPLATE_FIELDS}
+      }
+      templateVersion {
+        ${PCQ_TEMPLATE_VERSION_FIELDS}
       }
     }
   }
@@ -65,6 +76,9 @@ export const PATIENT_PCQ_DETAIL_QUERY = gql`
       template {
         ${PCQ_TEMPLATE_FIELDS}
       }
+      templateVersion {
+        ${PCQ_TEMPLATE_VERSION_FIELDS}
+      }
       questions {
         ${PCQ_QUESTION_FIELDS}
       }
@@ -79,13 +93,21 @@ export const PATIENT_BASELINE_PCQ_QUERY = gql`
   query PatientBaselinePCQ {
     baselinePcq {
       id
+      appointmentId
       patientId
+      assignedByProviderId
+      assignedByProviderName
       responseScope
       status
+      assignmentReason
+      dueAt
       submittedAt
       lockedAt
       template {
         ${PCQ_TEMPLATE_FIELDS}
+      }
+      templateVersion {
+        ${PCQ_TEMPLATE_VERSION_FIELDS}
       }
       questions {
         ${PCQ_QUESTION_FIELDS}
@@ -103,12 +125,19 @@ export const PATIENT_PCQ_FOR_APPOINTMENT_QUERY = gql`
       id
       appointmentId
       patientId
+      assignedByProviderId
+      assignedByProviderName
       responseScope
       status
+      assignmentReason
+      dueAt
       submittedAt
       lockedAt
       template {
         ${PCQ_TEMPLATE_FIELDS}
+      }
+      templateVersion {
+        ${PCQ_TEMPLATE_VERSION_FIELDS}
       }
       questions {
         ${PCQ_QUESTION_FIELDS}
@@ -156,9 +185,27 @@ export const PATIENT_SUBMIT_PCQ_MUTATION = gql`
       response {
         id
         appointmentId
+        patientId
+        assignedByProviderId
+        assignedByProviderName
+        responseScope
         status
+        assignmentReason
+        dueAt
         submittedAt
         lockedAt
+        template {
+          ${PCQ_TEMPLATE_FIELDS}
+        }
+        templateVersion {
+          ${PCQ_TEMPLATE_VERSION_FIELDS}
+        }
+        questions {
+          ${PCQ_QUESTION_FIELDS}
+        }
+        answers {
+          ${PCQ_ANSWER_FIELDS}
+        }
       }
     }
   }

@@ -34,7 +34,7 @@ export function ConsultantCard({ invite }: { invite: PatientConsultantInvite }) 
   return (
     <Link
       href={`/patient/consultants/${invite.inviteId}`}
-      className="group flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 shadow-subtle transition hover:-translate-y-0.5 hover:shadow-soft"
+      className="group flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 transition"
     >
       <div className="flex items-start gap-4">
         <div className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10 ring-1 ring-border">

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useQuery } from "@apollo/client";
-import { ArrowRight, Mail } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { Icons } from "@/components/ui/icons";
 import {
   MY_PATIENT_CONSULTANTS_QUERY,
   type PatientConsultantInvite,
@@ -26,23 +27,19 @@ export function ConsultantInvitesSection() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Mail className="size-4" />
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Icons.invites className="size-4 shrink-0 text-muted" />
+          <h2 className="text-lg font-semibold text-ink">Consultant invitations</h2>
+          <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-primary">
+            {invites.length}
           </span>
-          <div>
-            <h2 className="text-xl">Consultant invitations</h2>
-            <p className="text-sm text-muted">
-              {invites.length} provider{invites.length !== 1 ? "s" : ""} invited you to connect.
-            </p>
-          </div>
         </div>
         <Link
           href="/patient/consultants"
-          className="hidden items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline sm:flex"
+          className="hidden shrink-0 items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80 sm:flex"
         >
           View all
-          <ArrowRight className="size-4" />
+          <ArrowRight className="size-3.5" />
         </Link>
       </div>
 

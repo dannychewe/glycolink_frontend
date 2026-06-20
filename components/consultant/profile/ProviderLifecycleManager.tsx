@@ -19,6 +19,7 @@ import {
 } from "@/lib/consultant/provider-lifecycle-graphql";
 import { MY_CONSULTANT_ORGANIZATIONS_QUERY } from "@/lib/consultant/organization-graphql";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -219,7 +220,7 @@ function AlertBanner({ alert, onDismiss }: { alert: AlertState; onDismiss: () =>
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-2xl border px-4 py-3.5",
+        "flex items-start gap-3 rounded-lg border px-4 py-3.5",
         isError ? "border-danger/30 bg-danger/5 text-danger" : "border-success/30 bg-success/5 text-success",
       )}
     >
@@ -246,7 +247,7 @@ function ProfileAvatar({
 
   return (
     <div className="relative shrink-0">
-      <div className="size-20 overflow-hidden rounded-2xl border-2 border-border bg-surface shadow-soft sm:size-24">
+      <div className="size-20 overflow-hidden rounded-lg border-2 border-border bg-surface sm:size-24">
         {src ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt={name ?? "Profile"} className="size-full object-cover" />
@@ -260,7 +261,7 @@ function ProfileAvatar({
         type="button"
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
-        className="absolute -bottom-2 -right-2 flex size-8 items-center justify-center rounded-xl border border-border bg-surface shadow-soft transition hover:bg-background disabled:opacity-50"
+        className="absolute -bottom-2 -right-2 flex size-8 items-center justify-center rounded-xl border border-border bg-surface transition hover:bg-background disabled:opacity-50"
         title="Change photo"
       >
         {uploading ? (
@@ -537,21 +538,17 @@ export function ProviderLifecycleManager() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Consultant Workspace
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">My Profile</h1>
-        <p className="text-sm text-muted">
-          Manage your provider identity, credentials, and availability settings.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Consultant Workspace"
+        title="My Profile"
+        description="Manage your provider identity, credentials, and availability settings."
+      />
 
       <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
 
       {/* Profile header card */}
       {!providerMissing ? (
-        <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle sm:p-6">
+        <div className="rounded-lg border border-border bg-surface p-5 sm:p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-4">
               <ProfileAvatar
@@ -660,7 +657,7 @@ export function ProviderLifecycleManager() {
           ) : null}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-8 text-center">
+        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-8 text-center">
           <p className="text-base font-semibold text-text">No provider profile yet</p>
           <p className="mt-1 text-sm text-muted">
             Fill in your details below to create your provider profile and start accepting patients.
@@ -769,7 +766,7 @@ export function ProviderLifecycleManager() {
               <Label htmlFor="organizationId">Organization</Label>
               <select
                 id="organizationId"
-                className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={profileForm.organizationId}
                 onChange={(e) => setProfileForm((p) => ({ ...p, organizationId: e.target.value }))}
               >
@@ -895,7 +892,7 @@ export function ProviderLifecycleManager() {
             </div>
 
             {(status?.expiryWarnings ?? []).length === 0 ? (
-              <div className="rounded-2xl border border-success/25 bg-success/5 px-5 py-5">
+              <div className="rounded-lg border border-success/25 bg-success/5 px-5 py-5">
                 <div className="flex items-center gap-2 text-sm font-medium text-success">
                   <ShieldCheck className="size-4" />
                   All credentials are valid
@@ -910,7 +907,7 @@ export function ProviderLifecycleManager() {
                   <div
                     key={w.type}
                     className={cn(
-                      "flex flex-col gap-2 rounded-2xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between",
+                      "flex flex-col gap-2 rounded-lg border px-4 py-4 sm:flex-row sm:items-center sm:justify-between",
                       w.status === "EXPIRED"
                         ? "border-danger/30 bg-danger/5"
                         : "border-warning/30 bg-warning/5",
@@ -941,15 +938,15 @@ export function ProviderLifecycleManager() {
           {/* Verification dates */}
           {status ? (
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-surface px-4 py-4">
+              <div className="rounded-lg border border-border bg-surface px-4 py-4">
                 <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Verified At</p>
                 <p className="mt-1.5 text-sm font-semibold text-text">{formatDate(status.verifiedAt)}</p>
               </div>
-              <div className="rounded-2xl border border-border bg-surface px-4 py-4">
+              <div className="rounded-lg border border-border bg-surface px-4 py-4">
                 <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Verification Status</p>
                 <p className="mt-1.5 text-sm font-semibold text-text">{status.verificationStatus ?? "Pending"}</p>
               </div>
-              <div className="rounded-2xl border border-border bg-surface px-4 py-4">
+              <div className="rounded-lg border border-border bg-surface px-4 py-4">
                 <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Suspended At</p>
                 <p className="mt-1.5 text-sm font-semibold text-text">{formatDate(status.suspendedAt)}</p>
               </div>
@@ -967,14 +964,14 @@ export function ProviderLifecycleManager() {
 
             <form
               onSubmit={(e) => void handleUploadLicense(e)}
-              className="rounded-2xl border border-border bg-surface p-5 sm:p-6"
+              className="rounded-lg border border-border bg-surface p-5 sm:p-6"
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="licenseType">License type</Label>
                   <select
                     id="licenseType"
-                    className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     value={licenseForm.licenseType}
                     onChange={(e) => setLicenseForm((p) => ({ ...p, licenseType: e.target.value }))}
                   >

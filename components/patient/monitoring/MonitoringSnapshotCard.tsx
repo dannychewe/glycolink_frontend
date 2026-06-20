@@ -41,7 +41,7 @@ export function MonitoringSnapshotCard() {
   });
 
   if (loading) {
-    return <div className="h-52 animate-pulse rounded-2xl bg-border/40" />;
+    return <div className="h-52 animate-pulse rounded-lg bg-border/40" />;
   }
 
   if (error) {
@@ -58,7 +58,7 @@ export function MonitoringSnapshotCard() {
 
   if (!latest) {
     return (
-      <div className="rounded-2xl border border-border bg-surface px-6 py-8 text-center">
+      <div className="rounded-lg border border-border bg-surface px-6 py-8 text-center">
         <p className="text-base font-medium text-text">No glucose readings yet</p>
         <p className="mt-1 text-sm text-muted">Use the Log Reading tab to add your first reading.</p>
       </div>
@@ -67,7 +67,7 @@ export function MonitoringSnapshotCard() {
 
   return (
     <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-soft sm:p-6">
+      <div className="relative overflow-hidden rounded-lg border border-ink/20 bg-ink p-5 text-white sm:p-6">
         <div className="clinical-grid-light absolute inset-0 opacity-60" />
         <div className="relative">
           <div className="flex items-center justify-between">

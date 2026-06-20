@@ -109,9 +109,9 @@ export function PCQResponseDetail({ responseId }: Readonly<{ responseId: string 
   if (loading) {
     return (
       <div className="space-y-3">
-        <div className="h-16 animate-pulse rounded-2xl bg-border/40" />
-        <div className="h-24 animate-pulse rounded-2xl bg-border/40" />
-        <div className="h-24 animate-pulse rounded-2xl bg-border/40" />
+        <div className="h-16 animate-pulse rounded-lg bg-border/40" />
+        <div className="h-24 animate-pulse rounded-lg bg-border/40" />
+        <div className="h-24 animate-pulse rounded-lg bg-border/40" />
       </div>
     );
   }
@@ -127,7 +127,7 @@ export function PCQResponseDetail({ responseId }: Readonly<{ responseId: string 
   const pcq = data?.pcqResponse;
   if (!pcq) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
         <ClipboardList className="size-8 text-muted/50" />
         <p className="text-sm font-medium text-text">PCQ response not found</p>
       </div>
@@ -140,7 +140,7 @@ export function PCQResponseDetail({ responseId }: Readonly<{ responseId: string 
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-surface px-5 py-4 space-y-3">
+      <div className="rounded-lg border border-border bg-surface px-5 py-4 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-0.5">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
@@ -174,7 +174,7 @@ export function PCQResponseDetail({ responseId }: Readonly<{ responseId: string 
       ) : (
         <div className="space-y-3">
           {sortedQuestions.map((q, idx) => (
-            <div key={q.id} className="rounded-2xl border border-border bg-surface px-5 py-4 space-y-2">
+            <div key={q.id} className="rounded-lg border border-border bg-surface px-5 py-4 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-semibold text-text">
                   <span className="mr-2 text-muted">{idx + 1}.</span>

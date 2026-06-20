@@ -17,7 +17,20 @@ type PCQListItem = {
   dueAt: string | null;
   submittedAt: string | null;
   lockedAt: string | null;
-  template: { id: string; name: string; consultationType: string } | null;
+  template: {
+    id: string;
+    name: string;
+    consultationType: string;
+    status: string;
+    specialtyId: string | null;
+    isGlobal: boolean;
+  } | null;
+  templateVersion: {
+    id: string;
+    versionNumber: number;
+    isCurrent: boolean;
+    publishedAt: string | null;
+  } | null;
 };
 
 function formatDate(value: string) {
@@ -55,7 +68,7 @@ function PCQCard({ item }: { item: PCQListItem }) {
   return (
     <Link
       href={`/patient/pcq/response/${item.id}`}
-      className="flex items-center gap-4 rounded-2xl border border-border bg-surface px-5 py-4 transition hover:border-primary/40 hover:bg-primary/5"
+      className="flex items-center gap-4 rounded-lg border border-border bg-surface px-5 py-4 transition hover:border-primary/40 hover:bg-primary/5"
     >
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
@@ -78,6 +91,7 @@ function PCQCard({ item }: { item: PCQListItem }) {
             </span>
           ) : null}
           {item.submittedAt ? <span>Submitted {formatDate(item.submittedAt)}</span> : null}
+          {item.templateVersion ? <span>v{item.templateVersion.versionNumber}</span> : null}
         </div>
         {item.assignmentReason ? (
           <p className="line-clamp-1 text-xs text-muted italic">{item.assignmentReason}</p>
@@ -101,7 +115,7 @@ export function PCQListView() {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-border/40" />
+          <div key={i} className="h-20 animate-pulse rounded-lg bg-border/40" />
         ))}
       </div>
     );
@@ -119,7 +133,7 @@ export function PCQListView() {
 
   if (responses.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-12 text-center">
+      <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
         <ClipboardList className="size-9 text-muted/50" />
         <p className="text-sm font-medium text-text">No questionnaires yet</p>
         <p className="text-xs text-muted">Questionnaires from onboarding, appointments, and your care team appear here.</p>

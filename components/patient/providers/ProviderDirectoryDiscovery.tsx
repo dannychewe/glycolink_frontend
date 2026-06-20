@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils/cn";
 
 type ProviderDirectoryData = {
@@ -98,30 +99,20 @@ export function ProviderDirectoryDiscovery() {
   }, [subSpecialtiesData, filters.specialtyId, specialtyOptions]);
 
   return (
-    <div className="space-y-7">
-      <header className="relative overflow-hidden rounded-[1.75rem] border border-border/80 bg-gradient-to-br from-primary/10 via-surface to-surface px-6 py-8 shadow-soft sm:px-8">
-        <div className="absolute -right-12 -top-16 size-48 rounded-full bg-primary/10 blur-2xl" />
-        <div className="relative space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-            Provider Directory
-          </p>
-          <h1 className="text-3xl font-semibold text-text sm:text-4xl">Find your care team</h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted sm:text-base">
-            Discover verified specialists, compare consultation options, and book directly from
-            the provider profile.
-          </p>
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Badge variant="secondary" className="bg-white/80">
-              Secure tenant-scoped results
-            </Badge>
-            <Badge variant="secondary" className="bg-white/80">
-              Verified providers only
-            </Badge>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Provider Directory"
+        title="Find your care team"
+        description="Discover verified specialists, compare consultation options, and book directly from the provider profile."
+        actions={
+          <>
+            <Badge variant="secondary">Secure tenant-scoped results</Badge>
+            <Badge variant="secondary">Verified providers only</Badge>
+          </>
+        }
+      />
 
-      <Card className="border-border/80 shadow-soft">
+      <Card>
         <CardHeader className="pb-4">
           <CardTitle>Filter providers</CardTitle>
         </CardHeader>
@@ -151,7 +142,7 @@ export function ProviderDirectoryDiscovery() {
                     page: 1,
                   }))
                 }
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">All specialties</option>
                 {specialtyOptions.map((item) => (
@@ -170,7 +161,7 @@ export function ProviderDirectoryDiscovery() {
                 onChange={(event) =>
                   setFilters((prev) => ({ ...prev, subSpecialtyName: event.target.value, page: 1 }))
                 }
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               >
                 <option value="">All sub-specialties</option>
                 {subSpecialtyOptions.map((item) => (
@@ -243,7 +234,7 @@ export function ProviderDirectoryDiscovery() {
             key={provider.id}
             className={cn(
               "group flex h-full flex-col overflow-hidden border-border/80 transition-all duration-200",
-              provider.eligible && "hover:-translate-y-1 hover:shadow-subtle",
+              provider.eligible && "hover:-translate-y-1",
             )}
           >
             <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-white to-primary/5">
@@ -269,16 +260,16 @@ export function ProviderDirectoryDiscovery() {
                 />
               )}
               <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
-                <Badge variant="secondary" className="bg-white/90 text-text shadow-soft backdrop-blur">
+                <Badge variant="secondary" className="bg-white/90 text-text backdrop-blur">
                   {provider.specialties[0] ?? "Specialist"}
                 </Badge>
                 {provider.reviewCount > 0 && provider.averageRating != null ? (
-                  <div className="flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-warning shadow-soft backdrop-blur">
+                  <div className="flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-warning backdrop-blur">
                     <Star className="size-3.5 fill-current" />
                     {provider.averageRating.toFixed(1)} ({provider.reviewCount})
                   </div>
                 ) : provider.eligible ? (
-                  <Badge variant="success" className="bg-white/90 shadow-soft backdrop-blur">
+                  <Badge variant="success" className="bg-white/90 backdrop-blur">
                     <BadgeCheck className="mr-1 size-3" />
                     Available
                   </Badge>

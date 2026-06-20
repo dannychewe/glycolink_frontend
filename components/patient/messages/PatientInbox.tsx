@@ -164,7 +164,7 @@ function MessageBubble({ message, currentUserId }: { message: Message; currentUs
   return (
     <div className={cn("flex", fromMe ? "justify-end" : "justify-start")}>
       <div className={cn(
-        "max-w-[75%] rounded-2xl px-4 py-2.5 space-y-1",
+        "max-w-[75%] rounded-lg px-4 py-2.5 space-y-1",
         fromMe
           ? "rounded-tr-sm bg-primary text-white"
           : "rounded-tl-sm bg-surface border border-border",
@@ -392,7 +392,7 @@ function ConversationView({
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className={cn("h-12 w-2/3 animate-pulse rounded-2xl bg-border/40", i % 2 === 0 ? "" : "ml-auto")} />
+              <div key={i} className={cn("h-12 w-2/3 animate-pulse rounded-lg bg-border/40", i % 2 === 0 ? "" : "ml-auto")} />
             ))}
           </div>
         ) : messages.length === 0 ? (
@@ -539,7 +539,7 @@ export function PatientInbox({ initialConversationId }: { initialConversationId?
   const selectedThread = foundThread ?? stubThread;
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] min-h-[500px] overflow-hidden rounded-2xl border border-border bg-surface shadow-subtle">
+    <div className="flex h-[calc(100vh-10rem)] min-h-[500px] overflow-hidden rounded-lg border border-border bg-surface">
       {/* Thread list */}
       <div className={cn(
         "flex w-full flex-col border-r border-border sm:w-80 sm:flex-shrink-0",

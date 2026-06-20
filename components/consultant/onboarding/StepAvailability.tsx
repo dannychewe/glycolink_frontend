@@ -167,7 +167,7 @@ export function StepAvailability() {
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
@@ -178,7 +178,7 @@ export function StepAvailability() {
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
@@ -188,7 +188,7 @@ export function StepAvailability() {
             id="slotMinutes"
             value={slotMinutes}
             onChange={(e) => setSlotMinutes(Number(e.target.value))}
-            className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           >
             {SLOT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>

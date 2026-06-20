@@ -127,7 +127,7 @@ function RevokePanel({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="mt-3 space-y-3 rounded-2xl border border-danger/20 bg-danger/5 px-4 py-4">
+    <form onSubmit={(e) => void handleSubmit(e)} className="mt-3 space-y-3 rounded-lg border border-danger/20 bg-danger/5 px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-danger">Revoke Prescription</p>
       <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
       <div className="space-y-1.5">
@@ -310,7 +310,7 @@ function CreatePrescriptionForm({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 rounded-lg border border-border bg-surface p-5">
       <p className="text-sm font-semibold text-text">New Prescription</p>
       <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
 

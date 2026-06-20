@@ -6,6 +6,7 @@ import { CalendarDays, CircleDot, Clock3, Stethoscope } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { MY_APPOINTMENTS_QUERY } from "@/lib/bookings/graphql";
 import { cn } from "@/lib/utils/cn";
 import { canJoinVideoConsultation } from "@/lib/video-consultation-graphql";
@@ -122,52 +123,27 @@ export function GraphqlAppointmentsListView() {
     });
   }, [activeTab, appointments]);
 
-  return (
-    <div className="space-y-7">
-      <header className="relative overflow-hidden rounded-[1.75rem] border border-border/80 bg-gradient-to-br from-primary/10 via-surface to-surface px-6 py-7 shadow-soft sm:px-8">
-        <div className="absolute -right-12 -top-12 size-40 rounded-full bg-primary/10 blur-2xl" />
-        <div className="relative space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-            My bookings
-          </p>
-          <h1 className="text-3xl font-semibold text-text sm:text-4xl">Appointments</h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted sm:text-base">
-            Track your consultations, follow pending payment steps, and access completed visits.
-          </p>
-        </div>
-      </header>
+  const tabCounts: Record<AppointmentTab, number> = {
+    Upcoming: groupedCounts.upcoming,
+    Past: groupedCounts.past,
+    Cancelled: groupedCounts.cancelled,
+  };
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="border-border/80 bg-surface/80 shadow-soft">
-          <CardContent className="flex items-center justify-between py-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-muted">Upcoming</p>
-              <p className="text-2xl font-semibold text-text">{groupedCounts.upcoming}</p>
-            </div>
-            <CalendarDays className="size-5 text-primary" />
-          </CardContent>
-        </Card>
-        <Card className="border-border/80 bg-surface/80 shadow-soft">
-          <CardContent className="flex items-center justify-between py-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-muted">Past</p>
-              <p className="text-2xl font-semibold text-text">{groupedCounts.past}</p>
-            </div>
-            <Clock3 className="size-5 text-primary" />
-          </CardContent>
-        </Card>
-        <Card className="border-border/80 bg-surface/80 shadow-soft">
-          <CardContent className="flex items-center justify-between py-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-muted">Cancelled</p>
-              <p className="text-2xl font-semibold text-text">{groupedCounts.cancelled}</p>
-            </div>
-            <CircleDot className="size-5 text-primary" />
-          </CardContent>
-        </Card>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="My bookings"
+        title="Appointments"
+        description="Track your consultations, follow pending payment steps, and access completed visits."
+      />
+
+      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
+        <StatCell label="Upcoming" value={groupedCounts.upcoming} icon={CalendarDays} />
+        <StatCell label="Past" value={groupedCounts.past} icon={Clock3} />
+        <StatCell label="Cancelled" value={groupedCounts.cancelled} icon={CircleDot} />
       </div>
 
-      <div className="flex flex-wrap gap-3 rounded-xl border border-border/70 bg-surface px-3 py-3">
+      <div className="flex gap-1 border-b border-border">
         {tabs.map((tab) => {
           const isActive = tab === activeTab;
           return (
@@ -176,26 +152,27 @@ export function GraphqlAppointmentsListView() {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "rounded-xl border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none",
                 isActive
-                  ? "border-primary bg-primary text-white"
-                  : "border-border bg-surface text-text hover:bg-slate-50",
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted hover:text-text",
               )}
             >
               {tab}
+              <span className="ml-1.5 text-xs text-muted">{tabCounts[tab]}</span>
             </button>
           );
         })}
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+        <div className="rounded-lg border border-l-4 border-l-warning bg-surface px-4 py-3 text-sm text-warning">
           Unable to load appointments right now.
         </div>
       ) : null}
 
       {loading ? (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="h-36 animate-pulse bg-border/40" />
           ))}
@@ -203,12 +180,9 @@ export function GraphqlAppointmentsListView() {
       ) : null}
 
       {!loading && filtered.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {filtered.map((appointment) => (
-            <Card
-              key={appointment.id}
-              className="border-border/80 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-subtle"
-            >
+            <Card key={appointment.id} className="transition-colors hover:bg-background">
               <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
@@ -254,10 +228,30 @@ export function GraphqlAppointmentsListView() {
       ) : null}
 
       {!loading && filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No appointments found</p>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function StatCell({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon: typeof CalendarDays;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 bg-surface px-4 py-4">
+      <div className="min-w-0">
+        <p className="truncate text-xs font-medium uppercase tracking-wider text-muted">{label}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</p>
+      </div>
+      <Icon className="size-5 shrink-0 text-muted" />
     </div>
   );
 }

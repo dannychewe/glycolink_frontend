@@ -178,7 +178,7 @@ function ContributionCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-surface transition-all",
+        "rounded-lg border bg-surface transition-all",
         isPending ? "border-warning/40 bg-warning/5" : "border-border",
       )}
     >
@@ -342,7 +342,7 @@ function ContributionQueue() {
   return (
     <div className="space-y-5">
       {pendingCount > 0 ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-warning/30 bg-warning/5 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
           <AlertCircle className="size-5 shrink-0 text-warning" />
           <p className="text-sm font-medium text-warning">
             {pendingCount} contribution{pendingCount !== 1 ? "s" : ""} waiting for review
@@ -377,13 +377,13 @@ function ContributionQueue() {
       {loading && contributions.length === 0 ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-28 animate-pulse rounded-2xl bg-border/50" />
+            <div key={index} className="h-28 animate-pulse rounded-lg bg-border/50" />
           ))}
         </div>
       ) : null}
 
       {!loading && contributions.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-12 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
           <ClipboardList className="size-9 text-muted/50" />
           <p className="text-sm font-medium text-text">No {status === "all" ? "" : status} contributions</p>
           <p className="text-xs text-muted">

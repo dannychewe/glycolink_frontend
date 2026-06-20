@@ -44,7 +44,7 @@ export function QuestionRenderer({
         <select
           id={question.id}
           disabled={disabled}
-          className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70"
           {...register(question.id)}
         >
           <option value="">Select an option</option>

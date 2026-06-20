@@ -18,6 +18,7 @@ export default async function PatientVideoConsultationPage({
         appointmentId={id}
         backHref={`/patient/bookings/${id}`}
         backLabel="Back to appointment"
+        pcqHref={`/patient/pcq/${id}`}
       />
     </Container>
   );

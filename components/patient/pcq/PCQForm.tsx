@@ -33,7 +33,13 @@ type PCQAnswer = {
 type PCQResponse = {
   id: string;
   appointmentId: string;
+  patientId: string;
+  assignedByProviderId: string | null;
+  assignedByProviderName: string | null;
+  responseScope: string;
   status: string;
+  assignmentReason: string | null;
+  dueAt: string | null;
   submittedAt: string | null;
   lockedAt: string | null;
   template: {
@@ -41,14 +47,21 @@ type PCQResponse = {
     name: string;
     consultationType: string;
     status: string;
+    specialtyId: string | null;
     isGlobal: boolean;
+  } | null;
+  templateVersion: {
+    id: string;
+    versionNumber: number;
+    isCurrent: boolean;
+    publishedAt: string | null;
   } | null;
   questions: PCQQuestion[];
   answers: PCQAnswer[];
 };
 
 type PCQData = {
-  getPcqForAppointment: PCQResponse;
+  getPcqForAppointment: PCQResponse | null;
 };
 
 function formatDateTime(value: string) {
@@ -100,7 +113,7 @@ export function PCQForm({ appointmentId }: { appointmentId: string }) {
     );
   }
 
-  if (error || !data?.getPcqForAppointment) {
+  if (error) {
     return (
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
         Unable to load questionnaire. Please try again or contact support.
@@ -108,21 +121,52 @@ export function PCQForm({ appointmentId }: { appointmentId: string }) {
     );
   }
 
-  const pcq = data.getPcqForAppointment;
+  const pcq = data?.getPcqForAppointment;
+
+  if (!pcq) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
+          <p className="text-sm font-medium text-text">No appointment questionnaire assigned</p>
+          <p className="mt-1 text-sm text-muted">
+            Your baseline questionnaire is handled separately. This appointment is not blocked by an appointment-specific questionnaire.
+          </p>
+        </div>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.push(`/patient/bookings/${appointmentId}`)}
+          >
+            Back to Appointment
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const isReadOnly =
     pcq.status.toUpperCase() === "SUBMITTED" ||
     pcq.status.toUpperCase() === "LOCKED";
 
   const questions = [...pcq.questions].sort((a, b) => a.order - b.order);
+  const responseId = pcq.id;
 
   async function handleSubmit() {
-    await submitPcq({ variables: { responseId: pcq.id } });
+    // Flush every field through savePcqAnswer before submitting. This is what
+    // makes untouched required booleans persist their "false" answer (an
+    // unchecked box never fires onChange, so no draft row exists for it) — the
+    // backend would otherwise reject the submit as a missing required answer.
+    // Only submit once the save is clean so we never lock in a half-saved form.
+    const saved = await explicitSave.saveAll();
+    if (!saved) return;
+    await submitPcq({ variables: { responseId } });
   }
 
   return (
     <div className="space-y-6">
       {/* Status bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-5 py-4 shadow-soft sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           {pcq.template ? (
             <p className="text-sm font-medium text-text">{pcq.template.name}</p>
@@ -140,7 +184,7 @@ export function PCQForm({ appointmentId }: { appointmentId: string }) {
 
       {/* Questions */}
       {questions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-10 text-center">
+        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
           <p className="text-sm text-muted">No questions available for this questionnaire.</p>
         </div>
       ) : (
@@ -194,14 +238,14 @@ export function PCQForm({ appointmentId }: { appointmentId: string }) {
               onClick={() => void explicitSave.saveAll()}
               disabled={explicitSave.saving || questions.length === 0}
             >
-              {explicitSave.saving ? "Saving…" : "Save answers"}
+              {explicitSave.saving ? "Saving…" : "Save and continue later"}
             </Button>
             <Button
               type="button"
               onClick={() => void handleSubmit()}
-              disabled={submitting || questions.length === 0}
+              disabled={submitting || explicitSave.saving || questions.length === 0}
             >
-              {submitting ? "Submitting…" : "Submit Questionnaire"}
+              {submitting ? "Submitting…" : "Submit questionnaire"}
             </Button>
           </div>
         </div>

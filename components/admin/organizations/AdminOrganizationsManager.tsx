@@ -358,7 +358,7 @@ function SystemOrganizationsTable() {
             <Label htmlFor="system-org-type">Type</Label>
             <select
               id="system-org-type"
-              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={filters.type}
               onChange={(event) =>
                 setFilters((current) => ({ ...current, type: event.target.value, page: 1 }))
@@ -376,7 +376,7 @@ function SystemOrganizationsTable() {
             <Label htmlFor="system-org-status">Status</Label>
             <select
               id="system-org-status"
-              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={filters.status}
               onChange={(event) =>
                 setFilters((current) => ({ ...current, status: event.target.value, page: 1 }))
@@ -593,7 +593,7 @@ function OrganizationDetailPanel({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="overflow-hidden rounded-2xl border border-border bg-background">
+          <div className="overflow-hidden rounded-lg border border-border bg-background">
             {organization.logoUrl ? (
               <div className="relative aspect-video">
                 <Image
@@ -648,7 +648,7 @@ function OrganizationDetailPanel({
                 <Label htmlFor="org-type">Type</Label>
                 <select
                   id="org-type"
-                  className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   value={form.type}
                   onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
                 >

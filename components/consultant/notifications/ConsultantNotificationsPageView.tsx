@@ -72,7 +72,7 @@ export function ConsultantNotificationsPageView() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-border/40" />
+          <div key={i} className="h-20 animate-pulse rounded-lg bg-border/40" />
         ))}
       </div>
     );
@@ -105,13 +105,13 @@ export function ConsultantNotificationsPageView() {
       </div>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-16 text-center">
           <Bell className="size-8 text-muted/40" />
           <p className="text-sm font-medium text-text">No notifications</p>
           <p className="text-xs text-muted">You&apos;re all caught up.</p>
         </div>
       ) : (
-        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-subtle">
+        <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
           {items.map((notification) => (
             <button
               key={notification.id}

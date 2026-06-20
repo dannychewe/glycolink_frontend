@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useQuery } from "@apollo/client";
-import { Bell } from "lucide-react";
+import { Icons } from "@/components/ui/icons";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Panel, PanelHeader, PanelTitle, PanelList, PanelEmpty, ViewAllLink } from "@/components/ui/panel";
 import { cn } from "@/lib/utils/cn";
 import { PROVIDER_PATIENT_ALERTS_QUERY } from "@/lib/monitoring/graphql";
 
@@ -31,11 +31,11 @@ function severityVariant(severity: string) {
   return "secondary" as const;
 }
 
-function severityBorder(severity: string) {
+function severityAccent(severity: string) {
   const s = severity.toUpperCase();
-  if (s === "CRITICAL" || s === "HIGH") return "border-l-danger/60";
-  if (s === "MEDIUM") return "border-l-warning/60";
-  return "border-l-border";
+  if (s === "CRITICAL" || s === "HIGH") return "bg-danger";
+  if (s === "MEDIUM") return "bg-warning";
+  return "bg-border";
 }
 
 function formatTime(value: string) {
@@ -54,7 +54,7 @@ export function PatientAlertsSection() {
     PROVIDER_PATIENT_ALERTS_QUERY,
     {
       variables: { limit: 5 },
-      fetchPolicy: "network-only",
+      fetchPolicy: "cache-and-network",
     },
   );
 
@@ -62,77 +62,54 @@ export function PatientAlertsSection() {
   const activeAlerts = alerts.filter((a) => !a.alert.acknowledgedAt);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-danger/10 text-danger">
-            <Bell className="size-3.5" />
-          </span>
-          <h2 className="text-base font-semibold text-text">Patient Alerts</h2>
-          {activeAlerts.length > 0 ? (
-            <span className="flex size-5 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white">
-              {activeAlerts.length}
-            </span>
-          ) : null}
-        </div>
-        <Button href="/consultant/monitoring" variant="ghost" size="sm">
-          View all
-        </Button>
-      </div>
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={Icons.alerts} count={activeAlerts.length} countTone="danger">
+          Patient Alerts
+        </PanelTitle>
+        <ViewAllLink href="/consultant/monitoring" />
+      </PanelHeader>
 
       {error ? (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
-          Unable to load patient alerts right now.
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="space-y-2">
+        <PanelEmpty className="text-warning">Unable to load patient alerts right now.</PanelEmpty>
+      ) : loading && activeAlerts.length === 0 ? (
+        <div className="divide-y divide-border">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-border/40" />
+            <div key={i} className="px-5 py-4">
+              <div className="h-9 animate-pulse rounded bg-border/50" />
+            </div>
           ))}
         </div>
-      ) : null}
-
-      {!loading && activeAlerts.length === 0 && !error ? (
-        <div className="rounded-2xl border border-border bg-surface px-5 py-6 text-center">
-          <p className="text-sm font-medium text-text">No active alerts</p>
+      ) : activeAlerts.length === 0 ? (
+        <PanelEmpty>
+          <p className="font-medium text-text">No active alerts</p>
           <p className="mt-0.5 text-xs text-muted">All patient readings are within range.</p>
-        </div>
-      ) : null}
-
-      {!loading ? (
-        <div className="space-y-2">
+        </PanelEmpty>
+      ) : (
+        <PanelList>
           {activeAlerts.map((item) => (
-            <div
-              key={item.alert.id}
-              className={cn(
-                "flex flex-col gap-3 rounded-xl border-l-4 bg-surface px-4 py-3.5 shadow-subtle sm:flex-row sm:items-start sm:justify-between",
-                severityBorder(item.alert.severity),
-              )}
-            >
-              <div className="space-y-0.5 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
+            <div key={item.alert.id} className="flex gap-3 px-5 py-3.5 transition-colors hover:bg-background">
+              <span className={cn("mt-0.5 w-1 shrink-0 rounded-full", severityAccent(item.alert.severity))} />
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold text-text">
                     {item.patientName ?? "Unknown Patient"}
                   </p>
-                  <Badge variant={severityVariant(item.alert.severity)}>
-                    {item.alert.severity}
-                  </Badge>
+                  <Badge variant={severityVariant(item.alert.severity)}>{item.alert.severity}</Badge>
                 </div>
-                <p className="text-sm text-muted leading-5">{item.alert.message}</p>
+                <p className="text-sm leading-5 text-muted">{item.alert.message}</p>
                 <p className="text-xs text-muted/70">{formatTime(item.alert.createdAt)}</p>
               </div>
               <Link
                 href="/consultant/monitoring"
-                className="shrink-0 text-xs font-medium text-primary hover:underline"
+                className="shrink-0 self-start text-xs font-medium text-primary hover:underline"
               >
                 Review
               </Link>
             </div>
           ))}
-        </div>
-      ) : null}
-    </div>
+        </PanelList>
+      )}
+    </Panel>
   );
 }

@@ -8,11 +8,22 @@ import { PrescriptionSummarySection } from "@/components/patient/dashboard/Presc
 import { Container } from "@/components/ui/container";
 
 export default function PatientDashboardPage() {
+  const today = new Date().toLocaleDateString("en-ZM", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
-    <Container className="space-y-8 py-2">
-      <header className="space-y-2">
-        <h1 className="text-3xl sm:text-4xl">Dashboard</h1>
-        <p>Welcome back</p>
+    <Container className="space-y-6 py-2">
+      <header className="flex flex-col gap-1 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+            Patient Portal
+          </p>
+          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Dashboard</h1>
+        </div>
+        <p className="text-sm text-muted">{today}</p>
       </header>
 
       <OnboardingBanner />

@@ -6,6 +6,7 @@ import { ConsultantLabReviewModal } from "@/components/consultant/labs/Consultan
 import { ConsultantLabStatusBadge } from "@/components/consultant/labs/ConsultantLabStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import type { ConsultantLabReview } from "@/types";
 
 type ConsultantLabsPageViewProps = Readonly<{
@@ -44,12 +45,11 @@ export function ConsultantLabsPageView({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Clinical Reviews
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Lab Reviews</h1>
-      </header>
+      <PageHeader
+        eyebrow="Clinical Reviews"
+        title="Lab Reviews"
+        description="Review incoming lab results and acknowledge critical findings."
+      />
 
       {items.length > 0 ? (
         <div className="grid gap-4">
@@ -86,7 +86,7 @@ export function ConsultantLabsPageView({
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No lab reviews available</p>
         </div>
       )}

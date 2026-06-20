@@ -49,7 +49,7 @@ export function MyConsultantsView() {
     return (
       <div className="grid gap-3 sm:grid-cols-2">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="h-40 animate-pulse rounded-2xl bg-border/40" />
+          <div key={i} className="h-40 animate-pulse rounded-lg bg-border/40" />
         ))}
       </div>
     );
@@ -57,7 +57,7 @@ export function MyConsultantsView() {
 
   if (error && all.length === 0) {
     return (
-      <div className="space-y-3 rounded-2xl border border-danger/30 bg-danger/5 px-5 py-6 text-sm text-danger">
+      <div className="space-y-3 rounded-lg border border-danger/30 bg-danger/5 px-5 py-6 text-sm text-danger">
         <p>We couldn&apos;t load your consultants. Please try again.</p>
         <Button variant="secondary" size="sm" onClick={() => void refetch()}>
           Retry
@@ -68,7 +68,7 @@ export function MyConsultantsView() {
 
   if (all.length === 0) {
     return (
-      <div className="space-y-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+      <div className="space-y-3 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
         <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Users className="size-6" />
         </span>
@@ -122,7 +122,7 @@ export function MyConsultantsView() {
             ))}
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center text-sm text-muted">
+          <p className="rounded-lg border border-dashed border-border bg-surface px-5 py-8 text-center text-sm text-muted">
             Accept an invitation above to start working with a consultant.
           </p>
         )}
@@ -139,7 +139,7 @@ export function MyConsultantsView() {
             {rejected.map((invite) => (
               <div
                 key={invite.inviteId}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-5 py-4 opacity-70"
+                className="flex items-center gap-3 rounded-lg border border-border bg-surface px-5 py-4 opacity-70"
               >
                 <span className="grid size-10 place-items-center rounded-lg bg-slate-100 text-sm font-semibold text-muted">
                   {invite.provider.displayName.slice(0, 1).toUpperCase()}

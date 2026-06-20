@@ -111,7 +111,7 @@ export function GlucoseLogForm({ onSuccess }: GlucoseLogFormProps) {
           <select
             id="glucose-context"
             {...register("context")}
-            className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           >
             {contextOptions.map(({ value, label }) => (
               <option key={value} value={value}>{label}</option>

@@ -189,7 +189,7 @@ function CreateLabOrderForm({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 rounded-lg border border-border bg-surface p-5">
       <p className="text-sm font-semibold text-text">New Lab Order</p>
       <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
 

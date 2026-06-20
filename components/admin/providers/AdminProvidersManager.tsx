@@ -362,7 +362,7 @@ function ProviderDetailModal({
         <div className="space-y-5">
           <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
             <div className="space-y-3">
-              <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-background">
+              <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-background">
                 {provider.profilePictureUrl ? (
                   <img
                     src={provider.profilePictureUrl}
@@ -713,7 +713,7 @@ export function AdminProvidersManager() {
           ) : null}
 
           {!loading && providers.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-10 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-10 text-center">
               <UserCheck className="size-8 text-muted" />
               <p className="text-sm text-muted">No providers match the current filter.</p>
             </div>

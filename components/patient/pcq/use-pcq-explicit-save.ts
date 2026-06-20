@@ -8,8 +8,12 @@ export type FieldSaver = () => Promise<void>;
 export type PcqExplicitSave = {
   /** Fields call this on mount to register their saver; returns an unregister fn. */
   register: (questionId: string, saver: FieldSaver) => () => void;
-  /** Explicitly flush every registered field through savePcqAnswer. */
-  saveAll: () => Promise<void>;
+  /**
+   * Explicitly flush every registered field through savePcqAnswer. Resolves to
+   * true when every field saved, false when any saver threw. Callers that gate
+   * a follow-up action (e.g. submit) on a clean save should check the result.
+   */
+  saveAll: () => Promise<boolean>;
   saving: boolean;
   savedAt: string | null;
   error: boolean;
@@ -39,8 +43,10 @@ export function usePcqExplicitSave(): PcqExplicitSave {
     try {
       await Promise.all(Array.from(saversRef.current.values(), (save) => save()));
       setSavedAt(new Date().toISOString());
+      return true;
     } catch {
       setError(true);
+      return false;
     } finally {
       setSaving(false);
     }

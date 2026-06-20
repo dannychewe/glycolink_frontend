@@ -126,7 +126,7 @@ function ReviewPanel({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-3 rounded-2xl border border-border bg-background px-4 py-4">
+    <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-3 rounded-lg border border-border bg-background px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Review Notes</p>
       <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
       <div className="space-y-1.5">
@@ -178,7 +178,7 @@ function LabOrderCard({ item, onRefetch: _onRefetch }: { item: PendingLabReview;
 
   return (
     <div className={cn(
-      "rounded-2xl border-l-4 bg-surface shadow-subtle",
+      "rounded-lg border-l-4 bg-surface",
       hasCritical ? "border-l-danger/70" : "border-l-warning/60",
     )}>
       <div className="px-5 py-4 space-y-4">
@@ -302,7 +302,7 @@ export function GraphqlLabsList() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-36 animate-pulse rounded-2xl bg-border/40" />
+          <div key={i} className="h-36 animate-pulse rounded-lg bg-border/40" />
         ))}
       </div>
     );
@@ -318,7 +318,7 @@ export function GraphqlLabsList() {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
         <FlaskConical className="size-8 text-muted/40" />
         <div className="space-y-1">
           <p className="text-sm font-medium text-text">No pending lab reviews</p>

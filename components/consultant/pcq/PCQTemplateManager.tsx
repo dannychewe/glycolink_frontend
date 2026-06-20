@@ -121,7 +121,7 @@ function ActiveTemplateView({ consultationType }: { consultationType: string }) 
 
   if (!template) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-10 text-center">
+      <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-10 text-center">
         <ClipboardList className="size-8 text-muted" />
         <p className="text-sm text-muted">No active template for this consultation type.</p>
       </div>
@@ -132,7 +132,7 @@ function ActiveTemplateView({ consultationType }: { consultationType: string }) 
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-surface px-5 py-4 space-y-2">
+      <div className="rounded-lg border border-border bg-surface px-5 py-4 space-y-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-text">{template.name}</p>
@@ -221,7 +221,7 @@ function ContributionForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 space-y-5">
+    <div className="rounded-lg border border-border bg-surface p-6 space-y-5">
       <div className="space-y-1">
         <p className="text-sm font-semibold text-text">Suggest a Question</p>
         <p className="text-xs text-muted">
@@ -354,7 +354,7 @@ function MyContributions() {
           ))}
         </div>
       ) : contributions.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-10 text-center">
           <ClipboardList className="size-8 text-muted" />
           <p className="text-sm text-muted">
             {statusFilter === "all"
@@ -457,7 +457,7 @@ function CreateTemplateForm({ onCreated }: { onCreated: (alert: AlertState) => v
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
+    <form onSubmit={(e) => void handleSubmit(e)} className="rounded-lg border border-primary/30 bg-primary/5 p-5 space-y-4">
       <p className="text-sm font-semibold text-text">New supplemental template</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
@@ -522,7 +522,7 @@ function MyTemplates() {
           ))}
         </div>
       ) : templates.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-10 text-center">
           <ClipboardList className="size-8 text-muted" />
           <p className="text-sm text-muted">No templates yet. Create your first supplemental template above.</p>
         </div>

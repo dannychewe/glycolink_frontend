@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { Pill } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { MY_PRESCRIPTIONS_QUERY } from "@/lib/patient/prescriptions-graphql";
 import { cn } from "@/lib/utils/cn";
 
@@ -71,21 +72,14 @@ export function GraphqlPrescriptionsListView() {
   }, [activeTab, prescriptions]);
 
   return (
-    <div className="space-y-7">
-      <header className="relative overflow-hidden rounded-[1.75rem] border border-border/80 bg-gradient-to-br from-primary/10 via-surface to-surface px-6 py-7 shadow-soft sm:px-8">
-        <div className="absolute -right-12 -top-12 size-40 rounded-full bg-primary/10 blur-2xl" />
-        <div className="relative space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-            Medications
-          </p>
-          <h1 className="text-3xl font-semibold text-text sm:text-4xl">Prescriptions</h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted sm:text-base">
-            Prescriptions issued by your care team during consultations.
-          </p>
-        </div>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Medications"
+        title="Prescriptions"
+        description="Prescriptions issued by your care team during consultations."
+      />
 
-      <div className="flex flex-wrap gap-3 rounded-xl border border-border/70 bg-surface px-3 py-3">
+      <div className="flex gap-1 border-b border-border">
         {tabs.map((tab) => {
           const isActive = tab === activeTab;
           return (
@@ -94,10 +88,10 @@ export function GraphqlPrescriptionsListView() {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "rounded-xl border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none",
                 isActive
-                  ? "border-primary bg-primary text-white"
-                  : "border-border bg-surface text-text hover:bg-slate-50",
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted hover:text-text",
               )}
             >
               {tab}
@@ -107,7 +101,7 @@ export function GraphqlPrescriptionsListView() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+        <div className="rounded-lg border border-l-4 border-l-warning bg-surface px-4 py-3 text-sm text-warning">
           Unable to load prescriptions right now.
         </div>
       ) : null}
@@ -173,7 +167,7 @@ export function GraphqlPrescriptionsListView() {
       ) : null}
 
       {!loading && filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No prescriptions found</p>
           <p className="mt-1 text-sm text-muted">
             {activeTab === "Active"

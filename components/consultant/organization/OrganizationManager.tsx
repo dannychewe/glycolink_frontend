@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   APPROVE_PROVIDER_ORGANIZATION_INVITE_MUTATION,
   CREATE_PROVIDER_ORGANIZATION_MUTATION,
@@ -115,7 +116,7 @@ function AlertBanner({ alert, onDismiss }: { alert: AlertState; onDismiss: () =>
   const isError = alert.type === "error";
   return (
     <div className={cn(
-      "flex items-start gap-3 rounded-2xl border px-4 py-3.5",
+      "flex items-start gap-3 rounded-lg border px-4 py-3.5",
       isError ? "border-danger/30 bg-danger/5 text-danger" : "border-success/30 bg-success/5 text-success",
     )}>
       {isError ? <AlertCircle className="mt-0.5 size-4 shrink-0" /> : <CheckCircle className="mt-0.5 size-4 shrink-0" />}
@@ -148,7 +149,7 @@ function OrgLogoUpload({ orgId, logoUrl, orgName, onSuccess, onError }: {
 
   return (
     <div className="relative shrink-0">
-      <div className="size-16 overflow-hidden rounded-2xl border-2 border-border bg-surface shadow-soft sm:size-20">
+      <div className="size-16 overflow-hidden rounded-lg border-2 border-border bg-surface sm:size-20">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt={orgName} className="size-full object-cover" />
@@ -162,7 +163,7 @@ function OrgLogoUpload({ orgId, logoUrl, orgName, onSuccess, onError }: {
         type="button"
         disabled={loading}
         onClick={() => inputRef.current?.click()}
-        className="absolute -bottom-2 -right-2 flex size-7 items-center justify-center rounded-xl border border-border bg-surface shadow-soft transition hover:bg-background disabled:opacity-50"
+        className="absolute -bottom-2 -right-2 flex size-7 items-center justify-center rounded-xl border border-border bg-surface transition hover:bg-background disabled:opacity-50"
         title="Upload logo"
       >
         {loading
@@ -212,7 +213,7 @@ function InviteRow({ invite, onRefresh }: { invite: OrgInvite; onRefresh: () => 
 
   return (
     <div className={cn(
-      "rounded-2xl border-l-4 bg-surface px-4 py-4 shadow-subtle",
+      "rounded-lg border-l-4 bg-surface px-4 py-4",
       isPending ? "border-l-warning/60" :
       invite.status.toUpperCase() === "APPROVED" ? "border-l-success/50" : "border-l-danger/40",
     )}>
@@ -438,29 +439,25 @@ export function OrganizationManager() {
   if (orgsLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-32 animate-pulse rounded-2xl bg-border/40" />
-        <div className="h-48 animate-pulse rounded-2xl bg-border/40" />
+        <div className="h-32 animate-pulse rounded-lg bg-border/40" />
+        <div className="h-48 animate-pulse rounded-lg bg-border/40" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Consultant Workspace
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Organization</h1>
-        <p className="text-sm text-muted">
-          Create or manage your practice, clinic, or healthcare organization.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Consultant Workspace"
+        title="Organization"
+        description="Create or manage your practice, clinic, or healthcare organization."
+      />
 
       <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
 
       {/* ── No org: create form ── */}
       {orgs.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+        <div className="rounded-lg border border-border bg-surface p-6 sm:p-8">
           <div className="mb-6 flex items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Building2 className="size-5" />
@@ -484,7 +481,7 @@ export function OrganizationManager() {
               <div className="space-y-2">
                 <Label htmlFor="orgType">Type <span className="text-danger">*</span></Label>
                 <select id="orgType"
-                  className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   value={createForm.type}
                   onChange={(e) => setCreateForm((p) => ({ ...p, type: e.target.value }))}>
                   {ORGANIZATION_TYPE_OPTIONS.map((opt) => (
@@ -502,7 +499,7 @@ export function OrganizationManager() {
                 <Label htmlFor="parentOrgId">Parent organization</Label>
                 <select
                   id="parentOrgId"
-                  className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   value={createForm.parentOrgId}
                   onChange={(e) => setCreateForm((p) => ({ ...p, parentOrgId: e.target.value }))}
                 >
@@ -552,7 +549,7 @@ export function OrganizationManager() {
 
           {/* ── Org header card ── */}
           {activeOrg ? (
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle sm:p-6">
+            <div className="rounded-lg border border-border bg-surface p-5 sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                   <OrgLogoUpload
@@ -634,7 +631,7 @@ export function OrganizationManager() {
 
               {showInviteForm ? (
                 <form onSubmit={(e) => void handleInviteProvider(e)}
-                  className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+                  className="rounded-lg border border-primary/20 bg-primary/5 p-4 sm:p-5">
                   <p className="mb-4 text-sm font-medium text-text">Invite a provider by their profile ID</p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2 sm:col-span-2">
@@ -661,7 +658,7 @@ export function OrganizationManager() {
               ) : null}
 
               {members.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center">
+                <div className="rounded-lg border border-dashed border-border bg-surface px-5 py-8 text-center">
                   <p className="text-sm font-medium text-text">No providers yet</p>
                   <p className="mt-1 text-xs text-muted">
                     Invite providers using the button above. They will appear here once approved.
@@ -671,7 +668,7 @@ export function OrganizationManager() {
                 <div className="space-y-2">
                   {members.map((member) => (
                     <div key={member.id}
-                      className="flex flex-col gap-2 rounded-xl border-l-4 border-l-success/40 bg-surface px-4 py-3.5 shadow-subtle sm:flex-row sm:items-center sm:justify-between">
+                      className="flex flex-col gap-2 rounded-xl border-l-4 border-l-success/40 bg-surface px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-0.5">
                         <p className="text-sm font-semibold text-text">
                           {member.displayName ?? "Unnamed Provider"}
@@ -722,7 +719,7 @@ export function OrganizationManager() {
               </div>
 
               {invites.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center">
+                <div className="rounded-lg border border-dashed border-border bg-surface px-5 py-8 text-center">
                   <p className="text-sm font-medium text-text">No invites</p>
                   <p className="mt-1 text-xs text-muted">
                     {inviteFilter === "pending"
@@ -744,7 +741,7 @@ export function OrganizationManager() {
           {activeTab === "edit" && editFormReady && activeOrg ? (
             <div className="space-y-6">
               <form onSubmit={(e) => void handleUpdateOrg(e)}
-                className="space-y-5 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+                className="space-y-5 rounded-lg border border-border bg-surface p-5 sm:p-6">
                 <p className="text-sm font-medium text-text">Organization details</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2 sm:col-span-2">
@@ -755,7 +752,7 @@ export function OrganizationManager() {
                   <div className="space-y-2">
                     <Label htmlFor="editOrgType">Type <span className="text-danger">*</span></Label>
                     <select id="editOrgType"
-                      className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                       value={editForm.type}
                       onChange={(e) => setEditForm((p) => ({ ...p, type: e.target.value }))}>
                       {ORGANIZATION_TYPE_OPTIONS.map((opt) => (
@@ -773,7 +770,7 @@ export function OrganizationManager() {
                     <Label htmlFor="editParentOrgId">Parent organization</Label>
                     <select
                       id="editParentOrgId"
-                      className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                       value={editForm.parentOrgId}
                       onChange={(e) => setEditForm((p) => ({ ...p, parentOrgId: e.target.value }))}
                     >
@@ -794,7 +791,7 @@ export function OrganizationManager() {
               </form>
 
               {/* Deactivate */}
-              <div className="rounded-2xl border border-danger/20 bg-danger/5 p-5">
+              <div className="rounded-lg border border-danger/20 bg-danger/5 p-5">
                 <p className="text-sm font-semibold text-danger">Danger zone</p>
                 <p className="mt-1 text-xs text-muted">
                   Deactivating this organization will prevent new bookings and hide it from the provider directory. Existing data is preserved.

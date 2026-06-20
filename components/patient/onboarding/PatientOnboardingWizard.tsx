@@ -34,6 +34,8 @@ import {
   GET_PATIENT_CONSENTS_QUERY,
   GET_PATIENT_CONTACTS_QUERY,
   MY_PATIENT_PROFILE_QUERY,
+  PATIENT_ONBOARDING_READINESS_QUERY,
+  UPDATE_PATIENT_PROFILE_MUTATION,
   UPDATE_PATIENT_CONTACT_MUTATION,
 } from "@/lib/patient/clinical-profile-graphql";
 import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features/auth/auth-context";
@@ -77,6 +79,39 @@ const steps = [
 
 const REVIEW_STEP = steps.length - 1;
 
+type ReadinessItem = {
+  code: string;
+  label: string;
+  complete: boolean;
+  action: string | null;
+};
+
+type PatientOnboardingReadiness = {
+  isComplete: boolean;
+  pcqComplete: boolean;
+  consultationReady: boolean;
+  percentComplete: number;
+  missingRequired: string[];
+  missingSetup: string[];
+  nextAction: string | null;
+  requiredItems: ReadinessItem[];
+  setupItems: ReadinessItem[];
+} | null;
+
+const nextActionLabels: Record<string, string> = {
+  UPDATE_PROFILE: "Save profile",
+  ADD_EMERGENCY_CONTACT: "Add emergency contact",
+  COMPLETE_BASELINE_PCQ: "Complete questionnaire",
+  UPDATE_PRIVACY_PREFERENCES: "Save preferences",
+  OPEN_DASHBOARD: "Go to dashboard",
+};
+
+const nextActionSteps: Record<string, number> = {
+  UPDATE_PROFILE: 0,
+  ADD_EMERGENCY_CONTACT: 3,
+  UPDATE_PRIVACY_PREFERENCES: 4,
+};
+
 const defaultValues: PatientOnboardingValues = {
   fullName: "",
   dateOfBirth: "",
@@ -100,6 +135,9 @@ type ExistingProfile = {
   phone: string | null;
   diabetesType: string | null;
   diagnosisDate: string | null;
+  allergies: string | null;
+  currentMedications: string | null;
+  additionalNotes: string | null;
 } | null;
 
 type ExistingContact = {
@@ -140,6 +178,7 @@ export function PatientOnboardingWizard() {
   const [consentAlreadyAccepted, setConsentAlreadyAccepted] = useState(false);
 
   const [completeProfile] = useMutation(COMPLETE_PATIENT_PROFILE_MUTATION);
+  const [updateProfile] = useMutation(UPDATE_PATIENT_PROFILE_MUTATION);
   const [addPatientContact] = useMutation(ADD_PATIENT_CONTACT_MUTATION);
   const [updatePatientContact] = useMutation(UPDATE_PATIENT_CONTACT_MUTATION);
   const [acceptConsent] = useMutation(ACCEPT_CONSENT_MUTATION);
@@ -160,6 +199,9 @@ export function PatientOnboardingWizard() {
     GET_PATIENT_CONSENTS_QUERY,
     { fetchPolicy: "network-only", skip: !canQuery },
   );
+  const { data: readinessData, refetch: refetchReadiness } = useQuery<{
+    patientOnboardingReadiness: PatientOnboardingReadiness;
+  }>(PATIENT_ONBOARDING_READINESS_QUERY, { fetchPolicy: "network-only", skip: !canQuery });
 
   const methods = useForm<PatientOnboardingValues>({
     resolver: zodResolver(patientOnboardingSchema),
@@ -171,6 +213,15 @@ export function PatientOnboardingWizard() {
   const isLastStep = currentStep === REVIEW_STEP;
   const isFirstStep = currentStep === 0;
   const currentStepMeta = steps[currentStep];
+  const readiness = readinessData?.patientOnboardingReadiness ?? null;
+  const nextAction = readiness?.nextAction ?? null;
+  const primaryLabel = nextAction
+    ? nextActionLabels[nextAction] ?? "Continue"
+    : isLastStep
+      ? "Submit profile"
+      : "Continue";
+  const incompleteRequiredItems = readiness?.requiredItems.filter((item) => !item.complete) ?? [];
+  const incompleteSetupItems = readiness?.setupItems.filter((item) => !item.complete) ?? [];
 
   useEffect(() => {
     const profile = profileData?.myPatientProfile;
@@ -190,6 +241,15 @@ export function PatientOnboardingWizard() {
     }
     if (profile?.phone && !getFieldState("phone").isDirty) {
       setValue("phone", profile.phone);
+    }
+    if (profile?.allergies && !getFieldState("allergies").isDirty) {
+      setValue("allergies", profile.allergies);
+    }
+    if (profile?.currentMedications && !getFieldState("currentMedications").isDirty) {
+      setValue("currentMedications", profile.currentMedications);
+    }
+    if (profile?.additionalNotes && !getFieldState("additionalNotes").isDirty) {
+      setValue("additionalNotes", profile.additionalNotes);
     }
     if (user?.email && !getFieldState("email").isDirty) {
       setValue("email", user.email);
@@ -242,6 +302,70 @@ export function PatientOnboardingWizard() {
     setSubmitError(null);
     setErrorStep(null);
     setCurrentStep(stepIndex);
+  }
+
+  function buildPatientProfileInput() {
+    const values = methods.getValues();
+
+    return {
+      fullName: values.fullName || undefined,
+      dateOfBirth: values.dateOfBirth || undefined,
+      phone: values.phone || undefined,
+      diabetesType: values.diabetesType ? values.diabetesType.toUpperCase() : undefined,
+      diagnosisDate: values.diagnosisDate || undefined,
+      allergies: values.allergies || undefined,
+      currentMedications: values.currentMedications || undefined,
+      additionalNotes: values.additionalNotes || undefined,
+    };
+  }
+
+  async function persistPatientProfile() {
+    await updateProfile({
+      variables: {
+        data: buildPatientProfileInput(),
+      },
+    });
+    await refetchReadiness();
+  }
+
+  async function persistEmergencyContact() {
+    const isValid = await methods.trigger([
+      "emergencyContactName",
+      "emergencyContactRelationship",
+      "emergencyContactPhone",
+    ]);
+    if (!isValid) return false;
+
+    const values = methods.getValues();
+    if (existingContactId) {
+      await updatePatientContact({
+        variables: {
+          contactId: existingContactId,
+          data: {
+            name: values.emergencyContactName,
+            relationship: values.emergencyContactRelationship,
+            phone: values.emergencyContactPhone,
+            isPrimary: true,
+          },
+        },
+      });
+    } else {
+      const { data } = await addPatientContact({
+        variables: {
+          data: {
+            name: values.emergencyContactName,
+            relationship: values.emergencyContactRelationship,
+            phone: values.emergencyContactPhone,
+            isPrimary: true,
+          },
+        },
+      });
+      const contactId = data?.addPatientContact?.contact?.id;
+      if (contactId) setExistingContactId(contactId);
+    }
+
+    await refetchReadiness();
+    return true;
   }
 
   const submitProfile = methods.handleSubmit(async () => {
@@ -300,8 +424,8 @@ export function PatientOnboardingWizard() {
         });
       }
 
-      setSubmitMessage("Profile completed successfully.");
-      router.push("/patient/dashboard");
+      await refetchReadiness();
+      setSubmitMessage("Profile saved. Complete the baseline questionnaire when prompted.");
     } catch (error) {
       const code = getGraphQLErrorCode(error);
 
@@ -330,6 +454,73 @@ export function PatientOnboardingWizard() {
       setIsSubmitting(false);
     }
   });
+
+  async function handlePrimaryAction() {
+    setSubmitError(null);
+    setSubmitMessage(null);
+
+    if (nextAction === "OPEN_DASHBOARD") {
+      router.push("/patient/dashboard");
+      return;
+    }
+
+    if (nextAction === "COMPLETE_BASELINE_PCQ") {
+      router.push("/patient/pcq/baseline");
+      return;
+    }
+
+    if (nextAction === "ADD_EMERGENCY_CONTACT") {
+      if (currentStep !== nextActionSteps.ADD_EMERGENCY_CONTACT) {
+        setCurrentStep(nextActionSteps.ADD_EMERGENCY_CONTACT);
+        return;
+      }
+
+      try {
+        const saved = await persistEmergencyContact();
+        if (saved) setSubmitMessage("Emergency contact saved.");
+      } catch (error) {
+        setSubmitError(getGraphQLErrorMessage(error, "Unable to save emergency contact."));
+        setErrorStep(3);
+      }
+      return;
+    }
+
+    if (nextAction === "UPDATE_PRIVACY_PREFERENCES") {
+      if (currentStep !== nextActionSteps.UPDATE_PRIVACY_PREFERENCES) {
+        setCurrentStep(nextActionSteps.UPDATE_PRIVACY_PREFERENCES);
+        return;
+      }
+
+      try {
+        if (!consentAlreadyAccepted) {
+          await acceptConsent({ variables: { policyType: "terms_of_service", version: "v1" } });
+          setConsentAlreadyAccepted(true);
+        }
+        await refetchReadiness();
+        setSubmitMessage("Preferences saved.");
+      } catch (error) {
+        setSubmitError(getGraphQLErrorMessage(error, "Unable to save preferences."));
+        setErrorStep(4);
+      }
+      return;
+    }
+
+    if (nextAction === "UPDATE_PROFILE") {
+      try {
+        await persistPatientProfile();
+        setSubmitMessage("Profile saved.");
+      } catch (error) {
+        setSubmitError(getGraphQLErrorMessage(error, "Unable to save profile."));
+      }
+      return;
+    }
+
+    if (isLastStep) {
+      await submitProfile();
+    } else {
+      await handleNext();
+    }
+  }
 
   return (
     <FormProvider {...methods}>
@@ -362,6 +553,48 @@ export function PatientOnboardingWizard() {
           <div className="flex items-start gap-3 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
             <span>{submitMessage}</span>
+          </div>
+        ) : null}
+
+        {readiness ? (
+          <div className="grid gap-3 rounded-xl border border-border bg-surface p-4 text-sm md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="font-semibold text-text">Required before consultations</p>
+              {readiness.requiredItems.map((item) => (
+                <div key={item.code} className="flex items-center justify-between gap-3">
+                  <span className={item.complete ? "text-muted line-through" : "text-text"}>
+                    {item.label}
+                  </span>
+                  <span className={item.complete ? "text-success" : "text-danger"}>
+                    {item.complete ? "Done" : "Required"}
+                  </span>
+                </div>
+              ))}
+              {incompleteRequiredItems.length ? (
+                <p className="text-xs text-muted">
+                  Required items, including the baseline questionnaire, cannot be skipped.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <p className="font-semibold text-text">Recommended setup</p>
+              {readiness.setupItems.map((item) => (
+                <div key={item.code} className="flex items-center justify-between gap-3">
+                  <span className={item.complete ? "text-muted line-through" : "text-text"}>
+                    {item.label}
+                  </span>
+                  <span className={item.complete ? "text-success" : "text-muted"}>
+                    {item.complete ? "Done" : "Can add later"}
+                  </span>
+                </div>
+              ))}
+              {incompleteSetupItems.length ? (
+                <p className="text-xs text-muted">
+                  Recommended items can be finished now or updated later from settings.
+                </p>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
@@ -413,7 +646,7 @@ export function PatientOnboardingWizard() {
             <Button
               type="button"
               disabled={isSubmitting}
-              onClick={() => void submitProfile()}
+              onClick={() => void handlePrimaryAction()}
               className="gap-1.5 px-6"
             >
               {isSubmitting ? (
@@ -424,18 +657,18 @@ export function PatientOnboardingWizard() {
               ) : (
                 <>
                   <Send className="size-4" />
-                  Submit profile
+                  {primaryLabel}
                 </>
               )}
             </Button>
           ) : (
             <Button
               type="button"
-              onClick={handleNext}
+              onClick={() => void handlePrimaryAction()}
               disabled={isSubmitting}
               className="gap-1.5 px-6"
             >
-              Continue
+              {primaryLabel}
               <ArrowRight className="size-4" />
             </Button>
           )}

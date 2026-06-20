@@ -252,7 +252,7 @@ function QuestionCard({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface">
+    <div className="rounded-lg border border-border bg-surface">
       <div className="flex gap-4 px-5 py-4">
         <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
           {question.order ?? "–"}
@@ -433,7 +433,7 @@ function AddQuestionForm({
   }
 
   return (
-    <div className="rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 px-5 py-4">
       <p className="mb-3 text-sm font-semibold text-text">New question</p>
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
         <div className="space-y-2">
@@ -536,6 +536,7 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
   const sortedQuestions = displayVersion
     ? [...displayVersion.questions].sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
     : [];
+  const canEditDisplayedVersion = !readOnly && !displayVersion?.publishedAt;
 
   const refetchDetail = [{ query: PCQ_TEMPLATE_DETAIL_QUERY, variables: { id: templateId } }];
 
@@ -551,8 +552,17 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
   }
 
   async function handlePublish(versionId: string) {
+    const version = versions.find((v) => v.id === versionId);
+    if (!version?.questions.length) {
+      setAlert({ type: "error", message: "Add at least one question before publishing this version." });
+      return;
+    }
+
     try {
-      await publishVersion({ variables: { versionId }, refetchQueries: refetchDetail });
+      await publishVersion({
+        variables: { versionId },
+        refetchQueries: [...refetchDetail, PCQ_TEMPLATES_QUERY],
+      });
       setAlert({ type: "success", message: "Version published and set as current." });
     } catch (err) {
       setAlert({ type: "error", message: getGraphQLErrorMessage(err, "Unable to publish version.") });
@@ -573,10 +583,10 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
     return (
       <div className="space-y-6">
         <div className="h-8 w-48 animate-pulse rounded-xl bg-border/50" />
-        <div className="h-24 animate-pulse rounded-2xl bg-border/50" />
+        <div className="h-24 animate-pulse rounded-lg bg-border/50" />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-2xl bg-border/50" />
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-border/50" />
           ))}
         </div>
       </div>
@@ -589,7 +599,7 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
         <Button href="/consultant/pcq" variant="ghost" size="sm">
           <ArrowLeft className="size-4" /> Back to PCQ Templates
         </Button>
-        <div className="flex items-center gap-3 rounded-2xl border border-danger/30 bg-danger/5 px-5 py-4">
+        <div className="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/5 px-5 py-4">
           <AlertCircle className="size-5 shrink-0 text-danger" />
           <p className="text-sm text-danger">Unable to load this template.</p>
         </div>
@@ -747,10 +757,11 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
                       <span className="text-xs text-muted">{formatDate(v.publishedAt)}</span>
                     </div>
                   </div>
-                  {!v.isCurrent && !readOnly ? (
+                  {!v.publishedAt && !readOnly ? (
                     <button
                       type="button"
-                      disabled={publishing}
+                      disabled={publishing || v.questions.length === 0}
+                      title={v.questions.length === 0 ? "Add at least one question before publishing." : "Publish version"}
                       onClick={(e) => { e.stopPropagation(); void handlePublish(v.id); }}
                       className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 disabled:opacity-50"
                     >
@@ -775,21 +786,25 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
                 Questions — v{displayVersion.versionNumber}
                 <Badge variant="secondary">{sortedQuestions.length}</Badge>
               </CardTitle>
-              {!addingQuestion && !readOnly ? (
+              {!addingQuestion && canEditDisplayedVersion ? (
                 <Button type="button" variant="secondary" size="sm" onClick={() => setAddingQuestion(true)}>
                   <Plus className="size-4" />
                   Add Question
                 </Button>
               ) : null}
             </div>
-            {displayVersion.isCurrent && !readOnly ? (
+            {displayVersion.publishedAt && !readOnly ? (
               <p className="text-xs text-muted">
-                This is the current version. Editing questions here affects future assignments.
+                Published versions are read-only. Create a new version before changing questions.
+              </p>
+            ) : displayVersion.isCurrent && !readOnly ? (
+              <p className="text-xs text-muted">
+                This draft version can be edited before publishing.
               </p>
             ) : null}
           </CardHeader>
           <CardContent className="space-y-3">
-            {addingQuestion && !readOnly ? (
+            {addingQuestion && canEditDisplayedVersion ? (
               <AddQuestionForm
                 versionId={displayVersion.id}
                 templateId={templateId}
@@ -798,7 +813,7 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
               />
             ) : null}
             {sortedQuestions.length === 0 && !addingQuestion ? (
-              <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
+              <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
                 No questions yet.{readOnly ? "" : " Add the first one above."}
               </p>
             ) : null}
@@ -807,7 +822,7 @@ export function ConsultantPCQTemplateBuilder({ templateId }: Readonly<{ template
                 key={q.id}
                 question={q}
                 templateId={templateId}
-                readOnly={readOnly}
+                readOnly={!canEditDisplayedVersion}
                 onDone={setAlert}
               />
             ))}

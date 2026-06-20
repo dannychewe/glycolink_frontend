@@ -396,7 +396,7 @@ function TenantControls({
             <Label htmlFor="system-tenant-status">Status</Label>
             <select
               id="system-tenant-status"
-              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={systemFilters.status}
               onChange={(event) =>
                 setSystemFilters((current) => ({
@@ -439,7 +439,7 @@ function TenantControls({
                   <p className="text-muted">{tenant.slug}</p>
                   <Badge variant={statusVariant(tenant.status)}>{tenant.status}</Badge>
                   <select
-                    className="flex h-10 rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    className="flex h-10 rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     value={tenant.status}
                     disabled={updatingTenantStatus}
                     onChange={(event) => void handleTenantStatusChange(tenant.id, event.target.value)}
@@ -594,7 +594,7 @@ function TenantControls({
               <Label htmlFor="tenant-role">Role</Label>
               <select
                 id="tenant-role"
-                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={assignment.role}
                 onChange={(event) =>
                   setAssignment((current) => ({ ...current, role: event.target.value }))
@@ -704,7 +704,7 @@ function OrganizationEditor({
               <Label htmlFor="edit-org-type">Type</Label>
               <select
                 id="edit-org-type"
-                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={form.type}
                 onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
               >
@@ -896,7 +896,7 @@ function OrganizationsPanel({
               <Label htmlFor="create-org-type">Type</Label>
               <select
                 id="create-org-type"
-                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={createForm.type}
                 onChange={(event) =>
                   setCreateForm((current) => ({ ...current, type: event.target.value }))
@@ -948,7 +948,7 @@ function OrganizationsPanel({
               <Label htmlFor="org-type-filter">Type</Label>
               <select
                 id="org-type-filter"
-                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={filters.type}
                 onChange={(event) =>
                   setFilters((current) => ({ ...current, type: event.target.value, page: 1 }))

@@ -211,7 +211,7 @@ export function AppointmentPaymentModal({
     >
       <div className="space-y-5">
         {intent ? (
-          <div className="rounded-2xl border border-border bg-background px-4 py-3">
+          <div className="rounded-lg border border-border bg-background px-4 py-3">
             <p className="text-sm text-muted">Amount due</p>
             <p className="text-xl font-semibold text-text">{amountLabel}</p>
           </div>

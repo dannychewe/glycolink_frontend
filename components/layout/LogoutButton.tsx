@@ -39,7 +39,7 @@ export function LogoutButton({ variant = "sidebar" }: LogoutButtonProps) {
         type="button"
         onClick={handleLogout}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted shadow-soft transition hover:border-danger/40 hover:text-danger disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition hover:border-danger/40 hover:text-danger disabled:opacity-50"
       >
         <svg viewBox="0 0 24 24" fill="none" className="size-3.5" aria-hidden="true">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

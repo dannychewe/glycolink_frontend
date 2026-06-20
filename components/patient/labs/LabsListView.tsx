@@ -56,7 +56,7 @@ export function LabsListView({ labOrders }: LabsListViewProps) {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No lab tests available</p>
         </div>
       )}

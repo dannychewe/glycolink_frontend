@@ -70,7 +70,7 @@ export function SetThresholdForm() {
   });
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle sm:p-6">
+    <div className="rounded-lg border border-border bg-surface p-5 sm:p-6">
       <div className="mb-5 space-y-1">
         <h3 className="text-base font-semibold text-text">Set Glucose Threshold</h3>
         <p className="text-sm text-muted">

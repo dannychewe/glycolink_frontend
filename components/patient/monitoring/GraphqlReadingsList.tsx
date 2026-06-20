@@ -95,7 +95,7 @@ export function GraphqlReadingsList() {
       ) : null}
 
       {!loading && readings.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center">
+        <div className="rounded-lg border border-border bg-surface px-6 py-10 text-center">
           <p className="text-base font-medium text-text">No readings found</p>
           <p className="mt-1 text-sm text-muted">Use the Log Reading tab to record your first entry.</p>
         </div>
@@ -111,7 +111,7 @@ export function GraphqlReadingsList() {
               <div
                 key={reading.id}
                 className={cn(
-                  "flex flex-col gap-3 rounded-xl border-l-4 bg-surface px-4 py-3.5 shadow-subtle sm:flex-row sm:items-center sm:justify-between",
+                  "flex flex-col gap-3 rounded-xl border-l-4 bg-surface px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between",
                   isGlucose && flag === "low" ? "border-l-danger/50" :
                   isGlucose && flag === "high" ? "border-l-warning/60" :
                   isGlucose ? "border-l-success/50" :

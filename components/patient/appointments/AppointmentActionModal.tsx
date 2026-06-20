@@ -34,7 +34,7 @@ export function AppointmentActionModal({
       onClick={isLoading ? undefined : onClose}
     >
       <div
-        className="w-full max-w-lg rounded-[1.5rem] bg-surface shadow-subtle"
+        className="w-full max-w-lg rounded-[1.5rem] bg-surface"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="border-b border-border px-5 py-4">

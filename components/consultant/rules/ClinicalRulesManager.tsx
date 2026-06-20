@@ -238,7 +238,7 @@ export function ClinicalRulesManager() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-col gap-4 rounded-xl border border-border bg-surface px-6 py-6 shadow-subtle lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-xl border border-border bg-surface px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-1.5">
           <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.16em] text-primary">
             <SlidersHorizontal className="size-4" /> Clinical Rules
@@ -285,7 +285,7 @@ export function ClinicalRulesManager() {
       ) : null}
 
       {!loading && rules.length === 0 && !creating && !error ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
           <SlidersHorizontal className="size-8 text-muted/40" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-text">No custom rules yet</p>
@@ -305,7 +305,7 @@ export function ClinicalRulesManager() {
               </CardContent>
             </Card>
           ) : (
-            <div key={rule.id} className={cn("rounded-xl border bg-surface px-5 py-4 shadow-subtle", !rule.active && "opacity-60")}>
+            <div key={rule.id} className={cn("rounded-xl border bg-surface px-5 py-4", !rule.active && "opacity-60")}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">

@@ -58,7 +58,7 @@ export function PrescriptionsListView({
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No prescriptions available</p>
         </div>
       )}

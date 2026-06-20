@@ -26,7 +26,7 @@ export function OnboardingBanner() {
   // Profile setup is the first gate.
   if (profileIncomplete) {
     return (
-      <div className="rounded-xl border border-primary/30 bg-primary/5 px-5 py-4">
+      <div className="rounded-lg border border-l-4 border-l-primary bg-surface px-5 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-medium text-text">Complete your patient profile</p>
@@ -46,7 +46,7 @@ export function OnboardingBanner() {
   const completion = data?.profileCompletionStatus;
   if (completion && !completion.pcqComplete) {
     return (
-      <div className="rounded-xl border border-primary/30 bg-primary/5 px-5 py-4">
+      <div className="rounded-lg border border-l-4 border-l-primary bg-surface px-5 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-medium text-text">Complete your baseline questionnaire</p>

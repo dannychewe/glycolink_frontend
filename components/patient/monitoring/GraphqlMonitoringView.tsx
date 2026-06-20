@@ -73,11 +73,11 @@ export function GraphqlMonitoringView() {
           </div>
 
           {logSubTab === "glucose" ? (
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle sm:p-6">
+            <div className="rounded-lg border border-border bg-surface p-5 sm:p-6">
               <GlucoseLogForm />
             </div>
           ) : (
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle sm:p-6">
+            <div className="rounded-lg border border-border bg-surface p-5 sm:p-6">
               <VitalsLogForm />
             </div>
           )}

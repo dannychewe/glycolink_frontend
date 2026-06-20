@@ -6,8 +6,12 @@ export const PCQ_FOR_APPOINTMENT_QUERY = gql`
       id
       appointmentId
       patientId
+      assignedByProviderId
+      assignedByProviderName
       responseScope
       status
+      assignmentReason
+      dueAt
       submittedAt
       lockedAt
       template {
@@ -52,6 +56,12 @@ export const ACTIVE_PCQ_TEMPLATE_QUERY = gql`
       status
       specialtyId
       isGlobal
+      versions {
+        id
+        versionNumber
+        isCurrent
+        publishedAt
+      }
     }
   }
 `;
@@ -63,6 +73,13 @@ export const ACTIVE_PCQ_TEMPLATE_VERSION_QUERY = gql`
       versionNumber
       isCurrent
       publishedAt
+      template {
+        id
+        name
+        consultationType
+        status
+        isGlobal
+      }
       questions {
         id
         questionText
@@ -81,12 +98,18 @@ export const SUBMIT_PCQ_QUESTION_CONTRIBUTION_MUTATION = gql`
       contribution {
         id
         status
+        templateId
         consultationType
+        submittedByProviderId
+        submittedByProviderName
         questionText
         questionType
         isRequired
         order
         options
+        adminNote
+        appliedQuestionId
+        reviewedAt
         createdAt
       }
     }
@@ -190,6 +213,20 @@ export const CREATE_PCQ_TEMPLATE_MUTATION = gql`
         status
         specialtyId
         isGlobal
+        versions {
+          id
+          versionNumber
+          isCurrent
+          publishedAt
+          questions {
+            id
+            questionText
+            questionType
+            isRequired
+            order
+            options
+          }
+        }
       }
     }
   }
@@ -203,6 +240,22 @@ export const UPDATE_PCQ_TEMPLATE_MUTATION = gql`
         name
         consultationType
         status
+        specialtyId
+        isGlobal
+        versions {
+          id
+          versionNumber
+          isCurrent
+          publishedAt
+          questions {
+            id
+            questionText
+            questionType
+            isRequired
+            order
+            options
+          }
+        }
       }
     }
   }
@@ -224,6 +277,14 @@ export const CREATE_PCQ_TEMPLATE_VERSION_MUTATION = gql`
         versionNumber
         isCurrent
         publishedAt
+        template {
+          id
+          name
+          consultationType
+          status
+          specialtyId
+          isGlobal
+        }
         questions {
           id
           questionText
@@ -245,6 +306,22 @@ export const PUBLISH_PCQ_TEMPLATE_VERSION_MUTATION = gql`
         versionNumber
         isCurrent
         publishedAt
+        template {
+          id
+          name
+          consultationType
+          status
+          specialtyId
+          isGlobal
+        }
+        questions {
+          id
+          questionText
+          questionType
+          isRequired
+          order
+          options
+        }
       }
     }
   }
@@ -295,6 +372,7 @@ export const ASSIGN_PCQ_TO_PATIENT_MUTATION = gql`
     assignPcqToPatient(data: $data) {
       response {
         id
+        appointmentId
         patientId
         assignedByProviderId
         assignedByProviderName
@@ -302,9 +380,87 @@ export const ASSIGN_PCQ_TO_PATIENT_MUTATION = gql`
         status
         assignmentReason
         dueAt
+        submittedAt
+        lockedAt
         template {
           id
           name
+          consultationType
+          status
+          specialtyId
+          isGlobal
+        }
+        templateVersion {
+          id
+          versionNumber
+          isCurrent
+          publishedAt
+        }
+        questions {
+          id
+          questionText
+          questionType
+          isRequired
+          order
+          options
+        }
+        answers {
+          id
+          questionId
+          answerText
+          answerNumeric
+          answerBoolean
+          answerJson
+        }
+      }
+    }
+  }
+`;
+
+export const ASSIGN_PCQ_TO_APPOINTMENT_MUTATION = gql`
+  mutation ConsultantAssignAppointmentPCQ($data: AssignAppointmentPCQInput!) {
+    assignPcqToAppointment(data: $data) {
+      response {
+        id
+        appointmentId
+        patientId
+        assignedByProviderId
+        assignedByProviderName
+        responseScope
+        status
+        assignmentReason
+        dueAt
+        submittedAt
+        lockedAt
+        template {
+          id
+          name
+          consultationType
+          status
+          specialtyId
+          isGlobal
+        }
+        templateVersion {
+          id
+          versionNumber
+          isCurrent
+          publishedAt
+        }
+        questions {
+          id
+          questionText
+          questionType
+          isRequired
+          order
+          options
+        }
+        answers {
+          id
+          questionId
+          answerText
+          answerNumeric
+          answerBoolean
+          answerJson
         }
       }
     }

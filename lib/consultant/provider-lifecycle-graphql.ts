@@ -19,6 +19,14 @@ export const MY_PROVIDER_PROFILE_QUERY = gql`
       consultationFeeFollowup
       certificateExpiryDate
       telemedApprovalExpiryDate
+      licenses {
+        id
+        type
+        status
+        expiryDate
+        issuedAt
+        fileUrl
+      }
       organization {
         id
         name
@@ -35,6 +43,63 @@ export const UPLOAD_PROVIDER_PROFILE_PICTURE_MUTATION = gql`
         id
         avatarUrl
         profilePictureUrl
+      }
+    }
+  }
+`;
+
+export const PROVIDER_ONBOARDING_READINESS_QUERY = gql`
+  query ConsultantProviderOnboardingReadiness {
+    providerOnboardingReadiness {
+      status
+      verificationStatus
+      canSubmit
+      canResubmit
+      submitted
+      approved
+      missingRequired
+      missingSetup
+      nextAction
+      requiredItems {
+        code
+        label
+        complete
+        action
+      }
+      setupItems {
+        code
+        label
+        complete
+        action
+      }
+      provider {
+        id
+        displayName
+        hpczNumber
+        bio
+        languages
+        consultationFeeInitial
+        consultationFeeFollowup
+        status
+        verificationStatus
+        specialtyIds
+        specialties
+        subSpecialtyIds
+        subSpecialties
+        certificateExpiryDate
+        telemedApprovalExpiryDate
+        profilePictureUrl
+        licenses {
+          id
+          providerId
+          type
+          status
+          expiryDate
+          issuedAt
+          fileUrl
+          createdAt
+          updatedAt
+        }
       }
     }
   }

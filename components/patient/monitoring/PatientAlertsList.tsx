@@ -71,7 +71,7 @@ export function PatientAlertsList() {
 
   if (alerts.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center">
+      <div className="rounded-lg border border-border bg-surface px-6 py-10 text-center">
         <CheckCircle2 className="mx-auto size-8 text-success" />
         <p className="mt-3 text-base font-medium text-text">No active alerts</p>
         <p className="mt-1 text-sm text-muted">Your monitoring is on track.</p>
@@ -93,7 +93,7 @@ export function PatientAlertsList() {
             <div
               key={alert.id}
               className={cn(
-                "rounded-xl border-l-4 bg-surface px-4 py-4 shadow-subtle",
+                "rounded-xl border-l-4 bg-surface px-4 py-4",
                 severityBorder(alert.severity),
               )}
             >

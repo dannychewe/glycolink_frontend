@@ -16,7 +16,7 @@ export function StepDiabetesProfile() {
         <Label htmlFor="diabetesType">Diabetes Type</Label>
         <select
           id="diabetesType"
-          className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           {...register("diabetesType")}
         >
           <option value="">Select diabetes type</option>

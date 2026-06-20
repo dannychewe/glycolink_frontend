@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   ADMIN_DASHBOARD_ORGANIZATIONS_QUERY,
   ADMIN_DASHBOARD_REVIEW_QUEUE_QUERY,
@@ -298,15 +299,11 @@ export function AdminDashboardView() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Admin Workspace
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Dashboard</h1>
-        <p className="max-w-3xl text-sm text-muted">
-          System administration for platform-level services and review queues.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Admin Workspace"
+        title="Dashboard"
+        description="System administration for platform-level services and review queues."
+      />
 
       {dashboardError || providersError || tenantsError || usersError || organizationsError || reviewError ? (
         <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">

@@ -7,7 +7,7 @@ type PaymentsComingSoonNoticeProps = Readonly<{
 export function PaymentsComingSoonNotice({ className }: PaymentsComingSoonNoticeProps) {
   return (
     <div
-      className={`rounded-2xl border border-warning/30 bg-warning/5 p-5 sm:p-6 ${className ?? ""}`}
+      className={`rounded-lg border border-warning/30 bg-warning/5 p-5 sm:p-6 ${className ?? ""}`}
       role="status"
     >
       <div className="flex items-start gap-4">

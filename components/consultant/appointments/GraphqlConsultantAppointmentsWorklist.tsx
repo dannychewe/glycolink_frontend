@@ -161,7 +161,7 @@ function ReschedulePanel({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-3 rounded-2xl border border-border bg-background px-4 py-4">
+    <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-3 rounded-lg border border-border bg-background px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Reschedule</p>
       <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
       <div className="grid gap-3 sm:grid-cols-2">
@@ -231,7 +231,7 @@ function CancelPanel({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-3 rounded-2xl border border-danger/20 bg-danger/5 px-4 py-4">
+    <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-3 rounded-lg border border-danger/20 bg-danger/5 px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-danger">Cancel Appointment</p>
       <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
       <div className="space-y-1.5">
@@ -277,7 +277,7 @@ function AppointmentCard({
 
   return (
     <div className={cn(
-      "rounded-2xl border-l-4 bg-surface shadow-subtle",
+      "rounded-lg border-l-4 bg-surface",
       statusBorderClass(appointment.status),
     )}>
       <div className="px-5 py-4">
@@ -477,7 +477,7 @@ export function GraphqlConsultantAppointmentsWorklist() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-border/40" />
+            <div key={i} className="h-28 animate-pulse rounded-lg bg-border/40" />
           ))}
         </div>
       ) : null}
@@ -495,7 +495,7 @@ export function GraphqlConsultantAppointmentsWorklist() {
       ) : null}
 
       {!loading && filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
           <Calendar className="size-8 text-muted/40" />
           <p className="text-sm font-medium text-text">No {activeTab.toLowerCase()} appointments</p>
           <p className="text-xs text-muted">

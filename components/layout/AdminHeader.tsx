@@ -54,7 +54,7 @@ export function AdminHeader({ title, onMenuClick }: AdminHeaderProps) {
           type="button"
           onClick={onMenuClick}
           aria-label="Open navigation menu"
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-text shadow-soft md:hidden"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-text md:hidden"
         >
           <Menu className="size-5" aria-hidden="true" />
         </button>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@apollo/client";
-import { Pill } from "lucide-react";
+import { Icons } from "@/components/ui/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Panel, PanelHeader, PanelTitle, PanelBody, PanelEmpty } from "@/components/ui/panel";
 import { MY_PRESCRIPTIONS_QUERY } from "@/lib/patient/prescriptions-graphql";
 
 type PrescriptionItem = {
@@ -39,12 +40,7 @@ export function PrescriptionSummarySection() {
   });
 
   if (loading && !data) {
-    return (
-      <section className="space-y-4">
-        <h2 className="text-2xl">Prescriptions</h2>
-        <div className="h-40 animate-pulse rounded-2xl bg-border/40" />
-      </section>
-    );
+    return <div className="h-44 animate-pulse rounded-lg border border-border bg-border/30" />;
   }
 
   const prescriptions = data?.myPrescriptions ?? [];
@@ -53,56 +49,51 @@ export function PrescriptionSummarySection() {
   const latestItem = latest?.items[0] ?? null;
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-2xl">Prescriptions</h2>
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={Icons.prescriptions}>Prescriptions</PanelTitle>
+      </PanelHeader>
 
-      <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle">
-        {!latest || !latestItem ? (
-          <p className="text-sm text-muted">No prescriptions on record.</p>
-        ) : (
-          <>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
-                  <Pill className="size-5" />
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                    Latest prescription
-                  </p>
-                  <p className="font-semibold text-text">{latestItem.drugName}</p>
-                </div>
-              </div>
-              <Badge variant={latest.status?.toUpperCase() === "ACTIVE" ? "success" : "secondary"}>
-                {latest.status}
-              </Badge>
+      {!latest || !latestItem ? (
+        <PanelEmpty>No prescriptions on record.</PanelEmpty>
+      ) : (
+        <PanelBody>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                Latest prescription
+              </p>
+              <p className="mt-0.5 font-semibold text-text">{latestItem.drugName}</p>
             </div>
+            <Badge variant={latest.status?.toUpperCase() === "ACTIVE" ? "success" : "secondary"}>
+              {latest.status}
+            </Badge>
+          </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-background px-4 py-3">
-                <p className="text-xs text-muted">Dosage</p>
-                <p className="mt-0.5 text-sm font-semibold text-text">{latestItem.dosage}</p>
-              </div>
-              <div className="rounded-xl bg-background px-4 py-3">
-                <p className="text-xs text-muted">Frequency</p>
-                <p className="mt-0.5 text-sm font-semibold text-text">{latestItem.frequency}</p>
-              </div>
+          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border">
+            <div className="bg-surface px-4 py-3">
+              <p className="text-xs text-muted">Dosage</p>
+              <p className="mt-0.5 text-sm font-semibold text-text">{latestItem.dosage}</p>
             </div>
+            <div className="bg-surface px-4 py-3">
+              <p className="text-xs text-muted">Frequency</p>
+              <p className="mt-0.5 text-sm font-semibold text-text">{latestItem.frequency}</p>
+            </div>
+          </div>
 
-            <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted">
-              {formatDate(latest.issuedAt) ? (
-                <span>Issued {formatDate(latest.issuedAt)}</span>
-              ) : null}
-            </div>
+          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted">
+            {formatDate(latest.issuedAt) ? (
+              <span>Issued {formatDate(latest.issuedAt)}</span>
+            ) : null}
+          </div>
 
-            <div className="mt-5 border-t border-border pt-4">
-              <Button href="/patient/prescriptions" variant="secondary">
-                View Prescriptions
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    </section>
+          <div className="mt-5 border-t border-border pt-4">
+            <Button href="/patient/prescriptions" variant="secondary" size="sm">
+              View Prescriptions
+            </Button>
+          </div>
+        </PanelBody>
+      )}
+    </Panel>
   );
 }

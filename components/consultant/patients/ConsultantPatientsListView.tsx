@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import type { ConsultantPatientListItem } from "@/types";
 
 type ConsultantPatientsListViewProps = Readonly<{
@@ -37,12 +38,11 @@ export function ConsultantPatientsListView({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Patient Directory
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Patients</h1>
-      </header>
+      <PageHeader
+        eyebrow="Patient Directory"
+        title="Patients"
+        description="Search your patient roster and open a workspace to review their care."
+      />
 
       <div className="max-w-xl">
         <Input
@@ -88,7 +88,7 @@ export function ConsultantPatientsListView({
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center shadow-soft">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No patients found</p>
         </div>
       )}

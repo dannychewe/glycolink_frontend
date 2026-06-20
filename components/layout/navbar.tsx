@@ -84,7 +84,7 @@ export function Navbar() {
         {/* Mobile menu toggle */}
         <button
           type="button"
-          className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-surface text-text shadow-soft md:hidden"
+          className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-surface text-text md:hidden"
           onClick={toggleMenu}
           aria-label="Toggle navigation menu"
           aria-expanded={isOpen}

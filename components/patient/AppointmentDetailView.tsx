@@ -42,9 +42,27 @@ type AppointmentItem = {
 type PendingActionsData = {
   pendingActions: Array<{
     action: string;
+    title: string;
+    description: string;
     status: string;
+    dueAt: string | null;
     appointment: {
       id: string;
+      patientId?: string;
+      providerId?: string;
+      organizationId?: string | null;
+      status?: string;
+      startsAt?: string;
+      endsAt?: string | null;
+      consultationType?: string | null;
+      source?: string | null;
+    } | null;
+    provider: {
+      id: string;
+      displayName: string;
+      specialties?: string[];
+      consultationFee?: string | number | null;
+      shortBio?: string | null;
     } | null;
   }>;
 };
@@ -126,6 +144,16 @@ function formatDateTime(value: string | null) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function isTelemedicine(value: string | null | undefined) {
+  return value?.trim().toLowerCase() === "telemedicine";
+}
+
+function formatPendingActionType(action: string) {
+  if (action === "PCQ_NOT_COMPLETED") return "Questionnaire";
+  if (action === "PAYMENT_PENDING") return "Payment";
+  return action.replace(/_/g, " ").toLowerCase();
 }
 
 function mapAppointmentError(error: unknown) {
@@ -216,9 +244,20 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
   const canJoin = canJoinVideoConsultation(appointment?.consultationType, status);
   const canPay = status === "AWAITING_PAYMENT";
 
-  const hasPendingPcq = (pendingActionsData?.pendingActions ?? []).some(
-    (action) =>
-      action.action === "PCQ_NOT_COMPLETED" && action.appointment?.id === appointment?.id,
+  const pendingActionsForAppointment = (pendingActionsData?.pendingActions ?? []).filter(
+    (action) => action.appointment?.id === appointment?.id,
+  );
+  const prioritizedPendingActions = [...pendingActionsForAppointment].sort((a, b) => {
+    const priority = (action: string) => {
+      if (action === "PCQ_NOT_COMPLETED") return 0;
+      if (action === "PAYMENT_PENDING") return 1;
+      return 2;
+    };
+    return priority(a.action) - priority(b.action);
+  });
+  const primaryPendingAction = prioritizedPendingActions[0] ?? null;
+  const hasBlockingPendingActions = prioritizedPendingActions.some((action) =>
+    action.action === "PCQ_NOT_COMPLETED" || action.action === "PAYMENT_PENDING",
   );
   const rescheduleSlots = slotsData?.availableSlots ?? [];
 
@@ -296,6 +335,84 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
   return (
     <div className="space-y-6">
       <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>Next step</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {primaryPendingAction ? (
+            <div className="rounded-lg border border-l-4 border-l-warning bg-surface px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warning">
+                {formatPendingActionType(primaryPendingAction.action)}
+              </p>
+              <p className="mt-1 text-base font-semibold text-text">{primaryPendingAction.title}</p>
+              <p className="mt-1 text-sm text-muted">{primaryPendingAction.description}</p>
+              {primaryPendingAction.dueAt ? (
+                <p className="mt-2 text-xs text-muted">Due {formatDateTime(primaryPendingAction.dueAt)}</p>
+              ) : null}
+
+              <div className="mt-4">
+                {primaryPendingAction.action === "PCQ_NOT_COMPLETED" ? (
+                  <Button href={`/patient/pcq/${appointment.id}`}>
+                    Complete questionnaire
+                  </Button>
+                ) : primaryPendingAction.action === "PAYMENT_PENDING" ? (
+                  <Button type="button" disabled>
+                    Payment handled off-platform
+                  </Button>
+                ) : (
+                  <Button href={`/patient/bookings/${appointment.id}`} variant="secondary">
+                    Open appointment
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : canJoin ? (
+            <Button href={`/patient/bookings/${appointment.id}/video`} fullWidth>
+              Join consultation
+            </Button>
+          ) : isTelemedicine(appointment.consultationType) && !isTerminal ? (
+            <Button type="button" disabled fullWidth>
+              Join available at {formatDateTime(appointment.startsAt)}
+            </Button>
+          ) : status === "COMPLETED" ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button href="/patient/records" fullWidth>
+                View consultation summary
+              </Button>
+              <Button href="/patient/messages" variant="secondary" fullWidth>
+                Message consultant
+              </Button>
+              <Button href={`/providers/${appointment.providerId}`} variant="secondary" fullWidth>
+                Leave review
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No action is needed right now.</p>
+          )}
+
+          {prioritizedPendingActions.length > 1 ? (
+            <div className="space-y-2 border-t border-border pt-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                Other pending actions
+              </p>
+              {prioritizedPendingActions.slice(1).map((action) => (
+                <div key={`${action.action}-${action.dueAt ?? "none"}`} className="text-sm text-muted">
+                  <span className="font-medium text-text">{action.title}</span>
+                  {action.dueAt ? ` · Due ${formatDateTime(action.dueAt)}` : ""}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {actionError ? (
+            <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+              {actionError}
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
@@ -344,16 +461,10 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle>Actions</CardTitle>
+          <CardTitle>Appointment management</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {hasPendingPcq ? (
-            <Button href={`/patient/pcq/${appointment.id}`} variant="secondary" fullWidth>
-              Complete Questionnaire
-            </Button>
-          ) : null}
-
-          {canPay ? (
+          {canPay && !hasBlockingPendingActions ? (
             <Button
               type="button"
               fullWidth
@@ -362,11 +473,11 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
                 setIsPaymentModalOpen(true);
               }}
             >
-              Proceed to Payment
+              Payment guidance
             </Button>
           ) : null}
 
-          {canJoin ? (
+          {canJoin && !hasBlockingPendingActions ? (
             <Button href={`/patient/bookings/${appointment.id}/video`} fullWidth>
               Join video consultation
             </Button>
@@ -400,9 +511,9 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
             </Button>
           ) : null}
 
-          {actionError ? (
-            <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
-              {actionError}
+          {hasBlockingPendingActions ? (
+            <p className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted">
+              Complete the next step above before appointment actions unlock.
             </p>
           ) : null}
         </CardContent>

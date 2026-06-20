@@ -169,7 +169,7 @@ export function ConsultantPatientWorkspaceView({ patientId }: Readonly<{ patient
   return (
     <div className="space-y-6">
       {/* Header */}
-      <header className="flex flex-col gap-4 rounded-xl border border-border bg-surface px-6 py-6 shadow-subtle lg:flex-row lg:items-start lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-xl border border-border bg-surface px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">Patient Workspace</p>
           <h1 className="text-3xl font-semibold text-text">{patient.fullName ?? patient.email ?? "Patient"}</h1>

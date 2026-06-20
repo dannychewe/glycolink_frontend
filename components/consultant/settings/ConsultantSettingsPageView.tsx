@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   MY_CONSULTANT_ORGANIZATIONS_QUERY,
   UPDATE_ORGANIZATION_MUTATION,
@@ -60,7 +61,7 @@ function Toggle({
       }`}
     >
       <span
-        className={`inline-block size-5 rounded-full bg-white shadow-soft transition ${
+        className={`inline-block size-5 rounded-full bg-white transition ${
           checked ? "translate-x-6" : "translate-x-1"
         }`}
       />
@@ -672,13 +673,14 @@ export function ConsultantSettingsPageView() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">Settings</p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Organization Settings</h1>
-      </header>
+      <PageHeader
+        eyebrow="Settings"
+        title="Organization Settings"
+        description="Manage your organization profile, appointment policy, departments, and notifications."
+      />
 
       {/* Tab bar */}
-      <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-surface p-1">
+      <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -686,7 +688,7 @@ export function ConsultantSettingsPageView() {
             onClick={() => setTab(id)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
               tab === id
-                ? "bg-primary text-white shadow-soft"
+                ? "bg-primary text-white"
                 : "text-muted hover:bg-background hover:text-text"
             }`}
           >

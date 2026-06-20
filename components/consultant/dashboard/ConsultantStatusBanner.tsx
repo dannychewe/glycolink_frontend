@@ -29,7 +29,7 @@ type StatusSummaryData = {
 function ExpiryWarningRow({ warning }: { warning: ExpiryWarning }) {
   const isExpired = warning.status === "EXPIRED";
   return (
-    <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${isExpired ? "bg-danger/10 text-danger" : "bg-warning/10 text-warning"}`}>
+    <div className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm ${isExpired ? "border-danger/30 bg-danger/5 text-danger" : "border-warning/30 bg-warning/5 text-warning"}`}>
       <Clock className="size-3.5 shrink-0" />
       <span className="font-medium">{warning.label}</span>
       {warning.daysRemaining != null ? (
@@ -61,17 +61,15 @@ export function ConsultantStatusBanner() {
 
   return (
     <div
-      className={`rounded-2xl border px-5 py-5 ${
-        isSuspended
-          ? "border-danger/30 bg-danger/5"
-          : "border-warning/30 bg-warning/5"
+      className={`rounded-lg border border-l-4 bg-surface px-5 py-5 ${
+        isSuspended ? "border-l-danger" : "border-l-warning"
       }`}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <span
-            className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl ${
-              isSuspended ? "bg-danger/10 text-danger" : "bg-warning/10 text-warning"
+            className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border ${
+              isSuspended ? "border-danger/30 text-danger" : "border-warning/30 text-warning"
             }`}
           >
             <ShieldAlert className="size-4" />

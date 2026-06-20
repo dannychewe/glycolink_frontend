@@ -101,7 +101,7 @@ export function StepCredentials({ uploads, onUploaded, onRemove }: StepCredentia
       ) : null}
 
       {/* Upload form */}
-      <div className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+      <div className="space-y-4 rounded-lg border border-border bg-surface p-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="licenseType">Document Type</Label>
@@ -109,7 +109,7 @@ export function StepCredentials({ uploads, onUploaded, onRemove }: StepCredentia
               id="licenseType"
               value={licenseType}
               onChange={(e) => setLicenseType(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="flex h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               {PROVIDER_LICENSE_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>

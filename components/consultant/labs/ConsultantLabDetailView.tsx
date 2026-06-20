@@ -6,6 +6,7 @@ import { ConsultantLabStatusBadge } from "@/components/consultant/labs/Consultan
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { Textarea } from "@/components/ui/textarea";
 import type { ConsultantLabReview } from "@/types";
 
@@ -53,17 +54,21 @@ export function ConsultantLabDetailView({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Lab Review
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">{lab.patientName}</h1>
-        <p className="text-base text-muted">{lab.testName}</p>
-        <div className="flex flex-wrap gap-2 pt-2">
-          <ConsultantLabStatusBadge status={status} />
-          <ConsultantLabInterpretationBadge interpretation={lab.interpretation} />
-        </div>
-      </header>
+      <PageHeader
+        breadcrumbs={[
+          { label: "Lab Reviews", href: "/consultant/labs" },
+          { label: lab.patientName },
+        ]}
+        eyebrow="Lab Review"
+        title={lab.patientName}
+        description={lab.testName}
+        actions={
+          <>
+            <ConsultantLabStatusBadge status={status} />
+            <ConsultantLabInterpretationBadge interpretation={lab.interpretation} />
+          </>
+        }
+      />
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
         <div className="space-y-6">

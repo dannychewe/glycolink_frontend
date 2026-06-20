@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  getUserAccountType,
   getUserAudienceValues,
   isSystemAdminUser,
   useAuth,
@@ -18,7 +19,7 @@ type AuthGuardProps = Readonly<{
 export function AuthGuard({ children, allowedRoles, requireSystemAdmin = false }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status, user, getDefaultAuthenticatedRoute } = useAuth();
+  const { status, user, postLoginRedirect, getDefaultAuthenticatedRoute } = useAuth();
 
   const canAccess = requireSystemAdmin
     ? isSystemAdminUser(user)
@@ -42,8 +43,27 @@ export function AuthGuard({ children, allowedRoles, requireSystemAdmin = false }
 
     if (!canAccess) {
       router.replace(getDefaultAuthenticatedRoute());
+      return;
     }
-  }, [canAccess, getDefaultAuthenticatedRoute, pathname, router, status, user]);
+
+    if (
+      getUserAccountType(user) === "CONSULTANT" &&
+      postLoginRedirect?.reason === "PROVIDER_ONBOARDING" &&
+      pathname !== "/consultant/onboarding"
+    ) {
+      router.replace("/consultant/onboarding");
+      return;
+    }
+
+    if (
+      getUserAccountType(user) === "PATIENT" &&
+      (postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
+        postLoginRedirect?.reason === "PROFILE_MISSING") &&
+      pathname === "/patient/dashboard"
+    ) {
+      router.replace("/patient/onboarding");
+    }
+  }, [canAccess, getDefaultAuthenticatedRoute, pathname, postLoginRedirect?.reason, router, status, user]);
 
   if (status === "loading") {
     return <div className="px-6 py-10 text-sm text-muted">Loading your session...</div>;
@@ -54,6 +74,23 @@ export function AuthGuard({ children, allowedRoles, requireSystemAdmin = false }
   }
 
   if (!canAccess) {
+    return null;
+  }
+
+  if (
+    getUserAccountType(user) === "CONSULTANT" &&
+    postLoginRedirect?.reason === "PROVIDER_ONBOARDING" &&
+    pathname !== "/consultant/onboarding"
+  ) {
+    return null;
+  }
+
+  if (
+    getUserAccountType(user) === "PATIENT" &&
+    (postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
+      postLoginRedirect?.reason === "PROFILE_MISSING") &&
+    pathname === "/patient/dashboard"
+  ) {
     return null;
   }
 

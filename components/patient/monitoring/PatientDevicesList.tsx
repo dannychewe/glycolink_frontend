@@ -63,7 +63,7 @@ export function PatientDevicesList() {
 
   if (devices.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+      <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
         <MonitorSmartphone className="mx-auto size-8 text-muted/40" />
         <p className="mt-3 text-base font-medium text-text">No connected devices</p>
         <p className="mt-1 text-sm text-muted">
@@ -83,7 +83,7 @@ export function PatientDevicesList() {
         return (
           <div
             key={device.id}
-            className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-4 shadow-subtle sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="flex items-center gap-3">
               {isActive ? (

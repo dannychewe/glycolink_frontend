@@ -104,7 +104,7 @@ export function GraphqlLabOrderDetailModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-[1.75rem] bg-surface shadow-subtle"
+        className="w-full max-w-2xl overflow-hidden rounded-lg bg-surface"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">

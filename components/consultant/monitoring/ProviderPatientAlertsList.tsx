@@ -59,7 +59,7 @@ function AlertRow({ item, onAcknowledged }: { item: PatientAlert; onAcknowledged
   return (
     <div
       className={cn(
-        "rounded-2xl border-l-4 bg-surface p-5 shadow-subtle transition-opacity",
+        "rounded-lg border-l-4 bg-surface p-5 transition-opacity",
         severityBorder(item.alert.severity),
         isAcknowledged && "opacity-60",
       )}
@@ -107,7 +107,7 @@ export function ProviderPatientAlertsList() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-2xl bg-border/40" />
+          <div key={i} className="h-24 animate-pulse rounded-lg bg-border/40" />
         ))}
       </div>
     );
@@ -123,7 +123,7 @@ export function ProviderPatientAlertsList() {
 
   if (alerts.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center">
+      <div className="rounded-lg border border-border bg-surface px-6 py-10 text-center">
         <CheckCircle2 className="mx-auto size-8 text-success" />
         <p className="mt-3 text-base font-medium text-text">No patient alerts</p>
         <p className="mt-1 text-sm text-muted">

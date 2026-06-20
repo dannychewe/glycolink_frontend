@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils/cn";
 import type { GlucoseReading } from "@/types";
 
@@ -82,21 +83,27 @@ export function MonitoringPageView({ initialReadings }: MonitoringPageViewProps)
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        eyebrow="Monitoring"
+        title="Glucose Monitoring"
+        description="Log your readings and track how your glucose trends against your target range."
+      />
+
       {/* Stats row */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Avg glucose</p>
-          <p className="mt-1.5 text-2xl font-semibold text-text">{avg || "—"}</p>
+      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
+        <div className="bg-surface px-5 py-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">Avg glucose</p>
+          <p className="mt-1.5 text-2xl font-semibold tabular-nums text-ink">{avg || "—"}</p>
           <p className="text-xs text-muted">mg/dL</p>
         </div>
-        <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Highest</p>
-          <p className="mt-1.5 text-2xl font-semibold text-text">{highest || "—"}</p>
+        <div className="bg-surface px-5 py-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">Highest</p>
+          <p className="mt-1.5 text-2xl font-semibold tabular-nums text-ink">{highest || "—"}</p>
           <p className="text-xs text-muted">mg/dL</p>
         </div>
-        <div className="rounded-2xl border border-border bg-surface px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">In range</p>
-          <p className="mt-1.5 text-2xl font-semibold text-text">{inRangePercent}%</p>
+        <div className="bg-surface px-5 py-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">In range</p>
+          <p className="mt-1.5 text-2xl font-semibold tabular-nums text-secondary">{inRangePercent}%</p>
           <p className="text-xs text-muted">
             {inRange} of {values.length} readings
           </p>
@@ -105,20 +112,20 @@ export function MonitoringPageView({ initialReadings }: MonitoringPageViewProps)
 
       {/* Trend chart */}
       {chartReadings.length > 0 ? (
-        <div className="rounded-2xl bg-gradient-to-br from-primary to-blue-500 p-5 text-white shadow-soft sm:p-6">
+        <div className="rounded-lg border border-ink/20 bg-ink p-5 text-white sm:p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-white/80">
               <Activity className="size-4" />
               Glucose trend
             </div>
-            <div className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs text-white/90">
+            <div className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/90 ring-1 ring-inset ring-white/15">
               <TrendingUp className="size-3" />
               {inRangePercent}% in range
             </div>
           </div>
 
           <div className="mt-3 flex items-baseline gap-1.5">
-            <p className="text-3xl font-semibold">{avg}</p>
+            <p className="text-3xl font-semibold tabular-nums">{avg}</p>
             <p className="text-sm text-white/70">avg mg/dL</p>
           </div>
 

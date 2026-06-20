@@ -259,7 +259,7 @@ function QuestionCard({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface">
+    <div className="rounded-lg border border-border bg-surface">
       <div className="flex gap-4 px-5 py-4">
         <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
           {question.order ?? "–"}
@@ -438,7 +438,7 @@ function AddQuestionForm({
   }
 
   return (
-    <div className="rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 px-5 py-4">
       <p className="mb-3 text-sm font-semibold text-text">New question</p>
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
         <div className="space-y-2">
@@ -583,10 +583,10 @@ export function AdminPCQTemplateDetailView({ templateId }: Readonly<{ templateId
     return (
       <div className="space-y-6">
         <div className="h-8 w-48 animate-pulse rounded-xl bg-border/50" />
-        <div className="h-24 animate-pulse rounded-2xl bg-border/50" />
+        <div className="h-24 animate-pulse rounded-lg bg-border/50" />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-2xl bg-border/50" />
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-border/50" />
           ))}
         </div>
       </div>
@@ -599,7 +599,7 @@ export function AdminPCQTemplateDetailView({ templateId }: Readonly<{ templateId
         <Button href="/admin/pcq" variant="ghost" size="sm">
           <ArrowLeft className="size-4" /> Back to PCQ Templates
         </Button>
-        <div className="flex items-center gap-3 rounded-2xl border border-danger/30 bg-danger/5 px-5 py-4">
+        <div className="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/5 px-5 py-4">
           <AlertCircle className="size-5 shrink-0 text-danger" />
           <p className="text-sm text-danger">Unable to load this template.</p>
         </div>
@@ -797,7 +797,7 @@ export function AdminPCQTemplateDetailView({ templateId }: Readonly<{ templateId
               />
             ) : null}
             {sortedQuestions.length === 0 && !addingQuestion ? (
-              <p className="rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
+              <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
                 No questions yet. Add the first one above.
               </p>
             ) : null}

@@ -34,7 +34,7 @@ export function TimeSlotPicker({
             className={cn(
               "rounded-xl border px-4 py-3 text-sm font-medium text-text transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               isSelected
-                ? "border-primary bg-primary text-white shadow-soft"
+                ? "border-primary bg-primary text-white"
                 : "border-border bg-background hover:border-primary/40 hover:bg-primary/5",
             )}
             aria-pressed={isSelected}

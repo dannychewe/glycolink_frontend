@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   PATIENT_SETTINGS_PROFILE_QUERY,
   PATIENT_UPDATE_PROFILE_MUTATION,
@@ -74,7 +75,7 @@ function ToggleRow({
         }`}
       >
         <span
-          className={`inline-block size-5 rounded-full bg-white shadow-soft transition ${
+          className={`inline-block size-5 rounded-full bg-white transition ${
             checked ? "translate-x-6" : "translate-x-1"
           }`}
         />
@@ -194,7 +195,7 @@ function ProfileTab() {
             id="p-dtype"
             value={form.diabetesType}
             onChange={field("diabetesType")}
-            className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           >
             {DIABETES_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -240,7 +241,7 @@ function ProfileTab() {
           onChange={field("additionalNotes")}
           rows={3}
           placeholder="Any other clinical notes for your care team…"
-          className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
@@ -669,12 +670,13 @@ export function PatientSettingsPageView() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">Account</p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Settings</h1>
-      </header>
+      <PageHeader
+        eyebrow="Account"
+        title="Settings"
+        description="Manage your profile, privacy preferences, and notifications."
+      />
 
-      <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-surface p-1">
+      <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -682,7 +684,7 @@ export function PatientSettingsPageView() {
             onClick={() => setTab(id)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
               tab === id
-                ? "bg-primary text-white shadow-soft"
+                ? "bg-primary text-white"
                 : "text-muted hover:bg-background hover:text-text"
             }`}
           >

@@ -148,13 +148,58 @@ export const BOOTSTRAP_CLIENT_QUERY = gql`
     }
     myPatientProfile {
       id
+      fullName
+      email
+      dateOfBirth
+      diabetesType
+      diagnosisDate
+      phone
       profileComplete
       onboardingStatus
+      onboardingComplete
     }
     profileCompletionStatus {
       isComplete
+      pcqComplete
+      consultationReady
       percentComplete
       missingItems
+    }
+    patientOnboardingReadiness {
+      isComplete
+      pcqComplete
+      consultationReady
+      percentComplete
+      missingRequired
+      missingSetup
+      nextAction
+      requiredItems {
+        code
+        label
+        complete
+        action
+      }
+      setupItems {
+        code
+        label
+        complete
+        action
+      }
+      patientProfile {
+        id
+        fullName
+        email
+        dateOfBirth
+        diabetesType
+        diagnosisDate
+        phone
+        allergies
+        currentMedications
+        additionalNotes
+        profileComplete
+        onboardingStatus
+        onboardingComplete
+      }
     }
   }
 `;
@@ -201,6 +246,62 @@ export const BOOTSTRAP_CONSULTANT_QUERY = gql`
         status
         expiryDate
         daysRemaining
+        currentStatus
+      }
+    }
+    providerOnboardingReadiness {
+      status
+      verificationStatus
+      canSubmit
+      canResubmit
+      submitted
+      approved
+      missingRequired
+      missingSetup
+      nextAction
+      requiredItems {
+        code
+        label
+        complete
+        action
+      }
+      setupItems {
+        code
+        label
+        complete
+        action
+      }
+      provider {
+        id
+        tenantId
+        userId
+        organizationId
+        displayName
+        hpczNumber
+        bio
+        languages
+        consultationFeeInitial
+        consultationFeeFollowup
+        status
+        verificationStatus
+        specialtyIds
+        specialties
+        subSpecialtyIds
+        subSpecialties
+        certificateExpiryDate
+        telemedApprovalExpiryDate
+        profilePictureUrl
+        licenses {
+          id
+          providerId
+          type
+          status
+          expiryDate
+          issuedAt
+          fileUrl
+          createdAt
+          updatedAt
+        }
       }
     }
   }

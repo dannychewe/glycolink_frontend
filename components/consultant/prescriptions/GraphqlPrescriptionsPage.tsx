@@ -56,7 +56,7 @@ export function GraphqlPrescriptionsPage() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-border/40" />
+          <div key={i} className="h-20 animate-pulse rounded-lg bg-border/40" />
         ))}
       </div>
     );
@@ -73,7 +73,7 @@ export function GraphqlPrescriptionsPage() {
   if (medications.length === 0) {
     return (
       <div className="space-y-5">
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 text-sm text-text">
+        <div className="rounded-lg border border-primary/20 bg-primary/5 px-5 py-4 text-sm text-text">
           <p className="font-medium">Prescriptions are issued from within the consultation workspace.</p>
           <p className="mt-1 text-muted">
             Finalize an encounter, then use the Prescriptions tab to issue medications for that session.
@@ -82,7 +82,7 @@ export function GraphqlPrescriptionsPage() {
             Go to Consultations
           </Button>
         </div>
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
           <Pill className="size-8 text-muted/40" />
           <p className="text-sm font-medium text-text">No active medications</p>
           <p className="text-xs text-muted">Active prescriptions will appear here once issued.</p>
@@ -93,7 +93,7 @@ export function GraphqlPrescriptionsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 text-sm text-text">
+      <div className="rounded-lg border border-primary/20 bg-primary/5 px-5 py-4 text-sm text-text">
         <p className="font-medium">Issue prescriptions from the consultation workspace.</p>
         <p className="mt-1 text-muted">
           To prescribe medications, finalize an encounter and use the Prescriptions tab.
@@ -113,7 +113,7 @@ export function GraphqlPrescriptionsPage() {
         {medications.map((med) => (
           <div
             key={med.id}
-            className="rounded-2xl border-l-4 border-l-success/50 bg-surface px-5 py-4 shadow-subtle"
+            className="rounded-lg border-l-4 border-l-success/50 bg-surface px-5 py-4"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">

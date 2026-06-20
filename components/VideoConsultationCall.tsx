@@ -18,6 +18,7 @@ type VideoConsultationCallProps = Readonly<{
   appointmentId: string;
   backHref: string;
   backLabel: string;
+  pcqHref?: string;
   companion?: ReactNode;
 }>;
 
@@ -25,6 +26,9 @@ type CallState = "idle" | "joining" | "joined" | "left" | "error";
 
 function mapVideoConsultationError(error: unknown) {
   const code = getGraphQLErrorCode(error);
+  if (code === "PCQ_NOT_COMPLETED" || code === "APPOINTMENT_PCQ_REQUIRED") {
+    return "Complete the appointment questionnaire before joining this consultation.";
+  }
   if (code === "VIDEO_CONSULTATION_INVALID_APPOINTMENT") {
     return "This appointment is not configured for video consultation.";
   }
@@ -50,6 +54,7 @@ export function VideoConsultationCall({
   appointmentId,
   backHref,
   backLabel,
+  pcqHref,
   companion,
 }: VideoConsultationCallProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -57,6 +62,7 @@ export function VideoConsultationCall({
   const [status, setStatus] = useState<CallState>("idle");
   const [session, setSession] = useState<JoinVideoConsultationSession | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorActionHref, setErrorActionHref] = useState<string | null>(null);
   const isDailyEnabled = process.env.NEXT_PUBLIC_DAILY_JS_ENABLED !== "false";
 
   const [joinVideoConsultation] = useMutation<
@@ -82,6 +88,7 @@ export function VideoConsultationCall({
 
     setStatus("joining");
     setError(null);
+    setErrorActionHref(null);
     destroyCall();
 
     try {
@@ -123,9 +130,15 @@ export function VideoConsultationCall({
     } catch (joinError) {
       destroyCall();
       setStatus("error");
+      const code = getGraphQLErrorCode(joinError);
+      setErrorActionHref(
+        (code === "PCQ_NOT_COMPLETED" || code === "APPOINTMENT_PCQ_REQUIRED") && pcqHref
+          ? pcqHref
+          : null,
+      );
       setError(mapVideoConsultationError(joinError));
     }
-  }, [appointmentId, destroyCall, isDailyEnabled, joinVideoConsultation]);
+  }, [appointmentId, destroyCall, isDailyEnabled, joinVideoConsultation, pcqHref]);
 
   useEffect(() => {
     void startCall();
@@ -201,10 +214,16 @@ export function VideoConsultationCall({
                     <AlertCircle className="mx-auto size-8 text-warning" />
                     <p className="text-base font-medium">Unable to join</p>
                     <p className="text-sm text-white/70">{error}</p>
-                    <Button type="button" onClick={() => void startCall()}>
-                      <RefreshCcw className="size-4" />
-                      Try again
-                    </Button>
+                    {errorActionHref ? (
+                      <Button href={errorActionHref}>
+                        Complete questionnaire
+                      </Button>
+                    ) : (
+                      <Button type="button" onClick={() => void startCall()}>
+                        <RefreshCcw className="size-4" />
+                        Try again
+                      </Button>
+                    )}
                   </>
                 ) : null}
               </div>

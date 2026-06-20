@@ -37,7 +37,7 @@ export function BookingCalendar({
               hasSlots
                 ? "border-border bg-background hover:border-primary/40 hover:bg-primary/5"
                 : "cursor-not-allowed border-border/60 bg-slate-100 text-muted opacity-70",
-              isSelected ? "border-primary bg-primary/10 shadow-soft" : "",
+              isSelected ? "border-primary bg-primary/10" : "",
             )}
             aria-pressed={isSelected}
             aria-label={`Select ${formatDateLabel(date)}`}

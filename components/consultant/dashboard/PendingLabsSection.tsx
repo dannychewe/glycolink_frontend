@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@apollo/client";
-import { FlaskConical } from "lucide-react";
+import { Icons } from "@/components/ui/icons";
 import { PENDING_LAB_REVIEWS_QUERY } from "@/lib/consultant/labs-graphql";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Panel, PanelHeader, PanelTitle, PanelList, PanelEmpty, ViewAllLink } from "@/components/ui/panel";
+import { cn } from "@/lib/utils/cn";
 
 type CriticalFlag = {
   id: string;
@@ -42,7 +43,7 @@ function formatDate(value: string) {
 export function PendingLabsSection() {
   const { data, loading } = useQuery<{ pendingLabReviews: PendingLabReview[] }>(
     PENDING_LAB_REVIEWS_QUERY,
-    { variables: { limit: 4 }, fetchPolicy: "network-only" },
+    { variables: { limit: 4 }, fetchPolicy: "cache-and-network" },
   );
 
   const items = data?.pendingLabReviews ?? [];
@@ -51,36 +52,30 @@ export function PendingLabsSection() {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <FlaskConical className="size-3.5" />
-          </span>
-          <h2 className="text-base font-semibold text-text">Pending Lab Reviews</h2>
-          {!loading && items.length > 0 ? (
-            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${hasCritical ? "bg-danger/10 text-danger" : "bg-warning/10 text-warning"}`}>
-              {items.length}
-            </span>
-          ) : null}
-        </div>
-        <Button href="/consultant/labs" variant="ghost" size="sm">
-          View all
-        </Button>
-      </div>
+    <Panel>
+      <PanelHeader>
+        <PanelTitle
+          icon={Icons.labs}
+          count={items.length}
+          countTone={hasCritical ? "danger" : "warning"}
+        >
+          Pending Lab Reviews
+        </PanelTitle>
+        <ViewAllLink href="/consultant/labs" />
+      </PanelHeader>
 
-      {loading ? (
-        <div className="space-y-2">
+      {loading && items.length === 0 ? (
+        <div className="divide-y divide-border">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-border/40" />
+            <div key={i} className="px-5 py-4">
+              <div className="h-8 animate-pulse rounded bg-border/50" />
+            </div>
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
-          <p className="text-sm text-muted">No pending lab reviews</p>
-        </div>
+        <PanelEmpty>No pending lab reviews.</PanelEmpty>
       ) : (
-        <div className="space-y-2">
+        <PanelList>
           {items.map((item) => {
             const critical = item.results.some(
               (r) => r.result?.criticalFlags && r.result.criticalFlags.length > 0,
@@ -89,9 +84,10 @@ export function PendingLabsSection() {
             return (
               <div
                 key={item.labOrder.id}
-                className={`flex items-start justify-between gap-3 rounded-xl border-l-4 bg-surface px-4 py-3 shadow-subtle ${critical ? "border-l-danger/60" : "border-l-warning/60"}`}
+                className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-background"
               >
-                <div className="space-y-0.5 flex-1 min-w-0">
+                <span className={cn("h-9 w-1 shrink-0 rounded-full", critical ? "bg-danger" : "bg-warning")} />
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-text">
                     {item.patientName ?? `Patient ${item.labOrder.patientId.slice(0, 8)}…`}
                   </p>
@@ -102,8 +98,8 @@ export function PendingLabsSection() {
               </div>
             );
           })}
-        </div>
+        </PanelList>
       )}
-    </div>
+    </Panel>
   );
 }

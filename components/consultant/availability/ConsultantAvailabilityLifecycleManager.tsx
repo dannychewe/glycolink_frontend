@@ -15,6 +15,7 @@ import {
   PROVIDER_WEEKDAY_OPTIONS,
 } from "@/lib/consultant/provider-lifecycle-graphql";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -268,16 +269,12 @@ export function ConsultantAvailabilityLifecycleManager() {
   }
 
   return (
-    <div className="space-y-10">
-      <header className="space-y-1">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Consultant Workspace
-        </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Availability</h1>
-        <p className="text-sm text-muted">
-          Set your weekly working hours and manage one-off date exceptions.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Consultant Workspace"
+        title="Availability"
+        description="Set your weekly working hours and manage one-off date exceptions."
+      />
 
       {/* ── Weekly schedule ── */}
       <section className="space-y-4">
@@ -297,7 +294,7 @@ export function ConsultantAvailabilityLifecycleManager() {
             ))}
           </div>
         ) : rules.length > 0 ? (
-          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {rules.map((rule) => (
               <div key={rule.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
                 <div className="flex items-center gap-3">
@@ -336,7 +333,7 @@ export function ConsultantAvailabilityLifecycleManager() {
         {/* Add rule form */}
         <form
           onSubmit={(e) => void handleSaveRule(e)}
-          className="space-y-5 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+          className="space-y-5 rounded-lg border border-border bg-surface p-5 sm:p-6"
         >
           <p className="text-sm font-medium text-text">Add or update a day&apos;s schedule</p>
 
@@ -344,7 +341,7 @@ export function ConsultantAvailabilityLifecycleManager() {
             <Label htmlFor="weekday">Day of the week</Label>
             <select
               id="weekday"
-              className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text shadow-soft outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={ruleForm.weekday}
               onChange={(e) => setRuleForm((p) => ({ ...p, weekday: Number(e.target.value) }))}
             >
@@ -439,7 +436,7 @@ export function ConsultantAvailabilityLifecycleManager() {
 
         {/* Current exceptions list */}
         {exceptions.length > 0 ? (
-          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {exceptions.map((ex) => (
               <div key={ex.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
                 <div className="flex items-center gap-3">
@@ -480,7 +477,7 @@ export function ConsultantAvailabilityLifecycleManager() {
         {/* Add exception form */}
         <form
           onSubmit={(e) => void handleAddException(e)}
-          className="space-y-5 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+          className="space-y-5 rounded-lg border border-border bg-surface p-5 sm:p-6"
         >
           <p className="text-sm font-medium text-text">Add or update a date exception</p>
 

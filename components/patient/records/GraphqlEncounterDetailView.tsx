@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useQuery } from "@apollo/client";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { PATIENT_ENCOUNTER_QUERY } from "@/lib/patient/clinical-records-graphql";
 
 type GraphqlEncounterDetailViewProps = Readonly<{
@@ -187,7 +187,7 @@ export function GraphqlEncounterDetailView({ encounterId }: GraphqlEncounterDeta
     return (
       <div className="space-y-4">
         <div className="h-8 w-32 animate-pulse rounded-lg bg-border/40" />
-        <div className="h-40 animate-pulse rounded-[1.75rem] bg-border/40" />
+        <div className="h-40 animate-pulse rounded-lg bg-border/40" />
         <div className="h-48 animate-pulse rounded-xl bg-border/40" />
         <div className="h-48 animate-pulse rounded-xl bg-border/40" />
       </div>
@@ -221,41 +221,28 @@ export function GraphqlEncounterDetailView({ encounterId }: GraphqlEncounterDeta
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/patient/records"
-        className="inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-text"
-      >
-        <ArrowLeft className="size-4" />
-        Back to records
-      </Link>
-
-      <header className="relative overflow-hidden rounded-[1.75rem] border border-border/80 bg-gradient-to-br from-primary/10 via-surface to-surface px-6 py-7 shadow-soft sm:px-8">
-        <div className="absolute -right-12 -top-12 size-40 rounded-full bg-primary/10 blur-2xl" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-              {formatEncounterType(encounter.encounterType)} encounter
-            </p>
-            <h1 className="text-2xl font-semibold text-text sm:text-3xl">
-              {encounter.finalizedAt
-                ? `Finalized ${formatShortDate(encounter.finalizedAt)}`
-                : `Started ${formatShortDate(encounter.startedAt)}`}
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays className="size-3.5" />
-                {formatDate(encounter.startedAt)}
-              </span>
-              {encounter.endedAt ? (
-                <span>– {formatDate(encounter.endedAt)}</span>
-              ) : null}
-            </div>
-          </div>
-          <Badge variant={getBadgeVariant(encounter.status)} className="self-start">
-            {formatStatus(encounter.status)}
-          </Badge>
-        </div>
-      </header>
+      <PageHeader
+        breadcrumbs={[
+          { label: "My Records", href: "/patient/records" },
+          { label: `${formatEncounterType(encounter.encounterType)} encounter` },
+        ]}
+        eyebrow={`${formatEncounterType(encounter.encounterType)} encounter`}
+        title={
+          encounter.finalizedAt
+            ? `Finalized ${formatShortDate(encounter.finalizedAt)}`
+            : `Started ${formatShortDate(encounter.startedAt)}`
+        }
+        description={
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            <CalendarDays className="size-3.5" />
+            {formatDate(encounter.startedAt)}
+            {encounter.endedAt ? <span>– {formatDate(encounter.endedAt)}</span> : null}
+          </span>
+        }
+        actions={
+          <Badge variant={getBadgeVariant(encounter.status)}>{formatStatus(encounter.status)}</Badge>
+        }
+      />
 
       {encounter.clinicalSummary ? (
         <SectionCard title="Clinical Summary">

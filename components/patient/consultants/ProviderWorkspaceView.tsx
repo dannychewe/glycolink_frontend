@@ -74,7 +74,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-subtle sm:p-6">
+    <section className="space-y-4 rounded-lg border border-border bg-surface p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -198,8 +198,8 @@ export function ProviderWorkspaceView({ inviteId }: { inviteId: string }) {
   if (loading && !workspace) {
     return (
       <Container className="space-y-6 py-2">
-        <div className="h-32 animate-pulse rounded-2xl bg-border/40" />
-        <div className="h-64 animate-pulse rounded-2xl bg-border/40" />
+        <div className="h-32 animate-pulse rounded-lg bg-border/40" />
+        <div className="h-64 animate-pulse rounded-lg bg-border/40" />
       </Container>
     );
   }
@@ -252,8 +252,8 @@ export function ProviderWorkspaceView({ inviteId }: { inviteId: string }) {
       </Link>
 
       {/* Provider header */}
-      <header className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5 shadow-subtle sm:flex-row sm:items-center sm:p-6">
-        <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-primary/10 ring-1 ring-border">
+      <header className="flex flex-col gap-5 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-center sm:p-6">
+        <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/10 ring-1 ring-border">
           <span className="font-display text-xl font-semibold text-primary">{initials || "Dr"}</span>
           {/* eslint-disable-next-line @next/next/no-img-element -- avoids next/image SVG/remote config */}
           <img

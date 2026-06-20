@@ -251,7 +251,7 @@ function DiagnosesTab({ encounter, onRefresh }: { encounter: Encounter; onRefres
         <div className="space-y-2">
           {encounter.diagnoses.map((dx) => (
             <div key={dx.id} className={cn(
-              "flex items-start gap-3 rounded-xl border-l-4 bg-surface px-4 py-3 shadow-subtle",
+              "flex items-start gap-3 rounded-xl border-l-4 bg-surface px-4 py-3",
               dx.isPrimary ? "border-l-primary/60" : "border-l-border",
             )}>
               <div className="flex-1 space-y-0.5">
@@ -271,7 +271,7 @@ function DiagnosesTab({ encounter, onRefresh }: { encounter: Encounter; onRefres
       )}
 
       {!isFinalized ? (
-        <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+        <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-lg border border-border bg-surface p-5">
           <p className="text-sm font-semibold text-text">Add Diagnosis</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
@@ -361,7 +361,7 @@ function ObservationsTab({ encounter, onRefresh }: { encounter: Encounter; onRef
       )}
 
       {!isFinalized ? (
-        <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+        <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-lg border border-border bg-surface p-5">
           <p className="text-sm font-semibold text-text">Record Observation</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -440,7 +440,7 @@ function CarePlanTab({ encounter, onRefresh }: { encounter: Encounter; onRefresh
       {encounter.carePlanActions.length > 0 ? (
         <div className="space-y-2">
           {encounter.carePlanActions.map((action) => (
-            <div key={action.id} className="flex items-start gap-3 rounded-xl border-l-4 border-l-primary/40 bg-surface px-4 py-3 shadow-subtle">
+            <div key={action.id} className="flex items-start gap-3 rounded-xl border-l-4 border-l-primary/40 bg-surface px-4 py-3">
               <div className="flex-1 space-y-0.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-semibold text-text">{action.description}</p>
@@ -461,7 +461,7 @@ function CarePlanTab({ encounter, onRefresh }: { encounter: Encounter; onRefresh
       )}
 
       {!isFinalized ? (
-        <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+        <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-lg border border-border bg-surface p-5">
           <p className="text-sm font-semibold text-text">Add Care Plan Action</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
@@ -528,7 +528,7 @@ function AmendmentsTab({ encounter, onRefresh }: { encounter: Encounter; onRefre
       {encounter.amendments.length > 0 ? (
         <div className="space-y-2">
           {[...encounter.amendments].reverse().map((am) => (
-            <div key={am.id} className="rounded-xl border-l-4 border-l-primary/40 bg-surface px-4 py-3 shadow-subtle">
+            <div key={am.id} className="rounded-xl border-l-4 border-l-primary/40 bg-surface px-4 py-3">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">SOAP v{am.soapNoteVersionNumber}</Badge>
                 <span className="text-xs text-muted">{formatTime(am.createdAt)}</span>
@@ -541,7 +541,7 @@ function AmendmentsTab({ encounter, onRefresh }: { encounter: Encounter; onRefre
         <p className="text-sm text-muted">No amendments recorded yet.</p>
       )}
 
-      <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+      <form onSubmit={(e) => void handleAdd(e)} className="space-y-4 rounded-lg border border-border bg-surface p-5">
         <p className="text-sm font-semibold text-text">Add Amendment</p>
         <p className="text-xs text-muted">
           The amendment is recorded against the latest finalized SOAP note version.
@@ -596,8 +596,8 @@ export function GraphqlEncounterWorkspace({ encounterId }: { encounterId: string
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-28 animate-pulse rounded-2xl bg-border/40" />
-        <div className="h-64 animate-pulse rounded-2xl bg-border/40" />
+        <div className="h-28 animate-pulse rounded-lg bg-border/40" />
+        <div className="h-64 animate-pulse rounded-lg bg-border/40" />
       </div>
     );
   }
@@ -625,8 +625,8 @@ export function GraphqlEncounterWorkspace({ encounterId }: { encounterId: string
     <div className="space-y-6">
       {/* Header card */}
       <div className={cn(
-        "rounded-2xl p-5 text-white shadow-soft sm:p-6",
-        isFinalized ? "bg-gradient-to-br from-success to-emerald-600" : "bg-gradient-to-br from-primary to-blue-500",
+        "rounded-lg border-l-4 bg-ink p-5 text-white sm:p-6",
+        isFinalized ? "border-l-success" : "border-l-primary",
       )}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
@@ -677,7 +677,7 @@ export function GraphqlEncounterWorkspace({ encounterId }: { encounterId: string
       <InlineAlert alert={finalizeAlert} onDismiss={() => setFinalizeAlert(null)} />
 
       {isFinalized ? (
-        <div className="rounded-2xl border border-success/25 bg-success/5 px-4 py-3.5 text-sm text-success">
+        <div className="rounded-lg border border-success/25 bg-success/5 px-4 py-3.5 text-sm text-success">
           This encounter is finalized. You can now issue prescriptions and lab orders from the{" "}
           <a href="/consultant/appointments" className="font-medium underline">appointments page</a>.
           Use the Amendments tab to add corrections to these notes.

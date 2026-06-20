@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@apollo/client";
-import { FlaskConical } from "lucide-react";
+import { Icons } from "@/components/ui/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Panel, PanelHeader, PanelTitle, PanelBody, PanelEmpty } from "@/components/ui/panel";
 import { LATEST_LAB_RESULT_QUERY } from "@/lib/patient/labs-graphql";
 
 type LatestLabResultData = {
@@ -64,65 +65,55 @@ export function LabSummarySection() {
   });
 
   if (loading && !data) {
-    return (
-      <section className="space-y-4">
-        <h2 className="text-2xl">Labs</h2>
-        <div className="h-40 animate-pulse rounded-2xl bg-border/40" />
-      </section>
-    );
+    return <div className="h-44 animate-pulse rounded-lg border border-border bg-border/30" />;
   }
 
   const latest = data?.latestLabResult;
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-2xl">Labs</h2>
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={Icons.labs}>Labs</PanelTitle>
+      </PanelHeader>
 
-      <div className="rounded-2xl border border-border bg-surface p-5 shadow-subtle">
-        {!latest ? (
-          <p className="text-sm text-muted">No lab results yet.</p>
-        ) : (
-          <>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <FlaskConical className="size-5" />
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                    Latest lab
-                  </p>
-                  <p className="font-semibold text-text">{latest.testName}</p>
-                </div>
-              </div>
-              <Badge variant={getFlagVariant(latest.result?.flag ?? null)}>
-                {formatFlag(latest.result?.flag ?? null)}
-              </Badge>
-            </div>
-
-            {latest.result ? (
-              <p className="mt-4 text-sm leading-6 text-muted">
-                Result: <span className="font-medium text-text">{formatResultValue(latest.result)}</span>
+      {!latest ? (
+        <PanelEmpty>No lab results yet.</PanelEmpty>
+      ) : (
+        <PanelBody>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                Latest lab
               </p>
+              <p className="mt-0.5 font-semibold text-text">{latest.testName}</p>
+            </div>
+            <Badge variant={getFlagVariant(latest.result?.flag ?? null)}>
+              {formatFlag(latest.result?.flag ?? null)}
+            </Badge>
+          </div>
+
+          {latest.result ? (
+            <p className="mt-4 text-sm leading-6 text-muted">
+              Result: <span className="font-medium text-text">{formatResultValue(latest.result)}</span>
+            </p>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted">
+            {formatDate(latest.orderedAt) ? (
+              <span>Ordered {formatDate(latest.orderedAt)}</span>
             ) : null}
+            {latest.result?.resultedAt ? (
+              <span>· Resulted {formatDate(latest.result.resultedAt)}</span>
+            ) : null}
+          </div>
 
-            <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted">
-              {formatDate(latest.orderedAt) ? (
-                <span>Ordered {formatDate(latest.orderedAt)}</span>
-              ) : null}
-              {latest.result?.resultedAt ? (
-                <span>· Resulted {formatDate(latest.result.resultedAt)}</span>
-              ) : null}
-            </div>
-
-            <div className="mt-5 border-t border-border pt-4">
-              <Button href="/patient/labs" variant="secondary">
-                View Results
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    </section>
+          <div className="mt-5 border-t border-border pt-4">
+            <Button href="/patient/labs" variant="secondary" size="sm">
+              View Results
+            </Button>
+          </div>
+        </PanelBody>
+      )}
+    </Panel>
   );
 }
