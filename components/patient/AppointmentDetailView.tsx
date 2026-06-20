@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
+import { ArrowLeft, CalendarClock, Video } from "lucide-react";
 import { AppointmentActionModal } from "@/components/patient/appointments/AppointmentActionModal";
 import { PaymentsComingSoonNotice } from "@/components/patient/payments/PaymentsComingSoonNotice";
+import { Breadcrumbs } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useCountdown } from "@/hooks/use-countdown";
 import {
   AVAILABLE_SLOTS_QUERY,
   CANCEL_APPOINTMENT_MUTATION,
@@ -244,6 +247,13 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
   const canJoin = canJoinVideoConsultation(appointment?.consultationType, status);
   const canPay = status === "AWAITING_PAYMENT";
 
+  const isUpcomingTelemedicine =
+    isTelemedicine(appointment?.consultationType) && !isTerminal && !canJoin;
+  const startCountdown = useCountdown(
+    isUpcomingTelemedicine ? appointment?.startsAt : null,
+    { warnSeconds: 900, criticalSeconds: 300 },
+  );
+
   const pendingActionsForAppointment = (pendingActionsData?.pendingActions ?? []).filter(
     (action) => action.appointment?.id === appointment?.id,
   );
@@ -333,7 +343,20 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <div>
+        <Breadcrumbs
+          items={[
+            { label: "Appointments", href: "/patient/bookings" },
+            { label: provider?.displayName ?? "Appointment" },
+          ]}
+        />
+        <Button href="/patient/bookings" variant="ghost" size="sm" className="-ml-2">
+          <ArrowLeft className="size-4" />
+          Back to appointments
+        </Button>
+      </div>
+
       <Card>
         <CardHeader className="pb-4">
           <CardTitle>Next step</CardTitle>
@@ -370,10 +393,36 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
             <Button href={`/patient/bookings/${appointment.id}/video`} fullWidth>
               Join consultation
             </Button>
-          ) : isTelemedicine(appointment.consultationType) && !isTerminal ? (
-            <Button type="button" disabled fullWidth>
-              Join available at {formatDateTime(appointment.startsAt)}
-            </Button>
+          ) : isUpcomingTelemedicine ? (
+            <div className="rounded-lg border border-border bg-background px-4 py-4">
+              <div className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-primary">
+                  <Video className="size-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-sm font-semibold text-text">Video consultation</p>
+                  <p className="text-sm text-muted">
+                    Joining opens when your consultant starts the session.
+                  </p>
+                  {startCountdown && !startCountdown.isExpired ? (
+                    <p className="text-sm text-muted">
+                      Scheduled to start in{" "}
+                      <span className="font-semibold tabular-nums text-text">
+                        {startCountdown.label}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted">
+                      Scheduled for {formatDateTime(appointment.startsAt)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button type="button" disabled fullWidth className="mt-3">
+                <CalendarClock className="size-4" />
+                Waiting for consultant
+              </Button>
+            </div>
           ) : status === "COMPLETED" ? (
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button href="/patient/records" fullWidth>

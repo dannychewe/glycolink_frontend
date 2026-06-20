@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { Calendar, Clock, CheckCircle, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Calendar, Clock, CheckCircle, AlertCircle, ChevronDown, ChevronRight, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -315,6 +315,7 @@ function AppointmentCard({
         <div className="mt-4 flex flex-wrap gap-2">
           {canJoinVideo ? (
             <Button href={`/consultant/appointments/${appointment.id}/video`} size="sm">
+              <Video className="size-4" />
               Join video consultation
             </Button>
           ) : null}

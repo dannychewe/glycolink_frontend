@@ -4,8 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation } from "@apollo/client";
 import DailyIframe, { type DailyCall } from "@daily-co/daily-js";
-import { AlertCircle, PhoneOff, RefreshCcw, Video } from "lucide-react";
+import { AlarmClock, AlertCircle, ArrowLeft, PhoneOff, RefreshCcw, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CountdownPill } from "@/components/ui/countdown-pill";
+import { useCountdown } from "@/hooks/use-countdown";
+import { cn } from "@/lib/utils/cn";
 import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   JOIN_VIDEO_CONSULTATION_MUTATION,
@@ -65,6 +68,12 @@ export function VideoConsultationCall({
   const [error, setError] = useState<string | null>(null);
   const [errorActionHref, setErrorActionHref] = useState<string | null>(null);
   const isDailyEnabled = process.env.NEXT_PUBLIC_DAILY_JS_ENABLED !== "false";
+
+  const isLive = status === "ready" || status === "joined";
+  const countdown = useCountdown(isLive ? session?.expiresAt : null, {
+    warnSeconds: 300,
+    criticalSeconds: 60,
+  });
 
   const [joinVideoConsultation] = useMutation<
     JoinVideoConsultationData,
@@ -151,30 +160,41 @@ export function VideoConsultationCall({
   }, [destroyCall, startCall]);
 
   const showOverlay = status === "preparing" || status === "left" || status === "error";
+  const showEndingSoon = isLive && countdown?.isWarning;
 
   return (
-    <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface px-4 py-4 shadow-soft sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-              Video consultation
-            </p>
-            <h1 className="text-xl font-semibold text-text">
-              {session?.participantName ?? "Joining consultation"}
-            </h1>
-            {session ? (
-              <p className="text-sm text-muted">
-                {session.participantRole === "PROVIDER" ? "Provider" : "Patient"}
-                {session.isOwner ? " · host" : ""}
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="space-y-3">
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-primary">
+              <Video className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted">
+                Video consultation
               </p>
-            ) : null}
+              <h1 className="truncate text-lg font-semibold text-text sm:text-xl">
+                {session?.participantName ?? "Joining consultation"}
+              </h1>
+              {session ? (
+                <p className="text-xs text-muted sm:text-sm">
+                  {session.participantRole === "PROVIDER" ? "Provider" : "Patient"}
+                  {session.isOwner ? " · host" : ""}
+                </p>
+              ) : null}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {isLive && countdown ? (
+              <CountdownPill countdown={countdown} label="Ends in" />
+            ) : null}
             <Button href={backHref} variant="secondary" size="sm">
-              {backLabel}
+              <ArrowLeft className="size-4" />
+              <span className="hidden sm:inline">{backLabel}</span>
+              <span className="sm:hidden">Back</span>
             </Button>
-            {status === "ready" || status === "joined" ? (
+            {isLive ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -191,8 +211,30 @@ export function VideoConsultationCall({
           </div>
         </div>
 
-        <div className="relative min-h-[560px] overflow-hidden rounded-2xl border border-border bg-slate-950 shadow-soft">
-          <div ref={containerRef} className="h-[calc(100vh-12rem)] min-h-[560px] w-full" />
+        {showEndingSoon ? (
+          <div
+            className={cn(
+              "flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm",
+              countdown?.isCritical
+                ? "border-danger/30 bg-danger/5 text-danger"
+                : "border-warning/30 bg-warning/5 text-warning",
+            )}
+            role="status"
+          >
+            <AlarmClock className="size-4 shrink-0" aria-hidden="true" />
+            <p className="flex-1">
+              This consultation ends in{" "}
+              <span className="font-semibold tabular-nums">{countdown?.label}</span>. Wrap up any
+              final notes.
+            </p>
+          </div>
+        ) : null}
+
+        <div className="relative overflow-hidden rounded-xl border border-border bg-slate-950">
+          <div
+            ref={containerRef}
+            className="h-[calc(100dvh-15rem)] min-h-[360px] w-full sm:h-[calc(100dvh-13rem)] sm:min-h-[480px] lg:min-h-[560px]"
+          />
           {showOverlay ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/92 px-6 text-center text-white">
               <div className="max-w-sm space-y-4">
@@ -207,10 +249,15 @@ export function VideoConsultationCall({
                   <>
                     <PhoneOff className="mx-auto size-8 text-white/80" />
                     <p className="text-base font-medium">You left the consultation.</p>
-                    <Button type="button" onClick={() => void startCall()}>
-                      <RefreshCcw className="size-4" />
-                      Rejoin
-                    </Button>
+                    <div className="flex flex-col items-center gap-2">
+                      <Button type="button" onClick={() => void startCall()}>
+                        <RefreshCcw className="size-4" />
+                        Rejoin
+                      </Button>
+                      <Button href={backHref} variant="ghost" className="text-white hover:bg-white/10">
+                        {backLabel}
+                      </Button>
+                    </div>
                   </>
                 ) : null}
 

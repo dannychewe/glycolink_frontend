@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
-import { CalendarDays, CircleDot, Clock3, Stethoscope } from "lucide-react";
+import { CalendarDays, CircleDot, Clock3, Stethoscope, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -143,7 +143,7 @@ export function GraphqlAppointmentsListView() {
         <StatCell label="Cancelled" value={groupedCounts.cancelled} icon={CircleDot} />
       </div>
 
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 overflow-x-auto border-b border-border">
         {tabs.map((tab) => {
           const isActive = tab === activeTab;
           return (
@@ -215,6 +215,7 @@ export function GraphqlAppointmentsListView() {
               <CardContent className="flex flex-col gap-2 pt-0 sm:flex-row">
                 {canJoinVideoConsultation(appointment.consultationType, appointment.status) ? (
                   <Button href={`/patient/bookings/${appointment.id}/video`} className="sm:w-auto" fullWidth>
+                    <Video className="size-4" />
                     Join video consultation
                   </Button>
                 ) : null}
