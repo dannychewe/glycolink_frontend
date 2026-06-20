@@ -20,6 +20,7 @@ export default async function ConsultantVideoConsultationPage({
         appointmentId={appointmentId}
         backHref="/consultant/appointments"
         backLabel="Back to appointments"
+        pcqHref={`/consultant/consultations/${appointmentId}`}
         companion={
           <Card>
             <CardHeader>

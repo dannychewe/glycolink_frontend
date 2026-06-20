@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   FileText, Stethoscope, Activity, ListChecks, MessageSquare,
-  CheckCircle, AlertCircle, Lock, Clock, ClipboardList, FlaskConical, Pill,
+  CheckCircle, AlertCircle, Lock, Clock, ClipboardList, FlaskConical, Pill, Video,
 } from "lucide-react";
 import {
   ADD_AMENDMENT_MUTATION,
@@ -654,6 +654,15 @@ export function GraphqlEncounterWorkspace({ encounterId }: { encounterId: string
 
           {!isFinalized ? (
             <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+              <Button
+                href={`/consultant/appointments/${encounter.appointmentId}/video`}
+                variant="primary"
+                size="sm"
+                className="bg-white text-ink hover:bg-white/90"
+              >
+                <Video className="size-4" />
+                Join video consultation
+              </Button>
               <Button
                 type="button"
                 variant="secondary"
