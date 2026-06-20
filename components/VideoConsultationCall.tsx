@@ -22,7 +22,7 @@ type VideoConsultationCallProps = Readonly<{
   companion?: ReactNode;
 }>;
 
-type CallState = "idle" | "joining" | "joined" | "left" | "error";
+type CallState = "idle" | "preparing" | "ready" | "joined" | "left" | "error";
 
 function mapVideoConsultationError(error: unknown) {
   const code = getGraphQLErrorCode(error);
@@ -86,7 +86,7 @@ export function VideoConsultationCall({
     }
     if (!containerRef.current) return;
 
-    setStatus("joining");
+    setStatus("preparing");
     setError(null);
     setErrorActionHref(null);
     destroyCall();
@@ -111,7 +111,11 @@ export function VideoConsultationCall({
 
       callRef.current = call;
       setSession(nextSession);
+      setStatus("ready");
 
+      call.on("joined-meeting", () => {
+        setStatus("joined");
+      });
       call.on("left-meeting", () => {
         destroyCall();
         setStatus("left");
@@ -145,10 +149,10 @@ export function VideoConsultationCall({
     return () => destroyCall();
   }, [destroyCall, startCall]);
 
-  const showOverlay = status === "joining" || status === "left" || status === "error";
+  const showOverlay = status === "preparing" || status === "left" || status === "error";
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="space-y-4">
         <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface px-4 py-4 shadow-soft sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
@@ -169,7 +173,7 @@ export function VideoConsultationCall({
             <Button href={backHref} variant="secondary" size="sm">
               {backLabel}
             </Button>
-            {status === "joined" ? (
+            {status === "ready" || status === "joined" ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -186,15 +190,15 @@ export function VideoConsultationCall({
           </div>
         </div>
 
-        <div className="relative min-h-[520px] overflow-hidden rounded-2xl border border-border bg-slate-950 shadow-soft">
-          <div ref={containerRef} className="h-[70vh] min-h-[520px] w-full" />
+        <div className="relative min-h-[560px] overflow-hidden rounded-2xl border border-border bg-slate-950 shadow-soft">
+          <div ref={containerRef} className="h-[calc(100vh-12rem)] min-h-[560px] w-full" />
           {showOverlay ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/92 px-6 text-center text-white">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/92 px-6 text-center text-white">
               <div className="max-w-sm space-y-4">
-                {status === "joining" ? (
+                {status === "preparing" ? (
                   <>
                     <Video className="mx-auto size-8 text-white/80" />
-                    <p className="text-sm text-white/70">Joining video consultation...</p>
+                    <p className="text-sm text-white/70">Preparing video consultation...</p>
                   </>
                 ) : null}
 

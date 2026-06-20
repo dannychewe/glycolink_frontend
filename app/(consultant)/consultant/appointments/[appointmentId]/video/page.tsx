@@ -15,7 +15,7 @@ export default async function ConsultantVideoConsultationPage({
   const { appointmentId } = await params;
 
   return (
-    <Container className="py-2">
+    <Container className="max-w-none py-2">
       <VideoConsultationCall
         appointmentId={appointmentId}
         backHref="/consultant/appointments"

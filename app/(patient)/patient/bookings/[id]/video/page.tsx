@@ -13,7 +13,7 @@ export default async function PatientVideoConsultationPage({
   const { id } = await params;
 
   return (
-    <Container className="py-2">
+    <Container className="max-w-none py-2">
       <VideoConsultationCall
         appointmentId={id}
         backHref={`/patient/bookings/${id}`}
