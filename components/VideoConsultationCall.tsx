@@ -26,6 +26,7 @@ type CallState = "idle" | "preparing" | "ready" | "joined" | "left" | "error";
 
 function mapVideoConsultationError(error: unknown) {
   const code = getGraphQLErrorCode(error);
+  const backendMessage = getGraphQLErrorMessage(error, "");
   if (code === "PCQ_NOT_COMPLETED" || code === "APPOINTMENT_PCQ_REQUIRED") {
     return "Complete the appointment questionnaire before joining this consultation.";
   }
@@ -33,7 +34,7 @@ function mapVideoConsultationError(error: unknown) {
     return "This appointment is not configured for video consultation.";
   }
   if (code === "VIDEO_CONSULTATION_INVALID_STATE") {
-    return "This appointment is not ready for video yet.";
+    return backendMessage || "This appointment is not ready for video yet.";
   }
   if (code === "VIDEO_CONSULTATION_ACCESS_DENIED") {
     return "You do not have access to this video consultation.";
