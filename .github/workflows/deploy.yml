@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: frontend-production
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,11 +21,15 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
+
             cd /opt/najehealth/frontend
 
-            git pull origin main
+            git fetch origin ${{ github.sha }}
+            git reset --hard ${{ github.sha }}
 
-            npm install
+            npm ci
             npm run build
 
-            pm2 restart najehealth-frontend
+            pm2 restart najehealth-frontend --update-env
+            pm2 save
