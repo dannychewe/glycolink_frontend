@@ -215,11 +215,11 @@ export function PatientOnboardingWizard() {
   const currentStepMeta = steps[currentStep];
   const readiness = readinessData?.patientOnboardingReadiness ?? null;
   const nextAction = readiness?.nextAction ?? null;
-  const primaryLabel = nextAction
-    ? nextActionLabels[nextAction] ?? "Continue"
-    : isLastStep
-      ? "Submit profile"
-      : "Continue";
+  const primaryLabel = isLastStep
+    ? nextAction
+      ? nextActionLabels[nextAction] ?? "Submit profile"
+      : "Submit profile"
+    : "Continue";
   const incompleteRequiredItems = readiness?.requiredItems.filter((item) => !item.complete) ?? [];
   const incompleteSetupItems = readiness?.setupItems.filter((item) => !item.complete) ?? [];
 
@@ -328,46 +328,6 @@ export function PatientOnboardingWizard() {
     await refetchReadiness();
   }
 
-  async function persistEmergencyContact() {
-    const isValid = await methods.trigger([
-      "emergencyContactName",
-      "emergencyContactRelationship",
-      "emergencyContactPhone",
-    ]);
-    if (!isValid) return false;
-
-    const values = methods.getValues();
-    if (existingContactId) {
-      await updatePatientContact({
-        variables: {
-          contactId: existingContactId,
-          data: {
-            name: values.emergencyContactName,
-            relationship: values.emergencyContactRelationship,
-            phone: values.emergencyContactPhone,
-            isPrimary: true,
-          },
-        },
-      });
-    } else {
-      const { data } = await addPatientContact({
-        variables: {
-          data: {
-            name: values.emergencyContactName,
-            relationship: values.emergencyContactRelationship,
-            phone: values.emergencyContactPhone,
-            isPrimary: true,
-          },
-        },
-      });
-      const contactId = data?.addPatientContact?.contact?.id;
-      if (contactId) setExistingContactId(contactId);
-    }
-
-    await refetchReadiness();
-    return true;
-  }
-
   const submitProfile = methods.handleSubmit(async () => {
     setSubmitError(null);
     setErrorStep(null);
@@ -459,6 +419,13 @@ export function PatientOnboardingWizard() {
     setSubmitError(null);
     setSubmitMessage(null);
 
+    // Readiness describes the next incomplete onboarding requirement, but it
+    // must not override the sequential navigation of the wizard itself.
+    if (!isLastStep) {
+      await handleNext();
+      return;
+    }
+
     if (nextAction === "OPEN_DASHBOARD") {
       router.push("/patient/dashboard");
       return;
@@ -470,38 +437,12 @@ export function PatientOnboardingWizard() {
     }
 
     if (nextAction === "ADD_EMERGENCY_CONTACT") {
-      if (currentStep !== nextActionSteps.ADD_EMERGENCY_CONTACT) {
-        setCurrentStep(nextActionSteps.ADD_EMERGENCY_CONTACT);
-        return;
-      }
-
-      try {
-        const saved = await persistEmergencyContact();
-        if (saved) setSubmitMessage("Emergency contact saved.");
-      } catch (error) {
-        setSubmitError(getGraphQLErrorMessage(error, "Unable to save emergency contact."));
-        setErrorStep(3);
-      }
+      setCurrentStep(nextActionSteps.ADD_EMERGENCY_CONTACT);
       return;
     }
 
     if (nextAction === "UPDATE_PRIVACY_PREFERENCES") {
-      if (currentStep !== nextActionSteps.UPDATE_PRIVACY_PREFERENCES) {
-        setCurrentStep(nextActionSteps.UPDATE_PRIVACY_PREFERENCES);
-        return;
-      }
-
-      try {
-        if (!consentAlreadyAccepted) {
-          await acceptConsent({ variables: { policyType: "terms_of_service", version: "v1" } });
-          setConsentAlreadyAccepted(true);
-        }
-        await refetchReadiness();
-        setSubmitMessage("Preferences saved.");
-      } catch (error) {
-        setSubmitError(getGraphQLErrorMessage(error, "Unable to save preferences."));
-        setErrorStep(4);
-      }
+      setCurrentStep(nextActionSteps.UPDATE_PRIVACY_PREFERENCES);
       return;
     }
 

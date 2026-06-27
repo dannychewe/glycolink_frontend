@@ -163,9 +163,9 @@ export function VideoConsultationCall({
   const showEndingSoon = isLive && countdown?.isWarning;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="space-y-3">
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+    <div className="flex h-[calc(100dvh-7.5rem)] min-h-0 flex-col gap-3 md:h-[calc(100dvh-9rem)] lg:flex-row lg:gap-4">
+      <section className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex shrink-0 flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-primary">
               <Video className="size-5" aria-hidden="true" />
@@ -211,30 +211,28 @@ export function VideoConsultationCall({
           </div>
         </div>
 
-        {showEndingSoon ? (
-          <div
-            className={cn(
-              "flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm",
-              countdown?.isCritical
-                ? "border-danger/30 bg-danger/5 text-danger"
-                : "border-warning/30 bg-warning/5 text-warning",
-            )}
-            role="status"
-          >
-            <AlarmClock className="size-4 shrink-0" aria-hidden="true" />
-            <p className="flex-1">
-              This consultation ends in{" "}
-              <span className="font-semibold tabular-nums">{countdown?.label}</span>. Wrap up any
-              final notes.
-            </p>
-          </div>
-        ) : null}
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-slate-950">
+          <div ref={containerRef} className="size-full" />
 
-        <div className="relative overflow-hidden rounded-xl border border-border bg-slate-950">
-          <div
-            ref={containerRef}
-            className="h-[calc(100dvh-15rem)] min-h-[360px] w-full sm:h-[calc(100dvh-13rem)] sm:min-h-[480px] lg:min-h-[560px]"
-          />
+          {showEndingSoon ? (
+            <div
+              className={cn(
+                "pointer-events-none absolute inset-x-3 top-3 z-10 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm",
+                countdown?.isCritical
+                  ? "border-danger/40 bg-danger/90 text-white"
+                  : "border-warning/40 bg-warning/90 text-white",
+              )}
+              role="status"
+            >
+              <AlarmClock className="size-4 shrink-0" aria-hidden="true" />
+              <p className="flex-1">
+                This consultation ends in{" "}
+                <span className="font-semibold tabular-nums">{countdown?.label}</span>. Wrap up any
+                final notes.
+              </p>
+            </div>
+          ) : null}
+
           {showOverlay ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/92 px-6 text-center text-white">
               <div className="max-w-sm space-y-4">
@@ -284,7 +282,11 @@ export function VideoConsultationCall({
         </div>
       </section>
 
-      {companion ? <aside className="space-y-4">{companion}</aside> : null}
+      {companion ? (
+        <aside className="hidden shrink-0 space-y-4 overflow-y-auto lg:block lg:w-[320px] xl:w-[360px]">
+          {companion}
+        </aside>
+      ) : null}
     </div>
   );
 }

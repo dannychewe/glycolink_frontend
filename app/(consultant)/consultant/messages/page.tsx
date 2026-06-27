@@ -4,14 +4,17 @@ import { GraphqlInbox } from "@/components/consultant/messages/GraphqlInbox";
 
 export default function ConsultantMessagesPage() {
   return (
-    <Container className="space-y-6 py-2">
+    <Container className="flex h-[calc(100dvh-7.5rem)] flex-col gap-4 py-2 md:h-[calc(100dvh-9rem)]">
       <PageHeader
         eyebrow="Consultant Workspace"
         title="Messages"
         description="Communicate securely with your patients."
+        className="shrink-0"
       />
 
-      <GraphqlInbox />
+      <div className="min-h-0 flex-1">
+        <GraphqlInbox />
+      </div>
     </Container>
   );
 }

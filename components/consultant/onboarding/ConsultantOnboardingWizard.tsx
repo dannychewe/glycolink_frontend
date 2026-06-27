@@ -253,7 +253,11 @@ export function ConsultantOnboardingWizard() {
   const currentStepMeta = steps[currentStep];
   const readiness = readinessData?.providerOnboardingReadiness ?? null;
   const nextAction = readiness?.nextAction ?? null;
-  const primaryLabel = nextAction ? nextActionLabels[nextAction] ?? "Continue" : isLastStep ? "Submit for review" : "Continue";
+  const primaryLabel = isLastStep
+    ? nextAction
+      ? nextActionLabels[nextAction] ?? "Submit for review"
+      : "Submit for review"
+    : "Continue";
   const isAwaitingReview = nextAction === "AWAIT_ADMIN_REVIEW";
   const incompleteRequiredItems = readiness?.requiredItems.filter((item) => !item.complete) ?? [];
   const incompleteSetupItems = readiness?.setupItems.filter((item) => !item.complete) ?? [];
@@ -374,6 +378,13 @@ export function ConsultantOnboardingWizard() {
   }
 
   async function handlePrimaryAction() {
+    // Readiness describes the next incomplete onboarding requirement, but it
+    // must not override the sequential navigation of the wizard itself.
+    if (!isLastStep) {
+      await handleNext();
+      return;
+    }
+
     if (nextAction === "OPEN_DASHBOARD") {
       router.push("/consultant/dashboard");
       return;
@@ -384,10 +395,6 @@ export function ConsultantOnboardingWizard() {
     }
 
     if (nextAction === "SUBMIT_PROFILE") {
-      if (!isLastStep) {
-        setCurrentStep(REVIEW_STEP);
-        return;
-      }
       await handleSubmit();
       return;
     }
@@ -559,7 +566,7 @@ export function ConsultantOnboardingWizard() {
             <Button
               type="button"
               onClick={() => void handlePrimaryAction()}
-              disabled={isSubmitting || isAwaitingReview}
+              disabled={isSubmitting}
               className="gap-1.5 px-6"
             >
               {primaryLabel}

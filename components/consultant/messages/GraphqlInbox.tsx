@@ -890,7 +890,7 @@ export function GraphqlInbox({ initialConversationId }: { initialConversationId?
   const selectedThread = foundThread ?? stubThread;
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] min-h-[500px] overflow-hidden rounded-lg border border-border bg-surface">
+    <div className="flex h-full min-h-0 overflow-hidden rounded-lg border border-border bg-surface">
       {/* Thread list — hidden on mobile when a thread is selected */}
       <div className={cn(
         "flex w-full flex-col border-r border-border sm:w-80 sm:flex-shrink-0",
