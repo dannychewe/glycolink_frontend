@@ -1,4 +1,4 @@
-import { Activity, Pencil, Phone, ShieldCheck, Stethoscope, User } from "lucide-react";
+import { Activity, Pencil, Phone, ShieldCheck, User } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { DIABETES_TYPE_OPTIONS } from "@/lib/patient/clinical-profile-graphql";
 import type { PatientOnboardingValues } from "@/lib/validation/patient-onboarding";
@@ -79,9 +79,7 @@ export function StepReview({ onEdit }: Readonly<{ onEdit: (stepIndex: number) =>
     <div className="space-y-6">
       <ReviewSection icon={User} title="Basic Information" stepIndex={0} onEdit={onEdit}>
         <ReviewRow label="Full Name" value={values.fullName} />
-        <ReviewRow label="Date of Birth" value={values.dateOfBirth} />
-        <ReviewRow label="Phone" value={values.phone} />
-        <ReviewRow label="Email" value={values.email} last />
+        <ReviewRow label="Date of Birth" value={values.dateOfBirth} last />
       </ReviewSection>
 
       <ReviewSection icon={Activity} title="Diabetes Profile" stepIndex={1} onEdit={onEdit}>
@@ -89,19 +87,13 @@ export function StepReview({ onEdit }: Readonly<{ onEdit: (stepIndex: number) =>
         <ReviewRow label="Diagnosis Date" value={values.diagnosisDate} last />
       </ReviewSection>
 
-      <ReviewSection icon={Stethoscope} title="Medical Information" stepIndex={2} onEdit={onEdit}>
-        <ReviewRow label="Allergies" value={values.allergies} />
-        <ReviewRow label="Current Medications" value={values.currentMedications} />
-        <ReviewRow label="Additional Notes" value={values.additionalNotes} last />
-      </ReviewSection>
-
-      <ReviewSection icon={Phone} title="Emergency Contact" stepIndex={3} onEdit={onEdit}>
+      <ReviewSection icon={Phone} title="Emergency Contact" stepIndex={2} onEdit={onEdit}>
         <ReviewRow label="Name" value={values.emergencyContactName} />
         <ReviewRow label="Relationship" value={values.emergencyContactRelationship} />
         <ReviewRow label="Phone" value={values.emergencyContactPhone} last />
       </ReviewSection>
 
-      <ReviewSection icon={ShieldCheck} title="Consent" stepIndex={4} onEdit={onEdit}>
+      <ReviewSection icon={ShieldCheck} title="Consent" stepIndex={3} onEdit={onEdit}>
         <ReviewRow label="Terms & Medical Data Consent" value={values.consent} last />
       </ReviewSection>
     </div>

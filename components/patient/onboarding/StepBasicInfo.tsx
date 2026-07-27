@@ -51,16 +51,6 @@ export function StepBasicInfo({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="phone">Phone</Label>
-        <Input id="phone" type="tel" placeholder="+260..." {...register("phone")} />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" placeholder="patient@example.com" {...register("email")} />
-        {errors.email?.message ? <p className="text-sm text-danger">{errors.email.message}</p> : null}
-      </div>
     </div>
   );
 }

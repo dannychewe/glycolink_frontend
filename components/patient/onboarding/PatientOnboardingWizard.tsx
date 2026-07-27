@@ -19,7 +19,6 @@ import { StepBasicInfo } from "@/components/patient/onboarding/StepBasicInfo";
 import { StepConsent } from "@/components/patient/onboarding/StepConsent";
 import { StepDiabetesProfile } from "@/components/patient/onboarding/StepDiabetesProfile";
 import { StepEmergencyContact } from "@/components/patient/onboarding/StepEmergencyContact";
-import { StepMedicalInfo } from "@/components/patient/onboarding/StepMedicalInfo";
 import { StepReview } from "@/components/patient/onboarding/StepReview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -35,7 +34,6 @@ import {
   GET_PATIENT_CONTACTS_QUERY,
   MY_PATIENT_PROFILE_QUERY,
   PATIENT_ONBOARDING_READINESS_QUERY,
-  UPDATE_PATIENT_PROFILE_MUTATION,
   UPDATE_PATIENT_CONTACT_MUTATION,
 } from "@/lib/patient/clinical-profile-graphql";
 import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features/auth/auth-context";
@@ -43,18 +41,13 @@ import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features
 const steps = [
   {
     title: "Basic Info",
-    description: "Your name, date of birth, and contact details.",
-    fields: ["fullName", "dateOfBirth", "phone", "email"] as const,
+    description: "Your name and date of birth.",
+    fields: ["fullName", "dateOfBirth"] as const,
   },
   {
     title: "Diabetes Profile",
     description: "Help your care team understand your diabetes history.",
     fields: ["diabetesType", "diagnosisDate"] as const,
-  },
-  {
-    title: "Medical Info",
-    description: "Optional details about allergies, medications, and notes.",
-    fields: ["allergies", "currentMedications", "additionalNotes"] as const,
   },
   {
     title: "Emergency Contact",
@@ -106,22 +99,11 @@ const nextActionLabels: Record<string, string> = {
   OPEN_DASHBOARD: "Go to dashboard",
 };
 
-const nextActionSteps: Record<string, number> = {
-  UPDATE_PROFILE: 0,
-  ADD_EMERGENCY_CONTACT: 3,
-  UPDATE_PRIVACY_PREFERENCES: 4,
-};
-
 const defaultValues: PatientOnboardingValues = {
   fullName: "",
   dateOfBirth: "",
-  phone: "",
-  email: "",
   diabetesType: "type_2",
   diagnosisDate: "",
-  allergies: "",
-  currentMedications: "",
-  additionalNotes: "",
   emergencyContactName: "",
   emergencyContactRelationship: "",
   emergencyContactPhone: "",
@@ -132,12 +114,8 @@ type ExistingProfile = {
   id: string;
   fullName: string | null;
   dateOfBirth: string | null;
-  phone: string | null;
   diabetesType: string | null;
   diagnosisDate: string | null;
-  allergies: string | null;
-  currentMedications: string | null;
-  additionalNotes: string | null;
 } | null;
 
 type ExistingContact = {
@@ -178,7 +156,6 @@ export function PatientOnboardingWizard() {
   const [consentAlreadyAccepted, setConsentAlreadyAccepted] = useState(false);
 
   const [completeProfile] = useMutation(COMPLETE_PATIENT_PROFILE_MUTATION);
-  const [updateProfile] = useMutation(UPDATE_PATIENT_PROFILE_MUTATION);
   const [addPatientContact] = useMutation(ADD_PATIENT_CONTACT_MUTATION);
   const [updatePatientContact] = useMutation(UPDATE_PATIENT_CONTACT_MUTATION);
   const [acceptConsent] = useMutation(ACCEPT_CONSENT_MUTATION);
@@ -216,9 +193,13 @@ export function PatientOnboardingWizard() {
   const readiness = readinessData?.patientOnboardingReadiness ?? null;
   const nextAction = readiness?.nextAction ?? null;
   const primaryLabel = isLastStep
-    ? nextAction
-      ? nextActionLabels[nextAction] ?? "Submit profile"
-      : "Submit profile"
+    ? nextAction === "COMPLETE_BASELINE_PCQ"
+      ? "Save and continue to questionnaire"
+      : nextAction === "OPEN_DASHBOARD"
+        ? "Save and go to dashboard"
+        : nextAction
+          ? nextActionLabels[nextAction] ?? "Save and continue"
+          : "Save and continue"
     : "Continue";
   const incompleteRequiredItems = readiness?.requiredItems.filter((item) => !item.complete) ?? [];
   const incompleteSetupItems = readiness?.setupItems.filter((item) => !item.complete) ?? [];
@@ -239,22 +220,7 @@ export function PatientOnboardingWizard() {
     if (profile?.diagnosisDate && !getFieldState("diagnosisDate").isDirty) {
       setValue("diagnosisDate", profile.diagnosisDate);
     }
-    if (profile?.phone && !getFieldState("phone").isDirty) {
-      setValue("phone", profile.phone);
-    }
-    if (profile?.allergies && !getFieldState("allergies").isDirty) {
-      setValue("allergies", profile.allergies);
-    }
-    if (profile?.currentMedications && !getFieldState("currentMedications").isDirty) {
-      setValue("currentMedications", profile.currentMedications);
-    }
-    if (profile?.additionalNotes && !getFieldState("additionalNotes").isDirty) {
-      setValue("additionalNotes", profile.additionalNotes);
-    }
-    if (user?.email && !getFieldState("email").isDirty) {
-      setValue("email", user.email);
-    }
-  }, [profileData, getFieldState, setValue, user?.email]);
+  }, [profileData, getFieldState, setValue]);
 
   useEffect(() => {
     const contacts = contactsData?.myPatientContacts;
@@ -304,30 +270,6 @@ export function PatientOnboardingWizard() {
     setCurrentStep(stepIndex);
   }
 
-  function buildPatientProfileInput() {
-    const values = methods.getValues();
-
-    return {
-      fullName: values.fullName || undefined,
-      dateOfBirth: values.dateOfBirth || undefined,
-      phone: values.phone || undefined,
-      diabetesType: values.diabetesType ? values.diabetesType.toUpperCase() : undefined,
-      diagnosisDate: values.diagnosisDate || undefined,
-      allergies: values.allergies || undefined,
-      currentMedications: values.currentMedications || undefined,
-      additionalNotes: values.additionalNotes || undefined,
-    };
-  }
-
-  async function persistPatientProfile() {
-    await updateProfile({
-      variables: {
-        data: buildPatientProfileInput(),
-      },
-    });
-    await refetchReadiness();
-  }
-
   const submitProfile = methods.handleSubmit(async () => {
     setSubmitError(null);
     setErrorStep(null);
@@ -342,13 +284,9 @@ export function PatientOnboardingWizard() {
           data: {
             fullName: values.fullName,
             dateOfBirth: values.dateOfBirth,
-            phone: values.phone || undefined,
             // diabetesType is a GraphQL enum (TYPE_1, TYPE_2, …); send the uppercase name.
             diabetesType: values.diabetesType.toUpperCase(),
             diagnosisDate: values.diagnosisDate,
-            allergies: values.allergies || undefined,
-            currentMedications: values.currentMedications || undefined,
-            additionalNotes: values.additionalNotes || undefined,
           },
         },
       });
@@ -384,8 +322,21 @@ export function PatientOnboardingWizard() {
         });
       }
 
-      await refetchReadiness();
-      setSubmitMessage("Profile saved. Complete the baseline questionnaire when prompted.");
+      const readinessResult = await refetchReadiness();
+      const updatedNextAction =
+        readinessResult.data?.patientOnboardingReadiness?.nextAction ?? null;
+
+      if (updatedNextAction === "COMPLETE_BASELINE_PCQ") {
+        router.push("/patient/pcq/baseline");
+        return;
+      }
+
+      if (updatedNextAction === "OPEN_DASHBOARD") {
+        router.push("/patient/dashboard");
+        return;
+      }
+
+      setSubmitMessage("Profile saved.");
     } catch (error) {
       const code = getGraphQLErrorCode(error);
 
@@ -426,41 +377,12 @@ export function PatientOnboardingWizard() {
       return;
     }
 
-    if (nextAction === "OPEN_DASHBOARD") {
-      router.push("/patient/dashboard");
-      return;
-    }
-
-    if (nextAction === "COMPLETE_BASELINE_PCQ") {
-      router.push("/patient/pcq/baseline");
-      return;
-    }
-
-    if (nextAction === "ADD_EMERGENCY_CONTACT") {
-      setCurrentStep(nextActionSteps.ADD_EMERGENCY_CONTACT);
-      return;
-    }
-
-    if (nextAction === "UPDATE_PRIVACY_PREFERENCES") {
-      setCurrentStep(nextActionSteps.UPDATE_PRIVACY_PREFERENCES);
-      return;
-    }
-
-    if (nextAction === "UPDATE_PROFILE") {
-      try {
-        await persistPatientProfile();
-        setSubmitMessage("Profile saved.");
-      } catch (error) {
-        setSubmitError(getGraphQLErrorMessage(error, "Unable to save profile."));
-      }
-      return;
-    }
-
     if (isLastStep) {
       await submitProfile();
-    } else {
-      await handleNext();
+      return;
     }
+
+    await handleNext();
   }
 
   return (
@@ -562,8 +484,6 @@ export function PatientOnboardingWizard() {
             ) : currentStep === 1 ? (
               <StepDiabetesProfile />
             ) : currentStep === 2 ? (
-              <StepMedicalInfo />
-            ) : currentStep === 3 ? (
               <StepEmergencyContact />
             ) : (
               <StepConsent />

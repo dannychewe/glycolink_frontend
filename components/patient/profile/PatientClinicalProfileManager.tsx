@@ -815,6 +815,12 @@ export function PatientClinicalProfileManager() {
             <Badge variant={completion?.consultationReady ? "success" : "secondary"}>
               {completion?.consultationReady ? "Ready for consultation" : "Not yet consultation-ready"}
             </Badge>
+            {completion && !completion.pcqComplete ? (
+              <Button href="/patient/pcq/baseline" size="sm" className="ml-auto gap-1.5">
+                <ClipboardList className="size-4" />
+                Complete questionnaire
+              </Button>
+            ) : null}
           </div>
         </CardContent>
       </Card>
