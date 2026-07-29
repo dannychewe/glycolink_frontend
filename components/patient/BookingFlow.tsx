@@ -62,6 +62,9 @@ function mapBookingError(error: unknown) {
   if (code === "PATIENT_PROFILE_INCOMPLETE") {
     return "Please complete your patient profile before booking.";
   }
+  if (code === "BASELINE_PCQ_INCOMPLETE") {
+    return "Please complete your baseline questionnaire before booking.";
+  }
   if (code === "PROVIDER_NOT_AVAILABLE") {
     return "This provider is not currently eligible for booking.";
   }

@@ -608,10 +608,14 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
 
     if (accountType === "PATIENT") {
       if (
+        postLoginRedirect?.reason === "PATIENT_PROFILE_INCOMPLETE" ||
         postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
         postLoginRedirect?.reason === "PROFILE_MISSING"
       ) {
         return "/patient/onboarding";
+      }
+      if (postLoginRedirect?.reason === "BASELINE_PCQ_REQUIRED") {
+        return "/patient/pcq/baseline";
       }
     }
 

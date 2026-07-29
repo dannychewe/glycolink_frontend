@@ -314,17 +314,32 @@ export function PCQQuestionField({
       ) : null}
 
       {type === "boolean" ? (
-        <label className="flex items-start gap-3 rounded-xl border border-border bg-background px-4 py-4 cursor-pointer">
-          <input
-            id={question.id}
-            type="checkbox"
-            disabled={disabled}
-            checked={value === "true"}
-            onChange={(e) => handleImmediate(e.target.checked ? "true" : "false")}
-            className="mt-1 size-4 rounded border-border text-primary focus:ring-primary disabled:cursor-not-allowed"
-          />
-          <span className="text-sm leading-6 text-text">{question.questionText}</span>
-        </label>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={question.questionText}>
+          {[
+            { label: "Yes", value: "true" },
+            { label: "No", value: "false" },
+          ].map((option) => {
+            const isSelected = value === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                disabled={disabled}
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => handleImmediate(option.value)}
+                className={[
+                  "h-11 rounded-xl border px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-70",
+                  isSelected
+                    ? "border-primary bg-primary text-white"
+                    : "border-border bg-background text-text hover:border-primary/50",
+                ].join(" ")}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       ) : null}
 
       {type === "json" ? (

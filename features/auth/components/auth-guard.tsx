@@ -57,11 +57,21 @@ export function AuthGuard({ children, allowedRoles, requireSystemAdmin = false }
 
     if (
       getUserAccountType(user) === "PATIENT" &&
-      (postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
+      (postLoginRedirect?.reason === "PATIENT_PROFILE_INCOMPLETE" ||
+        postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
         postLoginRedirect?.reason === "PROFILE_MISSING") &&
       pathname === "/patient/dashboard"
     ) {
       router.replace("/patient/onboarding");
+      return;
+    }
+
+    if (
+      getUserAccountType(user) === "PATIENT" &&
+      postLoginRedirect?.reason === "BASELINE_PCQ_REQUIRED" &&
+      pathname === "/patient/dashboard"
+    ) {
+      router.replace("/patient/pcq/baseline");
     }
   }, [canAccess, getDefaultAuthenticatedRoute, pathname, postLoginRedirect?.reason, router, status, user]);
 
@@ -87,8 +97,17 @@ export function AuthGuard({ children, allowedRoles, requireSystemAdmin = false }
 
   if (
     getUserAccountType(user) === "PATIENT" &&
-    (postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
+    (postLoginRedirect?.reason === "PATIENT_PROFILE_INCOMPLETE" ||
+      postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
       postLoginRedirect?.reason === "PROFILE_MISSING") &&
+    pathname === "/patient/dashboard"
+  ) {
+    return null;
+  }
+
+  if (
+    getUserAccountType(user) === "PATIENT" &&
+    postLoginRedirect?.reason === "BASELINE_PCQ_REQUIRED" &&
     pathname === "/patient/dashboard"
   ) {
     return null;

@@ -15,8 +15,11 @@ export function OnboardingBanner() {
   const { patientProfile, postLoginRedirect, isAuthenticated } = useAuth();
 
   const profileIncomplete =
-    postLoginRedirect?.reason === "PATIENT_ONBOARDING" ||
+    postLoginRedirect?.reason === "PATIENT_PROFILE_INCOMPLETE" ||
+    postLoginRedirect?.reason === "PROFILE_MISSING" ||
+    (postLoginRedirect?.reason === "PATIENT_ONBOARDING" && patientProfile?.profileComplete === false) ||
     patientProfile?.profileComplete === false;
+  const baselinePcqRequired = postLoginRedirect?.reason === "BASELINE_PCQ_REQUIRED";
 
   const { data } = useQuery<{ profileCompletionStatus: CompletionStatus | null }>(
     PROFILE_COMPLETION_STATUS_QUERY,
@@ -44,7 +47,7 @@ export function OnboardingBanner() {
 
   // Profile done, but the baseline PCQ must be submitted to be consultation-ready.
   const completion = data?.profileCompletionStatus;
-  if (completion && !completion.pcqComplete) {
+  if (baselinePcqRequired || (completion && !completion.pcqComplete)) {
     return (
       <div className="rounded-lg border border-l-4 border-l-primary bg-surface px-5 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

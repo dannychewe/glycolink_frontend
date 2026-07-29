@@ -4,6 +4,7 @@ import { useQuery } from "@apollo/client";
 import { BookingFlow } from "@/components/patient/BookingFlow";
 import { Button } from "@/components/ui/button";
 import { useAuth, getGraphQLErrorCode, getUserAccountType } from "@/features/auth/auth-context";
+import { PROFILE_COMPLETION_STATUS_QUERY } from "@/lib/patient/clinical-profile-graphql";
 import { PROVIDER_QUERY } from "@/lib/providers/directory-graphql";
 
 type ProviderDetailData = {
@@ -23,6 +24,12 @@ type ProviderBookingPageViewProps = Readonly<{
   providerId: string;
 }>;
 
+type CompletionStatus = {
+  isComplete: boolean;
+  pcqComplete: boolean;
+  consultationReady: boolean;
+};
+
 export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewProps) {
   const { isAuthenticated, user, patientProfile } = useAuth();
   const { data, loading, error } = useQuery<ProviderDetailData>(PROVIDER_QUERY, {
@@ -33,8 +40,31 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
   const provider = data?.provider ?? null;
   const code = getGraphQLErrorCode(error);
   const accountType = getUserAccountType(user);
-  const needsPatientProfile = accountType === "PATIENT" && patientProfile?.profileComplete === false;
   const isVerifiedUser = Boolean(user?.isVerified);
+  const shouldCheckCompletion = isAuthenticated && accountType === "PATIENT" && isVerifiedUser;
+  const {
+    data: completionData,
+    loading: completionLoading,
+    error: completionError,
+  } = useQuery<{ profileCompletionStatus: CompletionStatus | null }>(
+    PROFILE_COMPLETION_STATUS_QUERY,
+    {
+      fetchPolicy: "network-only",
+      skip: !shouldCheckCompletion,
+    },
+  );
+  const completion = completionData?.profileCompletionStatus ?? null;
+  const completionCode = getGraphQLErrorCode(completionError);
+  const needsPatientProfile =
+    shouldCheckCompletion &&
+    (completionCode === "PATIENT_PROFILE_NOT_FOUND" ||
+      completion?.isComplete === false ||
+      (!completionLoading && !completion && patientProfile?.profileComplete === false));
+  const needsBaselinePcq =
+    shouldCheckCompletion &&
+    completion?.isComplete === true &&
+    !completion.pcqComplete &&
+    !completion.consultationReady;
 
   if (!isAuthenticated) {
     return (
@@ -66,6 +96,14 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
     );
   }
 
+  if (completionLoading) {
+    return (
+      <div className="rounded-xl border border-border bg-surface px-4 py-4 text-sm text-muted">
+        Checking profile readiness...
+      </div>
+    );
+  }
+
   if (needsPatientProfile) {
     return (
       <div className="space-y-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
@@ -73,6 +111,25 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
         <Button href="/patient/onboarding" variant="secondary">
           Complete profile
         </Button>
+      </div>
+    );
+  }
+
+  if (needsBaselinePcq) {
+    return (
+      <div className="space-y-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
+        <p>Complete your baseline questionnaire before booking a consultation.</p>
+        <Button href="/patient/pcq/baseline" variant="secondary">
+          Complete questionnaire
+        </Button>
+      </div>
+    );
+  }
+
+  if (completionError && !needsPatientProfile) {
+    return (
+      <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
+        Unable to verify your profile readiness. Please refresh and try again.
       </div>
     );
   }
