@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   Users, Search, UserPlus, CheckCircle, AlertCircle,
-  MessageSquare, FlaskConical, ClipboardList, Bell,
+  MessageSquare, FlaskConical, ClipboardList, Bell, Activity,
 } from "lucide-react";
 import {
   CONSULTANT_CLIENTS_QUERY,
@@ -330,6 +330,16 @@ function ClientRow({ client }: { client: ConsultantClient }) {
               View Profile
             </Button>
           ) : null}
+          {client.inviteStatus !== "INVITED" && client.inviteStatus !== "REJECTED" ? (
+            <Button
+              href={`/consultant/patients/${client.patientId}/monitoring`}
+              variant="secondary"
+              size="sm"
+            >
+              <Activity className="size-4" />
+              Monitoring
+            </Button>
+          ) : null}
           {client.activeConversationId ? (
             <Button
               href={`/consultant/messages/${client.activeConversationId}`}
@@ -408,7 +418,7 @@ export function GraphqlClientsList() {
           <p>
             <span className="font-semibold">{activeAlerts} patient{activeAlerts !== 1 ? "s" : ""}</span>{" "}
             with unacknowledged monitoring alerts.{" "}
-            <a href="/consultant/monitoring" className="font-medium underline">Review alerts</a>
+            <a href="/consultant/monitoring/alerts" className="font-medium underline">Review alerts</a>
           </p>
         </div>
       ) : null}

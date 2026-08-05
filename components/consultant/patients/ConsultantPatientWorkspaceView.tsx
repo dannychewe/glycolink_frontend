@@ -2,7 +2,7 @@
 
 import { useQuery } from "@apollo/client";
 import {
-  AlertTriangle, CalendarDays, FileText, FlaskConical,
+  Activity, AlertTriangle, CalendarDays, FileText, FlaskConical,
   Lightbulb, MessageSquare, Pill, Stethoscope,
 } from "lucide-react";
 import {
@@ -183,6 +183,10 @@ export function ConsultantPatientWorkspaceView({ patientId }: Readonly<{ patient
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button href={`/consultant/patients/${patientId}/monitoring`} variant="secondary">
+            <Activity className="size-4" />
+            Monitoring
+          </Button>
           {conversation ? (
             <Button href={`/consultant/messages/${conversation.id}`} variant="secondary">
               <MessageSquare className="size-4" />

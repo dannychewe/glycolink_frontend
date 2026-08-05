@@ -88,6 +88,40 @@ export const RESET_PASSWORD_MUTATION = gql`
   }
 `;
 
+export const ACCEPT_PROVIDER_ORGANIZATION_INVITE_MUTATION = gql`
+  mutation AcceptProviderOrganizationInvite(
+    $token: String!
+    $password: String
+    $fullName: String
+    $phone: String
+    $displayName: String
+    $hpczNumber: String
+  ) {
+    acceptProviderOrganizationInvite(
+      token: $token
+      password: $password
+      fullName: $fullName
+      phone: $phone
+      displayName: $displayName
+      hpczNumber: $hpczNumber
+    ) {
+      invite {
+        id
+        status
+        acceptedAt
+        organization {
+          id
+          name
+        }
+        invitedProvider {
+          id
+          displayName
+        }
+      }
+    }
+  }
+`;
+
 export const LOGOUT_MUTATION = gql`
   mutation Logout($refreshToken: String!) {
     logout(refreshToken: $refreshToken) {

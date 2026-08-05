@@ -133,6 +133,34 @@ export const PROVIDER_PATIENT_ALERTS_QUERY = gql`
   }
 `;
 
+export const CONSULTANT_MONITORING_OVERVIEW_QUERY = gql`
+  query ConsultantMonitoringOverview($limit: Int) {
+    consultantMonitoringOverview(limit: $limit) {
+      patient {
+        id
+        fullName
+        email
+        diabetesType
+      }
+      latestGlucose {
+        id
+        value
+        unit
+        flag
+        recordedAt
+      }
+      trend {
+        average7Days
+        average30Days
+        latestValue
+      }
+      activeAlertCount
+      monitoringAllowed
+      lastRecordedAt
+    }
+  }
+`;
+
 export const ACKNOWLEDGE_ALERT_MUTATION = gql`
   mutation AcknowledgeAlert($alertId: UUID!) {
     acknowledgeAlert(alertId: $alertId) {
@@ -293,6 +321,15 @@ export type ConsultantPatientMonitoring = {
   activeThreshold: ConsultantMonitoringThreshold;
   recentReadings: ConsultantMonitoringReading[];
   alerts: ConsultantMonitoringAlert[];
+};
+
+export type ConsultantMonitoringOverviewItem = {
+  patient: ConsultantMonitoringPatient;
+  latestGlucose: ConsultantMonitoringReading | null;
+  trend: ConsultantMonitoringTrend;
+  activeAlertCount: number;
+  monitoringAllowed: boolean;
+  lastRecordedAt: string | null;
 };
 
 export const MY_DEVICE_CONNECTIONS_QUERY = gql`

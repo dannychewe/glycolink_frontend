@@ -67,7 +67,7 @@ export function PatientAlertsSection() {
         <PanelTitle icon={Icons.alerts} count={activeAlerts.length} countTone="danger">
           Patient Alerts
         </PanelTitle>
-        <ViewAllLink href="/consultant/monitoring" />
+        <ViewAllLink href="/consultant/monitoring/alerts" />
       </PanelHeader>
 
       {error ? (
@@ -101,7 +101,7 @@ export function PatientAlertsSection() {
                 <p className="text-xs text-muted/70">{formatTime(item.alert.createdAt)}</p>
               </div>
               <Link
-                href="/consultant/monitoring"
+                href="/consultant/monitoring/alerts"
                 className="shrink-0 self-start text-xs font-medium text-primary hover:underline"
               >
                 Review

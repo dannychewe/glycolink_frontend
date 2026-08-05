@@ -72,6 +72,7 @@ export const ORGANIZATION_PROVIDER_INVITES_QUERY = gql`
     organizationProviderInvites(organizationId: $organizationId, status: $status) {
       id
       status
+      invitedEmail
       note
       inviterProvider {
         id
@@ -81,6 +82,12 @@ export const ORGANIZATION_PROVIDER_INVITES_QUERY = gql`
         id
         displayName
       }
+      invitedUser {
+        id
+        email
+      }
+      acceptedAt
+      expiresAt
       reviewedAt
       createdAt
     }
@@ -155,17 +162,18 @@ export const UPLOAD_ORGANIZATION_LOGO_MUTATION = gql`
 export const INVITE_PROVIDER_TO_ORGANIZATION_MUTATION = gql`
   mutation ConsultantInviteProviderToOrganization(
     $organizationId: UUID!
-    $providerId: UUID!
+    $email: String!
     $note: String
   ) {
     inviteProviderToOrganization(
       organizationId: $organizationId
-      providerId: $providerId
+      email: $email
       note: $note
     ) {
       invite {
         id
         status
+        invitedEmail
         note
         organization {
           id
@@ -175,6 +183,11 @@ export const INVITE_PROVIDER_TO_ORGANIZATION_MUTATION = gql`
           id
           displayName
         }
+        invitedUser {
+          id
+          email
+        }
+        expiresAt
         createdAt
       }
     }

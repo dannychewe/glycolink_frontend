@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useApolloClient, useMutation } from "@apollo/client";
 import { LOGOUT_MUTATION } from "@/lib/auth/graphql";
-import { clearStoredTokens, getRefreshToken } from "@/lib/auth/storage";
+import { clearCachedCredentials, getRefreshToken } from "@/lib/auth/storage";
 import { cn } from "@/lib/utils/cn";
 
 type LogoutButtonProps = Readonly<{
@@ -28,7 +28,7 @@ export function LogoutButton({ variant = "sidebar" }: LogoutButtonProps) {
       }
     }
 
-    clearStoredTokens();
+    clearCachedCredentials();
     await client.clearStore();
     window.location.replace("/login");
   }

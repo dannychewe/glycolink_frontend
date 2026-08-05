@@ -209,10 +209,13 @@ function AlertRow({
 
 // ─── Panel ────────────────────────────────────────────────
 
-export function ConsultantPatientMonitoringPanel({ patientId }: Readonly<{ patientId: string }>) {
+export function ConsultantPatientMonitoringPanel({
+  patientId,
+  limit = 10,
+}: Readonly<{ patientId: string; limit?: number }>) {
   const { data, loading, error, refetch } = useQuery<{ consultantPatientMonitoring: ConsultantPatientMonitoring }>(
     CONSULTANT_PATIENT_MONITORING_QUERY,
-    { variables: { patientId, range: "30d", limit: 10 }, fetchPolicy: "cache-and-network" },
+    { variables: { patientId, range: "30d", limit }, fetchPolicy: "cache-and-network" },
   );
 
   const monitoring = data?.consultantPatientMonitoring;

@@ -4,6 +4,7 @@ import { GraphqlConsultantAppointmentsSection } from "@/components/consultant/da
 import { MessagesSection } from "@/components/consultant/dashboard/MessagesSection";
 import { PatientAlertsSection } from "@/components/consultant/dashboard/PatientAlertsSection";
 import { PendingLabsSection } from "@/components/consultant/dashboard/PendingLabsSection";
+import { ConsultantGlucoseReadingsOverview } from "@/components/consultant/monitoring/ConsultantGlucoseReadingsOverview";
 
 export default function ConsultantDashboardPage() {
   const today = new Date().toLocaleDateString("en-ZM", {
@@ -31,6 +32,7 @@ export default function ConsultantDashboardPage() {
       <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-6">
           <GraphqlConsultantAppointmentsSection />
+          <ConsultantGlucoseReadingsOverview limit={5} compact />
           <PendingLabsSection />
         </div>
 

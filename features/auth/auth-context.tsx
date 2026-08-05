@@ -16,31 +16,22 @@ import {
   RESEND_VERIFICATION_MUTATION,
   VERIFY_EMAIL_MUTATION,
 } from "@/lib/auth/graphql";
-import { clearStoredTokens, getStoredTokens, setStoredTokens, subscribeToAuthChanges } from "@/lib/auth/storage";
+import {
+  cacheStoredUser,
+  clearCachedCredentials,
+  getStoredTokens,
+  getStoredUser,
+  setStoredTokens,
+  subscribeToAuthChanges,
+} from "@/lib/auth/storage";
 import { getGraphQLErrorCode, getGraphQLErrorMessage, refreshSessionTokens } from "@/lib/auth/session";
 
-const USER_CACHE_KEY = "glycolink.user";
-
 function cacheUser(user: AuthUser) {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-  }
+  cacheStoredUser(user);
 }
 
 function getCachedUser(): AuthUser | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(USER_CACHE_KEY);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
-  } catch {
-    return null;
-  }
-}
-
-function clearCachedUser() {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(USER_CACHE_KEY);
-  }
+  return getStoredUser<AuthUser>();
 }
 
 export type AuthRole =
@@ -369,8 +360,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     } catch (error) {
       const code = getGraphQLErrorCode(error);
       if (isLikelyAuthFailure(error) || code === "AUTH_USER_INACTIVE") {
-        clearStoredTokens();
-        clearCachedUser();
+        clearCachedCredentials();
         resetSessionState();
         return null;
       }
@@ -556,8 +546,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     } catch {
       // Clear the local session even if the backend session has already expired.
     } finally {
-      clearStoredTokens();
-      clearCachedUser();
+      clearCachedCredentials();
       await client.clearStore();
       resetSessionState();
     }

@@ -10,6 +10,7 @@ const TOKEN_KEY = "glycolink.token";
 const LEGACY_ACCESS_TOKEN_KEY = "glycolink.accessToken";
 const REFRESH_TOKEN_KEY = "glycolink.refreshToken";
 const REFRESH_EXPIRES_IN_KEY = "glycolink.refreshExpiresIn";
+const USER_CACHE_KEY = "glycolink.user";
 
 let inMemoryTokens: AuthTokens | null = null;
 const listeners = new Set<() => void>();
@@ -95,6 +96,34 @@ export function clearStoredTokens() {
   }
 
   notifyListeners();
+}
+
+export function cacheStoredUser<TUser>(user: TUser) {
+  if (canUseStorage()) {
+    window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+  }
+}
+
+export function getStoredUser<TUser>(): TUser | null {
+  if (!canUseStorage()) return null;
+
+  try {
+    const raw = window.localStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as TUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearStoredUser() {
+  if (canUseStorage()) {
+    window.localStorage.removeItem(USER_CACHE_KEY);
+  }
+}
+
+export function clearCachedCredentials() {
+  clearStoredTokens();
+  clearStoredUser();
 }
 
 export function subscribeToAuthChanges(listener: () => void) {

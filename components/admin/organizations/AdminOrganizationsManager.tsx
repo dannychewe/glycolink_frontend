@@ -127,6 +127,7 @@ const ADMIN_ORGANIZATION_INVITES_QUERY = gql`
     organizationProviderInvites(organizationId: $organizationId, status: $status) {
       id
       status
+      invitedEmail
       note
       organization {
         id
@@ -140,6 +141,12 @@ const ADMIN_ORGANIZATION_INVITES_QUERY = gql`
         id
         displayName
       }
+      invitedUser {
+        id
+        email
+      }
+      acceptedAt
+      expiresAt
       reviewedAt
       createdAt
     }
@@ -147,12 +154,14 @@ const ADMIN_ORGANIZATION_INVITES_QUERY = gql`
 `;
 
 const ADMIN_INVITE_PROVIDER_TO_ORGANIZATION_MUTATION = gql`
-  mutation AdminInviteProviderToOrganization($organizationId: UUID!, $providerId: UUID!, $note: String) {
-    inviteProviderToOrganization(organizationId: $organizationId, providerId: $providerId, note: $note) {
+  mutation AdminInviteProviderToOrganization($organizationId: UUID!, $email: String!, $note: String) {
+    inviteProviderToOrganization(organizationId: $organizationId, email: $email, note: $note) {
       invite {
         id
         status
+        invitedEmail
         note
+        expiresAt
         createdAt
       }
     }
@@ -198,7 +207,7 @@ const ADMIN_UPLOAD_ORGANIZATION_LOGO_MUTATION = gql`
 
 type AlertState = { type: "success" | "error"; message: string } | null;
 type Tab = "detail" | "providers" | "invites";
-type InviteStatus = "" | "pending" | "approved" | "rejected";
+type InviteStatus = "" | "pending" | "accepted" | "approved" | "rejected" | "expired";
 
 type Organization = {
   id: string;
@@ -233,10 +242,14 @@ type OrganizationProvider = {
 type OrganizationInvite = {
   id: string;
   status: string;
+  invitedEmail: string;
   note: string | null;
   organization: { id: string; name: string } | null;
   inviterProvider: { id: string; displayName: string | null } | null;
   invitedProvider: { id: string; displayName: string | null } | null;
+  invitedUser: { id: string; email: string } | null;
+  acceptedAt: string | null;
+  expiresAt: string | null;
   reviewedAt: string | null;
   createdAt: string;
 };
@@ -263,8 +276,8 @@ function formatLabel(value: string | null | undefined) {
 function statusVariant(status: string | null | undefined) {
   const normalized = status?.toUpperCase();
   if (normalized === "ACTIVE" || normalized === "APPROVED" || normalized === "VERIFIED") return "success" as const;
-  if (normalized === "PENDING" || normalized === "SUBMITTED") return "warning" as const;
-  if (normalized === "INACTIVE" || normalized === "DEACTIVATED" || normalized === "REJECTED" || normalized === "SUSPENDED") return "danger" as const;
+  if (normalized === "PENDING" || normalized === "ACCEPTED" || normalized === "SUBMITTED") return "warning" as const;
+  if (normalized === "INACTIVE" || normalized === "DEACTIVATED" || normalized === "REJECTED" || normalized === "EXPIRED" || normalized === "SUSPENDED") return "danger" as const;
   return "secondary" as const;
 }
 
@@ -769,7 +782,7 @@ function OrganizationInvitesPanel({
   setAlert: (alert: AlertState) => void;
 }>) {
   const [status, setStatus] = useState<InviteStatus>("pending");
-  const [providerId, setProviderId] = useState("");
+  const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
   const [rejectInviteId, setRejectInviteId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -791,9 +804,9 @@ function OrganizationInvitesPanel({
     setAlert(null);
     try {
       await inviteProvider({
-        variables: { organizationId, providerId, note: note.trim() || undefined },
+        variables: { organizationId, email: email.trim(), note: note.trim() || undefined },
       });
-      setProviderId("");
+      setEmail("");
       setNote("");
       await refetch();
       setAlert({ type: "success", message: "Provider invite created." });
@@ -842,12 +855,13 @@ function OrganizationInvitesPanel({
         <CardContent>
           <form onSubmit={(event) => void handleInvite(event)} className="grid gap-4 md:grid-cols-[1fr_1.2fr_auto] md:items-end">
             <div className="space-y-2">
-              <Label htmlFor="provider-id">Provider ID</Label>
+              <Label htmlFor="provider-email">Provider email</Label>
               <Input
-                id="provider-id"
-                value={providerId}
-                placeholder="Provider UUID"
-                onChange={(event) => setProviderId(event.target.value)}
+                id="provider-email"
+                type="email"
+                value={email}
+                placeholder="doctor@example.com"
+                onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </div>
@@ -878,7 +892,7 @@ function OrganizationInvitesPanel({
             <Badge variant="secondary">{invites.length}</Badge>
           </div>
           <div className="flex w-fit gap-1 rounded-xl border border-border bg-surface p-1">
-            {(["pending", "approved", "rejected", ""] as InviteStatus[]).map((item) => (
+            {(["pending", "accepted", "approved", "rejected", "expired", ""] as InviteStatus[]).map((item) => (
               <button
                 key={item || "all"}
                 type="button"
@@ -902,26 +916,35 @@ function OrganizationInvitesPanel({
             </p>
           ) : null}
           {invites.map((invite) => {
-            const isPending = invite.status.toLowerCase() === "pending";
+            const normalizedStatus = invite.status.toLowerCase();
+            const isAccepted = normalizedStatus === "accepted";
+            const isOpen = normalizedStatus === "pending" || normalizedStatus === "accepted";
             return (
               <div key={invite.id} className="rounded-xl border border-border bg-surface px-4 py-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-text">{invite.invitedProvider?.displayName ?? "Unknown provider"}</p>
+                      <p className="text-sm font-semibold text-text">{invite.invitedProvider?.displayName ?? invite.invitedEmail}</p>
                       <Badge variant={statusVariant(invite.status)}>{formatLabel(invite.status)}</Badge>
                     </div>
                     <p className="text-xs text-muted">
                       Invited by {invite.inviterProvider?.displayName ?? "Unknown"} · {formatDate(invite.createdAt)}
                     </p>
+                    <p className="text-xs text-muted">
+                      {invite.invitedUser?.email ?? invite.invitedEmail}
+                      {invite.expiresAt ? ` · Expires ${formatDate(invite.expiresAt)}` : ""}
+                    </p>
+                    {invite.acceptedAt ? (
+                      <p className="text-xs text-muted">Accepted: {formatDate(invite.acceptedAt)}</p>
+                    ) : null}
                     {invite.note ? (
                       <p className="text-xs italic text-muted">&quot;{invite.note}&quot;</p>
                     ) : null}
                     <p className="text-xs text-muted">Reviewed: {formatDate(invite.reviewedAt)}</p>
                   </div>
-                  {isPending ? (
+                  {isOpen ? (
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" size="sm" disabled={approving} onClick={() => void handleApprove(invite.id)}>
+                      <Button type="button" size="sm" disabled={approving || !isAccepted} onClick={() => void handleApprove(invite.id)}>
                         <Check className="size-4" />
                         Approve
                       </Button>

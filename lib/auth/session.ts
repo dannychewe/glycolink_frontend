@@ -1,6 +1,11 @@
 "use client";
 
-import { clearStoredTokens, getRefreshToken, setStoredTokens, type AuthTokens } from "@/lib/auth/storage";
+import {
+  clearCachedCredentials,
+  getRefreshToken,
+  setStoredTokens,
+  type AuthTokens,
+} from "@/lib/auth/storage";
 
 type GraphQLErrorLike = {
   message?: unknown;
@@ -89,7 +94,7 @@ async function requestTokenRefresh() {
   const refreshToken = getRefreshToken();
 
   if (!refreshToken) {
-    clearStoredTokens();
+    clearCachedCredentials();
     return null;
   }
 
@@ -119,7 +124,7 @@ async function requestTokenRefresh() {
   const nextTokens = payload.data?.refreshToken;
 
   if (!response.ok || !nextTokens || (payload.errors?.length ?? 0) > 0) {
-    clearStoredTokens();
+    clearCachedCredentials();
     return null;
   }
 
