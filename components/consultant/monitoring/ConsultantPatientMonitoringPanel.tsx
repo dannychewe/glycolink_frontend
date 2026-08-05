@@ -215,7 +215,7 @@ export function ConsultantPatientMonitoringPanel({
 }: Readonly<{ patientId: string; limit?: number }>) {
   const { data, loading, error, refetch } = useQuery<{ consultantPatientMonitoring: ConsultantPatientMonitoring }>(
     CONSULTANT_PATIENT_MONITORING_QUERY,
-    { variables: { patientId, range: "30d", limit }, fetchPolicy: "cache-and-network" },
+    { variables: { patientId, range: "month", limit }, fetchPolicy: "cache-and-network" },
   );
 
   const monitoring = data?.consultantPatientMonitoring;
