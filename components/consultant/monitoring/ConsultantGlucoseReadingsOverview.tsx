@@ -56,7 +56,7 @@ function flagAccent(flag: string | null | undefined, allowed: boolean) {
 }
 
 function patientName(item: ConsultantMonitoringOverviewItem) {
-  return item.patient.fullName || item.patient.email || "Unknown patient";
+  return item.patient?.fullName || item.patient?.email || "Unknown patient";
 }
 
 export function ConsultantGlucoseReadingsOverview({ limit = 6, compact = false, showViewAll = true }: Props) {
@@ -65,8 +65,8 @@ export function ConsultantGlucoseReadingsOverview({ limit = 6, compact = false, 
     fetchPolicy: "cache-and-network",
   });
 
-  const items = data?.consultantMonitoringOverview ?? [];
-  const activeAlerts = items.reduce((total, item) => total + item.activeAlertCount, 0);
+  const items = (data?.consultantMonitoringOverview ?? []).filter((item) => item?.patient?.id);
+  const activeAlerts = items.reduce((total, item) => total + (item.activeAlertCount ?? 0), 0);
 
   return (
     <Panel>
@@ -103,11 +103,11 @@ export function ConsultantGlucoseReadingsOverview({ limit = 6, compact = false, 
                 href={`/consultant/patients/${item.patient.id}/monitoring`}
                 className="flex gap-3 px-5 py-3.5 transition-colors hover:bg-background"
               >
-                <span className={cn("mt-1 h-10 w-1 shrink-0 rounded-full", flagAccent(latest?.flag, item.monitoringAllowed))} />
+                <span className={cn("mt-1 h-10 w-1 shrink-0 rounded-full", flagAccent(latest?.flag, item.monitoringAllowed !== false))} />
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-semibold text-text">{patientName(item)}</p>
-                    {!item.monitoringAllowed ? (
+                    {item.monitoringAllowed === false ? (
                       <Badge variant="secondary">
                         <ShieldOff className="mr-1 size-3" />
                         Private
@@ -115,7 +115,7 @@ export function ConsultantGlucoseReadingsOverview({ limit = 6, compact = false, 
                     ) : latest?.flag ? (
                       <Badge variant={flagVariant(latest.flag)}>{latest.flag}</Badge>
                     ) : null}
-                    {item.activeAlertCount > 0 ? (
+                    {(item.activeAlertCount ?? 0) > 0 ? (
                       <Badge variant="danger">{item.activeAlertCount} alert{item.activeAlertCount === 1 ? "" : "s"}</Badge>
                     ) : null}
                   </div>
