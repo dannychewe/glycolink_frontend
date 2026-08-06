@@ -30,9 +30,16 @@ function titleCase(value: string | null | undefined) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function num(value: number | null | undefined, digits = 1) {
-  if (value == null || Number.isNaN(value)) return "—";
-  return value.toFixed(digits);
+function num(value: number | string | null | undefined, digits = 1) {
+  if (value == null) return "—";
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return String(value);
+  return numeric.toFixed(digits);
+}
+
+function numericValue(value: number | string | null | undefined) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function flagVariant(flag: string | null | undefined): "success" | "warning" | "danger" | "secondary" {
@@ -256,7 +263,7 @@ export function ConsultantPatientMonitoringPanel({
   const { latestGlucose, trend, glucoseSummary, activeThreshold, recentReadings, alerts } = monitoring;
   const stats = glucoseSummary?.stats;
   const buckets = glucoseSummary?.buckets ?? [];
-  const maxBucket = buckets.reduce((m, b) => Math.max(m, b.average ?? 0), 0) || 1;
+  const maxBucket = buckets.reduce((m, b) => Math.max(m, numericValue(b.average)), 0) || 1;
   const unacked = alerts.filter((a) => !a.acknowledgedAt);
 
   // Privacy preferences can suppress the whole payload: empty readings, no
@@ -348,7 +355,7 @@ export function ConsultantPatientMonitoringPanel({
                         <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-border/50">
                           <div
                             className={cn("h-full rounded-full", bucketBarColor(b.status))}
-                            style={{ width: `${Math.max(4, Math.round(((b.average ?? 0) / maxBucket) * 100))}%` }}
+                            style={{ width: `${Math.max(4, Math.round((numericValue(b.average) / maxBucket) * 100))}%` }}
                           />
                         </div>
                         <span className="w-24 shrink-0 text-right text-xs text-muted">

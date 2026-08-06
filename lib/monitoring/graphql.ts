@@ -265,28 +265,28 @@ export type ConsultantMonitoringPatient = {
 
 export type ConsultantMonitoringReading = {
   id: string;
-  value: number;
+  value: number | string;
   unit: string | null;
   flag: string | null;
   recordedAt: string | null;
 };
 
 export type ConsultantMonitoringTrend = {
-  average7Days: number | null;
-  average30Days: number | null;
-  latestValue: number | null;
+  average7Days: number | string | null;
+  average30Days: number | string | null;
+  latestValue: number | string | null;
 } | null;
 
 export type ConsultantMonitoringSummaryStats = {
-  average: number | null;
-  highest: number | null;
-  lowest: number | null;
-  inRangePercent: number | null;
+  average: number | string | null;
+  highest: number | string | null;
+  lowest: number | string | null;
+  inRangePercent: number | string | null;
 } | null;
 
 export type ConsultantMonitoringBucket = {
   label: string;
-  average: number | null;
+  average: number | string | null;
   status: string | null;
   readingCount: number;
 };
@@ -300,8 +300,8 @@ export type ConsultantMonitoringSummary = {
 
 export type ConsultantMonitoringThreshold = {
   id: string;
-  glucoseLow: number | null;
-  glucoseHigh: number | null;
+  glucoseLow: number | string | null;
+  glucoseHigh: number | string | null;
   active: boolean | null;
 } | null;
 
