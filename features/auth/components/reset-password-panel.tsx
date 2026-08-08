@@ -125,6 +125,15 @@ export function ResetPasswordPanel() {
               className="pr-10"
               {...register("confirmPassword", { required: true })}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-text"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide confirm password" : "Show confirm password"}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
         </div>
 

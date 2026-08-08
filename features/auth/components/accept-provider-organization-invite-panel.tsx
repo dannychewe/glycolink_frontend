@@ -150,7 +150,22 @@ export function AcceptProviderOrganizationInvitePanel() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm password</Label>
-            <Input id="confirmPassword" type={showPassword ? "text" : "password"} {...register("confirmPassword")} />
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                className="pr-10"
+                {...register("confirmPassword")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-text"
+                aria-label={showPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
           </div>
         </div>
         <Button type="submit" fullWidth disabled={isSubmitting || !token}>
