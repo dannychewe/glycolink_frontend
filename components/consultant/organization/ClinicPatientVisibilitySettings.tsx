@@ -4,47 +4,37 @@ import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { Button } from "@/components/ui/button";
 import {
-  CLINIC_PATIENT_CONSULTANT_VISIBILITY_QUERY,
-  UPDATE_CLINIC_PATIENT_CONSULTANT_VISIBILITY_MUTATION,
-} from "@/lib/healthcare/graphql";
+  ORGANIZATION_SETTINGS_QUERY,
+  UPDATE_ORGANIZATION_SETTINGS_MUTATION,
+} from "@/lib/consultant/organization-graphql";
+import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
 const visibilityOptions = [
   {
-    value: "clinic_only",
+    value: "organization_only",
     label: "Clinic consultants only",
     description: "Invited patients can only see consultants attached to this clinic.",
   },
   {
-    value: "all_consultants",
+    value: "all_providers",
     label: "All consultants",
     description: "Invited patients can see every public consultant on the platform.",
-  },
-  {
-    value: "assigned_consultant_only",
-    label: "Assigned consultant only",
-    description: "Invited patients can only see the consultant assigned to them.",
   },
 ] as const;
 
 type VisibilityData = {
-  organization: {
+  organizationSettings: {
     id: string;
-    name: string;
-    patientConsultantVisibility: string;
+    patientProviderVisibility: string;
   } | null;
 };
 
 type UpdateVisibilityData = {
-  updateOrganization: {
-    success: boolean;
-    message: string;
-    errors: Array<{ code: string; message: string }>;
-    data: {
-      organization: {
-        id: string;
-        patientConsultantVisibility: string;
-      };
-    } | null;
+  updateOrganizationSettings: {
+    settings: {
+      id: string;
+      patientProviderVisibility: string;
+    };
   };
 };
 
@@ -52,45 +42,42 @@ export function ClinicPatientVisibilitySettings({
   organizationId,
 }: Readonly<{ organizationId: string }>) {
   const { data, loading, error, refetch } = useQuery<VisibilityData>(
-    CLINIC_PATIENT_CONSULTANT_VISIBILITY_QUERY,
+    ORGANIZATION_SETTINGS_QUERY,
     {
-      variables: { id: organizationId },
+      variables: { organizationId },
       fetchPolicy: "network-only",
     },
   );
   const [updateVisibility, { loading: saving }] = useMutation<UpdateVisibilityData>(
-    UPDATE_CLINIC_PATIENT_CONSULTANT_VISIBILITY_MUTATION,
+    UPDATE_ORGANIZATION_SETTINGS_MUTATION,
   );
-  const [visibility, setVisibility] = useState("clinic_only");
+  const [visibility, setVisibility] = useState("organization_only");
   const [message, setMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (data?.organization?.patientConsultantVisibility) {
-      setVisibility(data.organization.patientConsultantVisibility);
+    if (data?.organizationSettings?.patientProviderVisibility) {
+      setVisibility(data.organizationSettings.patientProviderVisibility);
     }
-  }, [data?.organization?.patientConsultantVisibility]);
+  }, [data?.organizationSettings?.patientProviderVisibility]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setMessage(null);
     setSubmitError(null);
 
-    const result = await updateVisibility({
-      variables: {
-        id: organizationId,
-        patientConsultantVisibility: visibility,
-      },
-    });
-    const payload = result.data?.updateOrganization;
-
-    if (!payload?.success) {
-      setSubmitError(payload?.errors?.[0]?.message ?? "Unable to save patient visibility.");
-      return;
+    try {
+      await updateVisibility({
+        variables: {
+          organizationId,
+          data: { patientProviderVisibility: visibility },
+        },
+      });
+      await refetch();
+      setMessage("Patient visibility saved.");
+    } catch (err) {
+      setSubmitError(getGraphQLErrorMessage(err, "Unable to save patient visibility."));
     }
-
-    await refetch();
-    setMessage("Patient visibility saved.");
   }
 
   return (
@@ -117,7 +104,7 @@ export function ClinicPatientVisibilitySettings({
             >
               <input
                 type="radio"
-                name="patientConsultantVisibility"
+                name="patientProviderVisibility"
                 value={option.value}
                 checked={visibility === option.value}
                 onChange={(event) => setVisibility(event.target.value)}

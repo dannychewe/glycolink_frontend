@@ -136,6 +136,31 @@ export const UPDATE_ORGANIZATION_MUTATION = gql`
   }
 `;
 
+export const ORGANIZATION_SETTINGS_QUERY = gql`
+  query ConsultantOrganizationSettings($organizationId: UUID!) {
+    organizationSettings(organizationId: $organizationId) {
+      id
+      patientProviderVisibility
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_ORGANIZATION_SETTINGS_MUTATION = gql`
+  mutation ConsultantUpdateOrganizationSettings(
+    $organizationId: UUID!
+    $data: OrganizationSettingsInput!
+  ) {
+    updateOrganizationSettings(organizationId: $organizationId, data: $data) {
+      settings {
+        id
+        patientProviderVisibility
+        updatedAt
+      }
+    }
+  }
+`;
+
 export const DEACTIVATE_ORGANIZATION_MUTATION = gql`
   mutation ConsultantDeactivateOrganization($organizationId: UUID!) {
     deactivateOrganization(organizationId: $organizationId) {

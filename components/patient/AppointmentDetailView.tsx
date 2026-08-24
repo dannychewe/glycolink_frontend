@@ -166,6 +166,9 @@ function mapAppointmentError(error: unknown) {
     return "You do not have access to this appointment.";
   }
   if (code === "PROVIDER_NOT_AVAILABLE") return "Provider is unavailable for this action.";
+  if (code === "PROVIDER_VISIBILITY_RESTRICTED") {
+    return "This provider is not available under your clinic's consultant access settings.";
+  }
   if (code === "SLOT_UNAVAILABLE") return "The selected slot is no longer available.";
   if (code === "INVALID_SLOT") return "Invalid slot selected.";
   if (code === "INVALID_STATUS_TRANSITION") return "This status transition is not allowed.";
@@ -209,6 +212,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
   const {
     data: slotsData,
     loading: slotsLoading,
+    error: slotsError,
     refetch: refetchSlots,
   } = useQuery<AvailableSlotsData>(AVAILABLE_SLOTS_QUERY, {
     variables:
@@ -626,7 +630,13 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
 
             {slotsLoading ? <p className="text-sm text-muted">Loading available slots...</p> : null}
 
-            {selectedRescheduleDate && !slotsLoading ? (
+            {slotsError ? (
+              <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+                {mapAppointmentError(slotsError)}
+              </p>
+            ) : null}
+
+            {selectedRescheduleDate && !slotsLoading && !slotsError ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 {rescheduleSlots.length === 0 ? (
                   <p className="text-sm text-muted">No slots available for this date.</p>

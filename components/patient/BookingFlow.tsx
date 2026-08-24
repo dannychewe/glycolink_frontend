@@ -68,11 +68,26 @@ function mapBookingError(error: unknown) {
   if (code === "PROVIDER_NOT_AVAILABLE") {
     return "This provider is not currently eligible for booking.";
   }
+  if (code === "PROVIDER_VISIBILITY_RESTRICTED") {
+    return "This provider is not available under your clinic's consultant access settings.";
+  }
   if (code === "INVALID_SLOT") return "This slot is invalid. Please choose another slot.";
   if (code === "SLOT_UNAVAILABLE") return "This slot is no longer available. Please pick another one.";
   if (code === "INVALID_CONSULTATION_TYPE") return "Invalid consultation type selected.";
   if (code === "TENANT_ACCESS_DENIED") return "You do not have access in this tenant.";
   return getGraphQLErrorMessage(error, "Unable to create appointment right now. Please try again.");
+}
+
+function mapSlotError(error: unknown) {
+  const code = getGraphQLErrorCode(error);
+  if (code === "PROVIDER_VISIBILITY_RESTRICTED") {
+    return "This provider is not available under your clinic's consultant access settings.";
+  }
+  if (code === "PROVIDER_NOT_AVAILABLE") {
+    return "This provider is not currently eligible for booking.";
+  }
+  if (code === "UNAUTHENTICATED") return "Please sign in to view available slots.";
+  return getGraphQLErrorMessage(error, "Unable to load available slots right now.");
 }
 
 export function BookingFlow({ provider }: BookingFlowProps) {
@@ -81,7 +96,7 @@ export function BookingFlow({ provider }: BookingFlowProps) {
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | undefined>();
   const [bookingAlert, setBookingAlert] = useState<string | null>(null);
-  const { data: slotsData, loading: slotsLoading } = useQuery<AvailableSlotsData>(AVAILABLE_SLOTS_QUERY, {
+  const { data: slotsData, loading: slotsLoading, error: slotsError } = useQuery<AvailableSlotsData>(AVAILABLE_SLOTS_QUERY, {
     variables: selectedDate ? { providerId: provider.id, date: selectedDate } : undefined,
     fetchPolicy: "network-only",
     skip: !selectedDate,
@@ -180,6 +195,10 @@ export function BookingFlow({ provider }: BookingFlowProps) {
           <CardContent>
             {slotsLoading ? (
               <p className="text-sm text-muted">Loading available slots...</p>
+            ) : slotsError ? (
+              <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+                {mapSlotError(slotsError)}
+              </p>
             ) : (
               <TimeSlotPicker
                 slots={currentSlots}

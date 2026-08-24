@@ -1,16 +1,13 @@
-import { Suspense } from "react";
-import { AuthCard } from "@/features/auth/components/auth-card";
-import { AcceptClinicPatientInvitePanel } from "@/features/auth/components/accept-clinic-patient-invite-panel";
+import { redirect } from "next/navigation";
 
-export default function AcceptClinicPatientInvitePage() {
-  return (
-    <AuthCard
-      title="Accept clinic invitation"
-      description="Confirm the clinic invitation to link your patient account."
-    >
-      <Suspense>
-        <AcceptClinicPatientInvitePanel />
-      </Suspense>
-    </AuthCard>
-  );
+type AcceptClinicPatientInvitePageProps = Readonly<{
+  searchParams: Promise<{ token?: string }>;
+}>;
+
+export default async function AcceptClinicPatientInvitePage({
+  searchParams,
+}: AcceptClinicPatientInvitePageProps) {
+  const { token } = await searchParams;
+  const suffix = token ? `?token=${encodeURIComponent(token)}` : "";
+  redirect(`/accept-patient-invite${suffix}`);
 }

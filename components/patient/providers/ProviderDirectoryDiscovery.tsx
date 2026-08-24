@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
 import Image from "next/image";
-import { BadgeCheck, Globe2, MapPin } from "lucide-react";
+import { BadgeCheck, Globe2, MapPin, Star } from "lucide-react";
 import { getGraphQLErrorCode } from "@/features/auth/auth-context";
-import { CONSULTANTS_QUERY } from "@/lib/healthcare/graphql";
+import { PROVIDERS_QUERY } from "@/lib/providers/directory-graphql";
 import { getProviderFallbackImage } from "@/lib/providers/provider-images";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,22 +16,31 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils/cn";
 
 type ProviderDirectoryData = {
-  consultants: ProviderDirectoryItem[];
+  providers: {
+    total: number;
+    page: number;
+    limit: number;
+    results: ProviderDirectoryItem[];
+    items: ProviderDirectoryItem[];
+  };
 };
 
 type ProviderDirectoryItem = {
   id: string;
   displayName: string;
-  firstName: string;
-  lastName: string;
-  specialty: string;
-  biography: string | null;
+  bio: string | null;
   languages: string[];
   status: string;
-  acceptingPatients: boolean;
-  clinic: {
+  eligible: boolean;
+  consultationFeeInitial: string | null;
+  specialties: string[];
+  subSpecialties: string[];
+  averageRating: number | null;
+  reviewCount: number;
+  organization: {
     id: string;
     name: string;
+    type: string;
   } | null;
 };
 
@@ -43,35 +52,31 @@ export function ProviderDirectoryDiscovery() {
     limit: 20,
   });
 
-  const { data, loading, error, refetch } = useQuery<ProviderDirectoryData>(CONSULTANTS_QUERY, {
+  const { data, loading, error, refetch } = useQuery<ProviderDirectoryData>(PROVIDERS_QUERY, {
     variables: {
-      specialty: filters.specialty || undefined,
+      search: filters.search || undefined,
+      page: filters.page,
+      limit: filters.limit,
     },
     fetchPolicy: "network-only",
   });
 
   const code = getGraphQLErrorCode(error);
-  const allProviders = useMemo(() => data?.consultants ?? [], [data?.consultants]);
+  const allProviders = useMemo(
+    () => data?.providers?.results ?? data?.providers?.items ?? [],
+    [data?.providers?.items, data?.providers?.results],
+  );
   const providers = useMemo(() => {
-    const search = filters.search.trim().toLowerCase();
-    if (!search) return allProviders;
+    const specialty = filters.specialty.trim().toLowerCase();
+    if (!specialty) return allProviders;
     return allProviders.filter((provider) => {
-      return [
-        provider.displayName,
-        provider.specialty,
-        provider.biography ?? "",
-        provider.clinic?.name ?? "",
-        provider.languages.join(" "),
-      ]
+      return [...provider.specialties, ...provider.subSpecialties]
         .join(" ")
         .toLowerCase()
-        .includes(search);
+        .includes(specialty);
     });
-  }, [allProviders, filters.search]);
-  const pagedProviders = providers.slice(
-    (filters.page - 1) * filters.limit,
-    filters.page * filters.limit,
-  );
+  }, [allProviders, filters.specialty]);
+  const total = data?.providers?.total ?? providers.length;
 
   return (
     <div className="space-y-6">
@@ -149,7 +154,7 @@ export function ProviderDirectoryDiscovery() {
         <p>
           {loading
             ? "Loading consultants..."
-            : `Showing ${pagedProviders.length} of ${providers.length} consultant${providers.length === 1 ? "" : "s"}`}
+            : `Showing ${providers.length} of ${total} consultant${total === 1 ? "" : "s"}`}
         </p>
         <div className="flex items-center gap-2">
           <Button
@@ -168,7 +173,7 @@ export function ProviderDirectoryDiscovery() {
             type="button"
             variant="secondary"
             size="sm"
-            disabled={loading || filters.page * filters.limit >= providers.length}
+            disabled={loading || filters.page * filters.limit >= total}
             onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
             Next
@@ -177,81 +182,95 @@ export function ProviderDirectoryDiscovery() {
       </div>
 
       <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
-        {pagedProviders.map((provider) => (
-          <Card
-            key={provider.id}
-            className={cn(
-              "group flex h-full flex-col overflow-hidden border-border/80 transition-all duration-200",
-              provider.acceptingPatients && "hover:-translate-y-1",
-            )}
-          >
-            <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-white to-primary/5">
-              <Image
-                src={getProviderFallbackImage(provider.id)}
-                alt={provider.displayName}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1536px) 50vw, 33vw"
-                className={cn(
-                  "object-cover transition-transform duration-300",
-                  provider.acceptingPatients && "group-hover:scale-[1.03]",
-                )}
-              />
-              <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
-                <Badge variant="secondary" className="bg-white/90 text-text backdrop-blur">
-                  {provider.specialty || "Specialist"}
-                </Badge>
-                {provider.acceptingPatients ? (
-                  <Badge variant="success" className="bg-white/90 backdrop-blur">
-                    <BadgeCheck className="mr-1 size-3" />
-                    Available
+        {providers.map((provider) => {
+          const specialty = provider.specialties[0] ?? provider.subSpecialties[0] ?? "Specialist";
+          const fee = provider.consultationFeeInitial ? Number(provider.consultationFeeInitial) : null;
+
+          return (
+            <Card
+              key={provider.id}
+              className={cn(
+                "group flex h-full flex-col overflow-hidden border-border/80 transition-all duration-200",
+                provider.eligible && "hover:-translate-y-1",
+              )}
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-white to-primary/5">
+                <Image
+                  src={getProviderFallbackImage(provider.id)}
+                  alt={provider.displayName}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1536px) 50vw, 33vw"
+                  className={cn(
+                    "object-cover transition-transform duration-300",
+                    provider.eligible && "group-hover:scale-[1.03]",
+                  )}
+                />
+                <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
+                  <Badge variant="secondary" className="bg-white/90 text-text backdrop-blur">
+                    {specialty}
                   </Badge>
+                  {provider.eligible ? (
+                    <Badge variant="success" className="bg-white/90 backdrop-blur">
+                      <BadgeCheck className="mr-1 size-3" />
+                      Available
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
+              <CardContent className="flex flex-1 flex-col gap-4 pt-5">
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-text">{provider.displayName}</p>
+                  <p className="text-sm font-medium text-primary">{specialty}</p>
+                </div>
+
+                {provider.bio ? (
+                  <p className="overflow-hidden text-ellipsis text-sm text-muted [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                    {provider.bio}
+                  </p>
                 ) : null}
-              </div>
-            </div>
-            <CardContent className="flex flex-1 flex-col gap-4 pt-5">
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-text">{provider.displayName}</p>
-                <p className="text-sm font-medium text-primary">{provider.specialty}</p>
-              </div>
 
-              {provider.biography ? (
-                <p className="overflow-hidden text-ellipsis text-sm text-muted [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                  {provider.biography}
-                </p>
-              ) : null}
-
-              <div className="space-y-1.5 text-sm text-muted">
-                {provider.languages.length > 0 ? (
+                <div className="space-y-1.5 text-sm text-muted">
+                  {provider.averageRating ? (
+                    <div className="flex items-center gap-1.5">
+                      <Star className="size-3.5 shrink-0 fill-current" />
+                      {provider.averageRating.toFixed(1)} ({provider.reviewCount})
+                    </div>
+                  ) : null}
+                  {provider.languages.length > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <Globe2 className="size-3.5 shrink-0" />
+                      {provider.languages.join(", ")}
+                    </div>
+                  ) : null}
                   <div className="flex items-center gap-1.5">
-                    <Globe2 className="size-3.5 shrink-0" />
-                    {provider.languages.join(", ")}
+                    <MapPin className="size-3.5 shrink-0" />
+                    {provider.organization?.name ?? "Independent practice"}
                   </div>
-                ) : null}
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="size-3.5 shrink-0" />
-                  {provider.clinic?.name ?? "Independent practice"}
                 </div>
-              </div>
 
-              <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs text-muted">Availability</p>
-                  <p className="text-lg font-semibold text-text">{provider.acceptingPatients ? "Accepting patients" : "Unavailable"}</p>
+                <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs text-muted">Availability</p>
+                    <p className="text-lg font-semibold text-text">
+                      {provider.eligible ? "Accepting patients" : "Unavailable"}
+                    </p>
+                    {fee !== null ? <p className="text-xs text-muted">ZMW {fee.toLocaleString("en-ZM")}</p> : null}
+                  </div>
+                  {provider.eligible ? (
+                    <Button href={`/patient/providers/${provider.id}/book`} fullWidth className="sm:w-auto">
+                      Request
+                    </Button>
+                  ) : (
+                    <Button type="button" fullWidth disabled className="sm:w-auto">
+                      Unavailable
+                    </Button>
+                  )}
                 </div>
-                {provider.acceptingPatients ? (
-                  <Button href={`/patient/providers/${provider.id}/book`} fullWidth className="sm:w-auto">
-                    Request
-                  </Button>
-                ) : (
-                  <Button type="button" fullWidth disabled className="sm:w-auto">
-                    Unavailable
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {!loading && pagedProviders.length === 0 ? (
+              </CardContent>
+            </Card>
+          );
+        })}
+        {!loading && providers.length === 0 ? (
           <Card className="md:col-span-2 2xl:col-span-3">
             <CardContent className="py-10 text-center text-sm text-muted">
               No consultants match your current filters.
