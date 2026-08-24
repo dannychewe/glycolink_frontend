@@ -19,6 +19,7 @@ import {
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
+import { ClinicPatientVisibilitySettings } from "@/components/consultant/organization/ClinicPatientVisibilitySettings";
 import {
   APPROVE_PROVIDER_ORGANIZATION_INVITE_MUTATION,
   CREATE_PROVIDER_ORGANIZATION_MUTATION,
@@ -868,6 +869,8 @@ export function OrganizationSettingsPageView({ organizationId }: { organizationI
           <Button type="submit" disabled={updating}>{updating ? "Saving..." : "Save settings"}</Button>
         </form>
       </div>
+
+      <ClinicPatientVisibilitySettings organizationId={organizationId} />
 
       <div className="rounded-lg border border-danger/20 bg-danger/5 p-5">
         <p className="text-sm font-semibold text-danger">Deactivate organization</p>

@@ -3,13 +3,9 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
 import Image from "next/image";
-import { BadgeCheck, Globe2, MapPin, Star } from "lucide-react";
+import { BadgeCheck, Globe2, MapPin } from "lucide-react";
 import { getGraphQLErrorCode } from "@/features/auth/auth-context";
-import { PROVIDERS_QUERY } from "@/lib/providers/directory-graphql";
-import {
-  CONSULTANT_SPECIALTIES_QUERY,
-  CONSULTANT_SUB_SPECIALTIES_QUERY,
-} from "@/lib/consultant/provider-lifecycle-graphql";
+import { CONSULTANTS_QUERY } from "@/lib/healthcare/graphql";
 import { getProviderFallbackImage } from "@/lib/providers/provider-images";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,94 +16,73 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils/cn";
 
 type ProviderDirectoryData = {
-  providers: {
-    total: number;
-    page: number;
-    limit: number;
-    items: ProviderDirectoryItem[];
-  };
+  consultants: ProviderDirectoryItem[];
 };
 
 type ProviderDirectoryItem = {
   id: string;
   displayName: string;
-  avatarUrl: string | null;
-  profilePictureUrl: string | null;
-  bio: string | null;
-  consultationFeeInitial: string | null;
-  consultationFeeFollowup: string | null;
-  specialties: string[];
-  subSpecialties: string[];
+  firstName: string;
+  lastName: string;
+  specialty: string;
+  biography: string | null;
   languages: string[];
   status: string;
-  verificationStatus: string;
-  eligible: boolean;
-  averageRating: number | null;
-  reviewCount: number;
-  organization: {
+  acceptingPatients: boolean;
+  clinic: {
     id: string;
     name: string;
-    type: string;
   } | null;
 };
-
-type SpecialtyItem = { id: string; name: string };
-type SubSpecialtyItem = { id: string; name: string; specialtyId: string; specialtyName: string };
 
 export function ProviderDirectoryDiscovery() {
   const [filters, setFilters] = useState({
     search: "",
-    specialtyId: "",
-    subSpecialtyName: "",
+    specialty: "",
     page: 1,
     limit: 20,
   });
 
-  const { data, loading, error, refetch } = useQuery<ProviderDirectoryData>(PROVIDERS_QUERY, {
+  const { data, loading, error, refetch } = useQuery<ProviderDirectoryData>(CONSULTANTS_QUERY, {
     variables: {
-      search: filters.search || undefined,
-      specialtyId: filters.specialtyId || undefined,
-      page: filters.page,
-      limit: filters.limit,
+      specialty: filters.specialty || undefined,
     },
     fetchPolicy: "network-only",
   });
 
-  const { data: specialtiesData } = useQuery<{ specialties: SpecialtyItem[] }>(
-    CONSULTANT_SPECIALTIES_QUERY,
-  );
-  const { data: subSpecialtiesData } = useQuery<{ subSpecialties: SubSpecialtyItem[] }>(
-    CONSULTANT_SUB_SPECIALTIES_QUERY,
-    { variables: { specialtyId: null } },
-  );
-
   const code = getGraphQLErrorCode(error);
-  const allProviders = useMemo(() => data?.providers?.items ?? [], [data?.providers?.items]);
+  const allProviders = useMemo(() => data?.consultants ?? [], [data?.consultants]);
   const providers = useMemo(() => {
-    if (!filters.subSpecialtyName) return allProviders;
-    return allProviders.filter((p) => p.subSpecialties.includes(filters.subSpecialtyName));
-  }, [allProviders, filters.subSpecialtyName]);
-  const total = data?.providers?.total ?? 0;
-
-  const specialtyOptions = specialtiesData?.specialties ?? [];
-  const subSpecialtyOptions = useMemo(() => {
-    const all = subSpecialtiesData?.subSpecialties ?? [];
-    if (!filters.specialtyId) return all;
-    const spec = specialtyOptions.find((s) => s.id === filters.specialtyId);
-    if (!spec) return all;
-    return all.filter((ss) => ss.specialtyName === spec.name);
-  }, [subSpecialtiesData, filters.specialtyId, specialtyOptions]);
+    const search = filters.search.trim().toLowerCase();
+    if (!search) return allProviders;
+    return allProviders.filter((provider) => {
+      return [
+        provider.displayName,
+        provider.specialty,
+        provider.biography ?? "",
+        provider.clinic?.name ?? "",
+        provider.languages.join(" "),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search);
+    });
+  }, [allProviders, filters.search]);
+  const pagedProviders = providers.slice(
+    (filters.page - 1) * filters.limit,
+    filters.page * filters.limit,
+  );
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Provider Directory"
         title="Find your care team"
-        description="Discover verified specialists, compare consultation options, and book directly from the provider profile."
+        description="Discover specialists available to your patient account and request a consultation."
         actions={
           <>
-            <Badge variant="secondary">Secure tenant-scoped results</Badge>
-            <Badge variant="secondary">Verified providers only</Badge>
+            <Badge variant="secondary">Clinic policy applied</Badge>
+            <Badge variant="secondary">Public consultants only</Badge>
           </>
         }
       />
@@ -117,7 +92,7 @@ export function ProviderDirectoryDiscovery() {
           <CardTitle>Filter providers</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="search">Search</Label>
               <Input
@@ -131,45 +106,18 @@ export function ProviderDirectoryDiscovery() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="specialty">Specialty</Label>
-              <select
+              <Input
                 id="specialty"
-                value={filters.specialtyId}
+                placeholder="Cardiology, diabetes care..."
+                value={filters.specialty}
                 onChange={(event) =>
                   setFilters((prev) => ({
                     ...prev,
-                    specialtyId: event.target.value,
-                    subSpecialtyName: "",
+                    specialty: event.target.value,
                     page: 1,
                   }))
                 }
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">All specialties</option>
-                {specialtyOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="subSpecialty">Sub-specialty</Label>
-              <select
-                id="subSpecialty"
-                value={filters.subSpecialtyName}
-                disabled={subSpecialtyOptions.length === 0}
-                onChange={(event) =>
-                  setFilters((prev) => ({ ...prev, subSpecialtyName: event.target.value, page: 1 }))
-                }
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-              >
-                <option value="">All sub-specialties</option>
-                {subSpecialtyOptions.map((item) => (
-                  <option key={item.id} value={item.name}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-3 pt-1">
@@ -180,7 +128,7 @@ export function ProviderDirectoryDiscovery() {
               type="button"
               variant="secondary"
               onClick={() =>
-                setFilters({ search: "", specialtyId: "", subSpecialtyName: "", page: 1, limit: 20 })
+                setFilters({ search: "", specialty: "", page: 1, limit: 20 })
               }
             >
               Reset
@@ -200,8 +148,8 @@ export function ProviderDirectoryDiscovery() {
       <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
         <p>
           {loading
-            ? "Loading providers..."
-            : `Showing ${providers.length} of ${total} provider${total === 1 ? "" : "s"}`}
+            ? "Loading consultants..."
+            : `Showing ${pagedProviders.length} of ${providers.length} consultant${providers.length === 1 ? "" : "s"}`}
         </p>
         <div className="flex items-center gap-2">
           <Button
@@ -220,7 +168,7 @@ export function ProviderDirectoryDiscovery() {
             type="button"
             variant="secondary"
             size="sm"
-            disabled={loading || providers.length < filters.limit}
+            disabled={loading || filters.page * filters.limit >= providers.length}
             onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
             Next
@@ -229,46 +177,30 @@ export function ProviderDirectoryDiscovery() {
       </div>
 
       <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
-        {providers.map((provider) => (
+        {pagedProviders.map((provider) => (
           <Card
             key={provider.id}
             className={cn(
               "group flex h-full flex-col overflow-hidden border-border/80 transition-all duration-200",
-              provider.eligible && "hover:-translate-y-1",
+              provider.acceptingPatients && "hover:-translate-y-1",
             )}
           >
             <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-white to-primary/5">
-              {(provider.profilePictureUrl ?? provider.avatarUrl) ? (
-                <img
-                  src={provider.profilePictureUrl ?? provider.avatarUrl!}
-                  alt={provider.displayName}
-                  className={cn(
-                    "size-full object-cover transition-transform duration-300",
-                    provider.eligible && "group-hover:scale-[1.03]",
-                  )}
-                />
-              ) : (
-                <Image
-                  src={getProviderFallbackImage(provider.id)}
-                  alt={provider.displayName}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1536px) 50vw, 33vw"
-                  className={cn(
-                    "object-cover transition-transform duration-300",
-                    provider.eligible && "group-hover:scale-[1.03]",
-                  )}
-                />
-              )}
+              <Image
+                src={getProviderFallbackImage(provider.id)}
+                alt={provider.displayName}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1536px) 50vw, 33vw"
+                className={cn(
+                  "object-cover transition-transform duration-300",
+                  provider.acceptingPatients && "group-hover:scale-[1.03]",
+                )}
+              />
               <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
                 <Badge variant="secondary" className="bg-white/90 text-text backdrop-blur">
-                  {provider.specialties[0] ?? "Specialist"}
+                  {provider.specialty || "Specialist"}
                 </Badge>
-                {provider.reviewCount > 0 && provider.averageRating != null ? (
-                  <div className="flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-warning backdrop-blur">
-                    <Star className="size-3.5 fill-current" />
-                    {provider.averageRating.toFixed(1)} ({provider.reviewCount})
-                  </div>
-                ) : provider.eligible ? (
+                {provider.acceptingPatients ? (
                   <Badge variant="success" className="bg-white/90 backdrop-blur">
                     <BadgeCheck className="mr-1 size-3" />
                     Available
@@ -279,16 +211,12 @@ export function ProviderDirectoryDiscovery() {
             <CardContent className="flex flex-1 flex-col gap-4 pt-5">
               <div className="space-y-1">
                 <p className="text-lg font-semibold text-text">{provider.displayName}</p>
-                {provider.subSpecialties.length > 0 ? (
-                  <p className="text-sm font-medium text-primary">
-                    {provider.subSpecialties.join(" · ")}
-                  </p>
-                ) : null}
+                <p className="text-sm font-medium text-primary">{provider.specialty}</p>
               </div>
 
-              {provider.bio ? (
+              {provider.biography ? (
                 <p className="overflow-hidden text-ellipsis text-sm text-muted [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                  {provider.bio}
+                  {provider.biography}
                 </p>
               ) : null}
 
@@ -301,28 +229,32 @@ export function ProviderDirectoryDiscovery() {
                 ) : null}
                 <div className="flex items-center gap-1.5">
                   <MapPin className="size-3.5 shrink-0" />
-                  {provider.organization?.name ?? "Independent practice"}
+                  {provider.clinic?.name ?? "Independent practice"}
                 </div>
               </div>
 
               <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs text-muted">Consultation fee</p>
-                  <p className="text-lg font-semibold text-text">
-                    {provider.consultationFeeInitial != null ? `ZMW ${provider.consultationFeeInitial}` : "On request"}
-                  </p>
+                  <p className="text-xs text-muted">Availability</p>
+                  <p className="text-lg font-semibold text-text">{provider.acceptingPatients ? "Accepting patients" : "Unavailable"}</p>
                 </div>
-                <Button href={`/patient/providers/${provider.id}/book`} fullWidth className="sm:w-auto">
-                  View & Book
-                </Button>
+                {provider.acceptingPatients ? (
+                  <Button href={`/patient/providers/${provider.id}/book`} fullWidth className="sm:w-auto">
+                    Request
+                  </Button>
+                ) : (
+                  <Button type="button" fullWidth disabled className="sm:w-auto">
+                    Unavailable
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
-        {!loading && providers.length === 0 ? (
+        {!loading && pagedProviders.length === 0 ? (
           <Card className="md:col-span-2 2xl:col-span-3">
             <CardContent className="py-10 text-center text-sm text-muted">
-              No providers match your current filters.
+              No consultants match your current filters.
             </CardContent>
           </Card>
         ) : null}

@@ -344,19 +344,22 @@ export const BOOTSTRAP_CONSULTANT_QUERY = gql`
 export const MY_PATIENT_PROFILE_QUERY = gql`
   query MyPatientProfile {
     myPatientProfile {
-      baselineBpDiastolic
-      baselineBpSystolic
-      baselineWeight
-      dateOfBirth
-      diabetesType
-      diagnosisDate
-      email
-      fullName
       id
-      notes
-      onboardingStatus
-      phone
-      profileComplete
+      source
+      status
+      primaryClinic {
+        id
+        name
+      }
+      invitedByClinic {
+        id
+        name
+      }
+      assignedConsultant {
+        id
+        displayName
+        specialty
+      }
     }
   }
 `;

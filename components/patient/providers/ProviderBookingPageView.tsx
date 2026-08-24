@@ -1,70 +1,84 @@
 "use client";
 
-import { useQuery } from "@apollo/client";
-import { BookingFlow } from "@/components/patient/BookingFlow";
+import { useMutation, useQuery } from "@apollo/client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth, getGraphQLErrorCode, getUserAccountType } from "@/features/auth/auth-context";
-import { PROFILE_COMPLETION_STATUS_QUERY } from "@/lib/patient/clinical-profile-graphql";
-import { PROVIDER_QUERY } from "@/lib/providers/directory-graphql";
+import { CONSULTANT_QUERY, REQUEST_CONSULTATION_MUTATION } from "@/lib/healthcare/graphql";
 
 type ProviderDetailData = {
-  provider: {
+  consultant: {
     id: string;
     displayName: string;
-    bio: string | null;
-    consultationFeeInitial: string | null;
+    biography: string | null;
+    specialty: string;
+    languages: string[];
+    acceptingPatients: boolean;
     status: string;
-    verificationStatus: string;
-    eligible: boolean;
-    specialties: string[];
+    clinic: { id: string; name: string } | null;
   } | null;
+};
+
+type RequestConsultationData = {
+  requestConsultation: {
+    success: boolean;
+    message: string;
+    errors: Array<{ code: string; message: string }>;
+    data: {
+      consultationRequest: {
+        id: string;
+        status: string;
+      } | null;
+    } | null;
+  };
 };
 
 type ProviderBookingPageViewProps = Readonly<{
   providerId: string;
 }>;
 
-type CompletionStatus = {
-  isComplete: boolean;
-  pcqComplete: boolean;
-  consultationReady: boolean;
-};
-
 export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewProps) {
-  const { isAuthenticated, user, patientProfile } = useAuth();
-  const { data, loading, error } = useQuery<ProviderDetailData>(PROVIDER_QUERY, {
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
+  const [reason, setReason] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { data, loading, error } = useQuery<ProviderDetailData>(CONSULTANT_QUERY, {
     variables: { id: providerId },
     fetchPolicy: "network-only",
   });
+  const [requestConsultation, { loading: requesting }] = useMutation<RequestConsultationData>(
+    REQUEST_CONSULTATION_MUTATION,
+  );
 
-  const provider = data?.provider ?? null;
+  const provider = data?.consultant ?? null;
   const code = getGraphQLErrorCode(error);
   const accountType = getUserAccountType(user);
   const isVerifiedUser = Boolean(user?.isVerified);
-  const shouldCheckCompletion = isAuthenticated && accountType === "PATIENT" && isVerifiedUser;
-  const {
-    data: completionData,
-    loading: completionLoading,
-    error: completionError,
-  } = useQuery<{ profileCompletionStatus: CompletionStatus | null }>(
-    PROFILE_COMPLETION_STATUS_QUERY,
-    {
-      fetchPolicy: "network-only",
-      skip: !shouldCheckCompletion,
-    },
-  );
-  const completion = completionData?.profileCompletionStatus ?? null;
-  const completionCode = getGraphQLErrorCode(completionError);
-  const needsPatientProfile =
-    shouldCheckCompletion &&
-    (completionCode === "PATIENT_PROFILE_NOT_FOUND" ||
-      completion?.isComplete === false ||
-      (!completionLoading && !completion && patientProfile?.profileComplete === false));
-  const needsBaselinePcq =
-    shouldCheckCompletion &&
-    completion?.isComplete === true &&
-    !completion.pcqComplete &&
-    !completion.consultationReady;
+
+  async function handleRequestConsultation() {
+    setSubmitError(null);
+    setSuccessMessage(null);
+
+    const result = await requestConsultation({
+      variables: {
+        consultantId: providerId,
+        reason: reason.trim() || undefined,
+      },
+    });
+    const payload = result.data?.requestConsultation;
+
+    if (!payload?.success) {
+      setSubmitError(payload?.errors?.[0]?.message ?? "Unable to request this consultation.");
+      return;
+    }
+
+    setSuccessMessage("Consultation request submitted.");
+    window.setTimeout(() => router.push("/patient/consultants"), 900);
+  }
 
   if (!isAuthenticated) {
     return (
@@ -96,44 +110,6 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
     );
   }
 
-  if (completionLoading) {
-    return (
-      <div className="rounded-xl border border-border bg-surface px-4 py-4 text-sm text-muted">
-        Checking profile readiness...
-      </div>
-    );
-  }
-
-  if (needsPatientProfile) {
-    return (
-      <div className="space-y-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
-        <p>Complete your patient profile before booking a consultation.</p>
-        <Button href="/patient/onboarding" variant="secondary">
-          Complete profile
-        </Button>
-      </div>
-    );
-  }
-
-  if (needsBaselinePcq) {
-    return (
-      <div className="space-y-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
-        <p>Complete your baseline questionnaire before booking a consultation.</p>
-        <Button href="/patient/pcq/baseline" variant="secondary">
-          Complete questionnaire
-        </Button>
-      </div>
-    );
-  }
-
-  if (completionError && !needsPatientProfile) {
-    return (
-      <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
-        Unable to verify your profile readiness. Please refresh and try again.
-      </div>
-    );
-  }
-
   if (loading) {
     return <div className="rounded-xl border border-border bg-surface px-4 py-4 text-sm text-muted">Loading provider...</div>;
   }
@@ -141,32 +117,76 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
   if (error || !provider) {
     return (
       <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-4 text-sm text-danger">
-        {code === "PROVIDER_NOT_FOUND"
-          ? "Provider not found."
-          : code === "PROVIDER_ACCESS_DENIED" || code === "TENANT_ACCESS_DENIED"
-            ? "Access denied for this provider."
-            : "Unable to load provider details."}
+        {code === "not_found"
+          ? "Consultant not found."
+          : code === "forbidden"
+            ? "Access denied for this consultant."
+            : "Unable to load consultant details."}
       </div>
     );
   }
 
-  if (!provider.eligible) {
+  if (!provider.acceptingPatients) {
     return (
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
-        This provider is currently not eligible for directory booking.
+        This consultant is currently not accepting consultation requests.
       </div>
     );
   }
 
-  const mappedProvider = {
-    id: provider.id,
-    name: provider.displayName,
-    specialty: provider.specialties[0] ?? "General",
-    consultationFee: Number(provider.consultationFeeInitial ?? 0),
-    isAvailable: provider.eligible,
-  } as const;
-
   return (
-    <BookingFlow provider={mappedProvider} />
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+      <Card>
+        <CardHeader>
+          <CardTitle>{provider.displayName}</CardTitle>
+          <p className="text-sm font-medium text-primary">{provider.specialty}</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {provider.biography ? <p className="text-sm leading-6 text-muted">{provider.biography}</p> : null}
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-muted">Clinic</p>
+              <p className="font-medium text-text">{provider.clinic?.name ?? "Independent practice"}</p>
+            </div>
+            <div>
+              <p className="text-muted">Languages</p>
+              <p className="font-medium text-text">{provider.languages.length ? provider.languages.join(", ") : "Not specified"}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Request consultation</CardTitle>
+          <p className="text-sm text-muted">Share a short reason so the consultant can review the request.</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Briefly describe what you need help with..."
+          />
+          {submitError ? (
+            <div className="rounded-xl border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+              {submitError}
+            </div>
+          ) : null}
+          {successMessage ? (
+            <div className="rounded-xl border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
+              {successMessage}
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            fullWidth
+            disabled={requesting}
+            onClick={() => void handleRequestConsultation()}
+          >
+            {requesting ? "Submitting..." : "Submit request"}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -57,8 +57,13 @@ export type AuthUser = {
 
 type PatientProfile = {
   id: string;
-  onboardingStatus: string | null;
-  profileComplete: boolean | null;
+  source: string | null;
+  status: string | null;
+  onboardingStatus?: string | null;
+  profileComplete?: boolean | null;
+  primaryClinic?: { id: string; name: string } | null;
+  invitedByClinic?: { id: string; name: string } | null;
+  assignedConsultant?: { id: string; displayName: string; specialty: string } | null;
 };
 
 type ProviderProfile = {
@@ -123,18 +128,20 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function isPatientRole(role?: string | null) {
-  return role === "CLIENT" || role === "PATIENT" || role === "STANDARD_USER";
+  return role === "CLIENT" || role === "PATIENT" || role === "patient" || role === "STANDARD_USER";
 }
 
 function normalizeAccountType(value?: string | null): AuthAccountType {
   if (!value) return "UNKNOWN";
-  if (value === "CLIENT") return "PATIENT";
+  if (value === "CLIENT" || value === "patient") return "PATIENT";
+  if (value === "consultant") return "CONSULTANT";
+  if (value === "platform_admin" || value === "super_admin") return "ADMIN";
   return value;
 }
 
 function roleToAccountType(role?: string | null): AuthAccountType {
-  if (role === "ADMIN" || role === "platform_admin") return "ADMIN";
-  if (role === "CONSULTANT") return "CONSULTANT";
+  if (role === "ADMIN" || role === "platform_admin" || role === "super_admin") return "ADMIN";
+  if (role === "CONSULTANT" || role === "consultant") return "CONSULTANT";
   if (isPatientRole(role)) return "PATIENT";
   return "UNKNOWN";
 }
