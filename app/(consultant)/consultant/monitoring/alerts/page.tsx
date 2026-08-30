@@ -1,4 +1,5 @@
 import { ProgrammeAlertWorkQueue } from "@/components/consultant/programmes/ProgrammeAlertWorkQueue";
+import { ProgrammeAccessSummary, ProgrammePermissionGate } from "@/components/consultant/programmes/ProgrammePermissionGate";
 import { ProgrammePermissionNotice } from "@/components/consultant/programmes/ProgrammePermissionNotice";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
@@ -15,8 +16,11 @@ export default function ConsultantMonitoringAlertsPage() {
           { label: "Work queue" },
         ]}
       />
+      <ProgrammeAccessSummary />
       <ProgrammePermissionNotice scope="clinical" />
-      <ProgrammeAlertWorkQueue />
+      <ProgrammePermissionGate permissions={["alerts.manage"]}>
+        <ProgrammeAlertWorkQueue />
+      </ProgrammePermissionGate>
     </Container>
   );
 }

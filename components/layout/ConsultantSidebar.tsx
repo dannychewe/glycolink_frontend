@@ -9,6 +9,8 @@ import {
   isConsultantRouteActive,
   type ConsultantNavigationItem,
 } from "@/lib/navigation/consultant-navigation";
+import { useAuth } from "@/features/auth/auth-context";
+import { canAccessConsultantRoute } from "@/lib/programmes/permissions";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 
 type ConsultantSidebarProps = Readonly<{
@@ -164,6 +166,9 @@ export function ConsultantSidebar({
   onNavigate,
 }: ConsultantSidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const mainNavigation = consultantMainNavigation.filter((item) => canAccessConsultantRoute(user, item.href));
+  const secondaryNavigation = consultantSecondaryNavigation.filter((item) => canAccessConsultantRoute(user, item.href));
 
   return (
     <aside
@@ -187,7 +192,7 @@ export function ConsultantSidebar({
             Clinic Care
           </p>
           <nav className="space-y-1">
-            {consultantMainNavigation.map((item) => {
+            {mainNavigation.map((item) => {
               const isActive = isConsultantRouteActive(pathname ?? "", item.href);
 
               return (
@@ -216,7 +221,7 @@ export function ConsultantSidebar({
               Practice
             </p>
             <nav className="space-y-1">
-              {consultantSecondaryNavigation.map((item) => {
+              {secondaryNavigation.map((item) => {
                 const isActive = isConsultantRouteActive(pathname ?? "", item.href);
 
                 return (

@@ -4,19 +4,22 @@ import { ProgrammePermissionNotice } from "@/components/consultant/programmes/Pr
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default function ConsultantBillingPage() {
+export default function ConsultantBillingInvoicesPage() {
   return (
     <Container className="space-y-6 py-2">
       <PageHeader
-        eyebrow="Diabetes programme"
-        title="Programme billing"
-        description="Track programme invoices, collections, entitlement status, and billing setup gaps."
+        eyebrow="Payment requests"
+        title="Programme invoices"
+        description="Attach a payer and price to an enrolment, then create a payment request for continuity care."
+        breadcrumbs={[
+          { label: "Programme billing", href: "/consultant/billing" },
+          { label: "Invoices" },
+        ]}
       />
-
       <ProgrammeAccessSummary />
       <ProgrammePermissionNotice scope="billing" />
-      <ProgrammePermissionGate permissions={["billing.view"]}>
-        <ProgrammeBillingDashboard workflow="overview" />
+      <ProgrammePermissionGate permissions={["billing.manage"]}>
+        <ProgrammeBillingDashboard workflow="invoices" />
       </ProgrammePermissionGate>
     </Container>
   );

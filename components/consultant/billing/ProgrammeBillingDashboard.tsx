@@ -1,12 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { AlertTriangle, CreditCard, ReceiptText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Panel,
   PanelBody,
@@ -17,21 +16,33 @@ import {
   StatTile,
 } from "@/components/ui/panel";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/features/auth/auth-context";
+import { CONSULTANT_CLIENTS_QUERY } from "@/lib/consultant/clients-graphql";
+import { hasProgrammePermission } from "@/lib/programmes/permissions";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
 import {
   ASSIGN_PROGRAMME_PAYER_MUTATION,
   CANCEL_PROGRAMME_INVOICE_MUTATION,
+  CLINIC_CARE_PROGRAMMES_QUERY,
   CLINIC_PROGRAMME_BILLING_SUMMARY_QUERY,
+  CLINIC_PROGRAMME_ENROLMENTS_QUERY,
   CREATE_PROGRAMME_PAYER_MUTATION,
   CREATE_PROGRAMME_PRICE_MUTATION,
   DEACTIVATE_PROGRAMME_PRICE_MUTATION,
   GENERATE_PROGRAMME_INVOICE_MUTATION,
   ISSUE_PROGRAMME_INVOICE_MUTATION,
   PROGRAMME_PAYMENT_INTENT_QUERY,
+  PROGRAMME_PAYMENT_INTENTS_QUERY,
   PROGRAMME_INVOICES_QUERY,
+  PROGRAMME_PAYERS_QUERY,
   PROGRAMME_PRICES_QUERY,
   VOID_PROGRAMME_INVOICE_MUTATION,
+  type CareProgramme,
   type ClinicProgrammeBillingSummary,
+  type ProgrammeEnrolment,
   type ProgrammeInvoicePage,
+  type ProgrammePayer,
+  type ProgrammePaymentIntent,
 } from "@/lib/programmes/graphql";
 
 type SummaryData = {
@@ -55,17 +66,36 @@ type PricesData = {
   }>;
 };
 
-type PaymentIntentData = {
-  programmePaymentIntent: {
-    id: string;
-    amount: string;
-    currency: string;
-    method: string;
-    status: string;
-    expiresAt?: string | null;
-    confirmedAt?: string | null;
-  };
+type ProgrammesData = {
+  clinicCareProgrammes: CareProgramme[];
 };
+
+type EnrolmentsData = {
+  clinicProgrammeEnrolments: ProgrammeEnrolment[];
+};
+
+type PayersData = {
+  programmePayers: ProgrammePayer[];
+};
+
+type ConsultantClientsData = {
+  consultantClients: Array<{
+    patientId: string;
+    patientName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  }>;
+};
+
+type PaymentIntentData = {
+  programmePaymentIntent: ProgrammePaymentIntent;
+};
+
+type PaymentIntentsData = {
+  programmePaymentIntents: ProgrammePaymentIntent[];
+};
+
+type BillingWorkflow = "overview" | "prices" | "payers" | "invoices" | "payments";
 
 function money(amount: string, currency: string) {
   const value = Number(amount);
@@ -100,12 +130,15 @@ function formatDate(value: string | null | undefined) {
   return date.toLocaleDateString("en-ZM", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function ProgrammeBillingDashboard() {
+export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?: BillingWorkflow }) {
+  const { user } = useAuth();
+  const canManageBilling = hasProgrammePermission(user, "billing.manage");
   const [programmeId, setProgrammeId] = useState("");
   const [enrolmentId, setEnrolmentId] = useState("");
   const [payerId, setPayerId] = useState("");
   const [priceId, setPriceId] = useState("");
   const [organizationId, setOrganizationId] = useState("");
+  const [payerPatientId, setPayerPatientId] = useState("");
   const [priceName, setPriceName] = useState("Diabetes continuity monthly");
   const [amount, setAmount] = useState("250");
   const [currencyInput, setCurrencyInput] = useState("ZMW");
@@ -119,9 +152,34 @@ export function ProgrammeBillingDashboard() {
   const [reason, setReason] = useState("");
   const [paymentId, setPaymentId] = useState("");
   const [adminError, setAdminError] = useState<string | null>(null);
+  const organizationOptions = useMemo(() => {
+    const memberships = user?.clinicAccess?.memberships ?? [];
+    const seen = new Set<string>();
+    return memberships
+      .filter((membership) => membership?.organizationId)
+      .map((membership) => ({
+        value: membership.organizationId as string,
+        label: membership.organizationName ?? "Clinic organization",
+        description: membership.tenantName ?? undefined,
+        badge: titleCase(membership.role),
+      }))
+      .filter((option) => {
+        if (seen.has(option.value)) return false;
+        seen.add(option.value);
+        return true;
+      });
+  }, [user?.clinicAccess?.memberships]);
 
+  const programmesQuery = useQuery<ProgrammesData>(CLINIC_CARE_PROGRAMMES_QUERY, {
+    fetchPolicy: "cache-and-network",
+  });
   const summaryQuery = useQuery<SummaryData>(CLINIC_PROGRAMME_BILLING_SUMMARY_QUERY, {
     variables: { programmeId: programmeId || undefined },
+    fetchPolicy: "cache-and-network",
+  });
+  const enrolmentsQuery = useQuery<EnrolmentsData>(CLINIC_PROGRAMME_ENROLMENTS_QUERY, {
+    variables: { programmeId: programmeId || undefined },
+    skip: !programmeId,
     fetchPolicy: "cache-and-network",
   });
   const invoicesQuery = useQuery<InvoicesData>(PROGRAMME_INVOICES_QUERY, {
@@ -132,10 +190,27 @@ export function ProgrammeBillingDashboard() {
     variables: { programmeId: programmeId || undefined },
     fetchPolicy: "cache-and-network",
   });
+  const payersQuery = useQuery<PayersData>(PROGRAMME_PAYERS_QUERY, {
+    variables: { organizationId: organizationId || undefined, active: true },
+    fetchPolicy: "cache-and-network",
+  });
+  const patientsQuery = useQuery<ConsultantClientsData>(CONSULTANT_CLIENTS_QUERY, {
+    variables: { limit: 50 },
+    fetchPolicy: "cache-and-network",
+  });
   const paymentIntentQuery = useQuery<PaymentIntentData>(PROGRAMME_PAYMENT_INTENT_QUERY, {
     variables: { paymentId },
     skip: !paymentId.trim(),
     fetchPolicy: "network-only",
+  });
+  const paymentIntentsQuery = useQuery<PaymentIntentsData>(PROGRAMME_PAYMENT_INTENTS_QUERY, {
+    variables: {
+      programmeId: programmeId || undefined,
+      enrolmentId: enrolmentId || undefined,
+      payerId: payerId || undefined,
+      limit: 50,
+    },
+    fetchPolicy: "cache-and-network",
   });
   const [createPrice, createPriceState] = useMutation(CREATE_PROGRAMME_PRICE_MUTATION);
   const [deactivatePrice, deactivatePriceState] = useMutation(DEACTIVATE_PROGRAMME_PRICE_MUTATION);
@@ -149,6 +224,55 @@ export function ProgrammeBillingDashboard() {
   const summary = summaryQuery.data?.clinicProgrammeBillingSummary;
   const invoices = invoicesQuery.data?.programmeInvoices.items ?? [];
   const prices = pricesQuery.data?.programmePrices ?? [];
+  const programmes = programmesQuery.data?.clinicCareProgrammes ?? [];
+  const enrolments = enrolmentsQuery.data?.clinicProgrammeEnrolments ?? [];
+  const payers = payersQuery.data?.programmePayers ?? [];
+  const paymentIntents = paymentIntentsQuery.data?.programmePaymentIntents ?? [];
+  const programmeOptions = programmes.map((programme) => ({
+    value: programme.id,
+    label: programme.name,
+    description: programme.code,
+    badge: titleCase(programme.status),
+  }));
+  const enrolmentOptions = enrolments.map((enrolment) => ({
+    value: enrolment.id,
+    label: enrolment.patient.fullName ?? enrolment.patient.email ?? "Programme enrolment",
+    description: `${enrolment.programme.name} · ${enrolment.leadProvider?.displayName ?? "No lead provider"}`,
+    badge: titleCase(enrolment.status),
+  }));
+  const payerOptions = payers.map((payer) => ({
+    value: payer.id,
+    label: payer.displayName,
+    description: [titleCase(payer.payerType), payer.mobileMoneyPhone, payer.billingContactEmail].filter(Boolean).join(" · "),
+    badge: payer.active ? "Active" : "Inactive",
+  }));
+  const priceOptions = prices.map((price) => ({
+    value: price.id,
+    label: price.name,
+    description: `${money(price.amount, price.currency)} · ${titleCase(price.billingModel)} · ${titleCase(price.billingInterval)}`,
+    badge: price.active ? "Active" : "Inactive",
+  }));
+  const patientOptions = (patientsQuery.data?.consultantClients ?? []).map((patient) => ({
+    value: patient.patientId,
+    label: patient.patientName || patient.email || "Patient",
+    description: [patient.email, patient.phone].filter(Boolean).join(" · "),
+  }));
+  const paymentIntentOptions = paymentIntents.map((intent) => {
+    const invoice = invoices.find((candidate) => candidate.id === intent.programmeInvoiceId);
+    return {
+      value: intent.id,
+      label: invoice?.invoiceNumber ?? `Payment ${intent.id.slice(0, 8)}`,
+      description: [
+        invoice?.payer.displayName,
+        money(intent.amount, intent.currency),
+        titleCase(intent.method),
+        intent.confirmedAt ? `Confirmed ${formatDate(intent.confirmedAt)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      badge: titleCase(intent.status),
+    };
+  });
   const firstCurrency = summary?.amountsByCurrency[0];
   const currency = firstCurrency?.currency ?? invoices[0]?.currency ?? "ZMW";
   const outstanding = firstCurrency?.outstandingBalance ?? "0";
@@ -162,6 +286,13 @@ export function ProgrammeBillingDashboard() {
     issueInvoiceState.loading ||
     cancelInvoiceState.loading ||
     voidInvoiceState.loading;
+  const showAdminPanel = workflow !== "overview";
+  const showPriceWorkflow = workflow === "prices";
+  const showPayerWorkflow = workflow === "payers";
+  const showInvoiceWorkflow = workflow === "invoices";
+  const showPaymentWorkflow = workflow === "payments";
+  const showPricesList = workflow === "overview" || workflow === "prices";
+  const showInvoicesList = workflow === "overview" || workflow === "invoices";
 
   function mapError(error: unknown) {
     if (error instanceof Error) return error.message;
@@ -172,6 +303,9 @@ export function ProgrammeBillingDashboard() {
     await summaryQuery.refetch();
     await invoicesQuery.refetch();
     await pricesQuery.refetch();
+    await payersQuery.refetch();
+    await paymentIntentsQuery.refetch();
+    if (programmeId) await enrolmentsQuery.refetch();
   }
 
   async function run(action: () => Promise<unknown>) {
@@ -215,6 +349,7 @@ export function ProgrammeBillingDashboard() {
             organizationId: organizationId.trim(),
             payerType,
             displayName: payerName || undefined,
+            patientId: payerType.toLowerCase() === "patient" ? payerPatientId || undefined : undefined,
             mobileMoneyPhone: payerPhone || undefined,
             currency: currencyInput,
             active: true,
@@ -302,34 +437,76 @@ export function ProgrammeBillingDashboard() {
         />
       </div>
 
+      {workflow === "overview" ? (
+        <Panel>
+          <PanelHeader>
+            <PanelTitle icon={CreditCard}>Billing workflows</PanelTitle>
+            <div className="flex flex-wrap gap-2">
+              <Button href="/consultant/billing/prices" size="sm">Manage prices</Button>
+              <Button href="/consultant/billing/payers" size="sm" variant="secondary">Set up payers</Button>
+              <Button href="/consultant/billing/invoices" size="sm" variant="secondary">Issue invoices</Button>
+              <Button href="/consultant/billing/payments" size="sm" variant="secondary">Refresh payments</Button>
+            </div>
+          </PanelHeader>
+        </Panel>
+      ) : null}
+
+      {showAdminPanel ? (
       <Panel>
         <PanelHeader>
-          <PanelTitle icon={CreditCard}>Billing Administration</PanelTitle>
+          <PanelTitle icon={CreditCard}>
+            {showPriceWorkflow ? "Programme price setup" : showPayerWorkflow ? "Payer setup" : showInvoiceWorkflow ? "Invoice workflow" : "Payment status refresh"}
+          </PanelTitle>
         </PanelHeader>
         <PanelBody className="space-y-5">
           {adminError ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{adminError}</p> : null}
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="billing-programme">Programme ID</Label>
-              <Input id="billing-programme" value={programmeId} onChange={(event) => setProgrammeId(event.target.value)} placeholder="Programme UUID" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="billing-enrolment">Enrolment ID</Label>
-              <Input id="billing-enrolment" value={enrolmentId} onChange={(event) => setEnrolmentId(event.target.value)} placeholder="Enrolment UUID" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="billing-payer">Payer ID</Label>
-              <Input id="billing-payer" value={payerId} onChange={(event) => setPayerId(event.target.value)} placeholder="Payer UUID" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="billing-price-id">Price ID</Label>
-              <Input id="billing-price-id" value={priceId} onChange={(event) => setPriceId(event.target.value)} placeholder="Price UUID" />
-            </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <SearchableSelector
+              id="billing-programme"
+              label="Programme"
+              value={programmeId}
+              options={programmeOptions}
+              placeholder="Search programme"
+              emptyLabel={programmesQuery.loading ? "Loading programmes..." : "No programmes found"}
+              onChange={(nextProgrammeId) => {
+                setProgrammeId(nextProgrammeId);
+                setEnrolmentId("");
+                setPriceId("");
+              }}
+            />
+            <SearchableSelector
+              id="billing-enrolment"
+              label="Enrolment"
+              value={enrolmentId}
+              options={enrolmentOptions}
+              placeholder="Select patient enrolment"
+              emptyLabel={!programmeId ? "Select a programme first" : enrolmentsQuery.loading ? "Loading enrolments..." : "No enrolments found"}
+              onChange={setEnrolmentId}
+            />
+            <SearchableSelector
+              id="billing-payer"
+              label="Payer"
+              value={payerId}
+              options={payerOptions}
+              placeholder="Search payer"
+              emptyLabel={payersQuery.loading ? "Loading payers..." : "No payers found"}
+              onChange={setPayerId}
+            />
+            <SearchableSelector
+              id="billing-price-id"
+              label="Price"
+              value={priceId}
+              options={priceOptions}
+              placeholder="Select programme price"
+              emptyLabel={!programmeId ? "Select a programme first" : pricesQuery.loading ? "Loading prices..." : "No prices found"}
+              onChange={setPriceId}
+            />
           </div>
 
+          {showPriceWorkflow ? (
           <div className="grid gap-5 xl:grid-cols-2">
             <form onSubmit={handleCreatePrice} className="space-y-3 rounded-lg border border-border bg-background p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Programme price</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Monthly programme price</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input value={priceName} onChange={(event) => setPriceName(event.target.value)} placeholder="Price name" />
                 <Input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Amount" />
@@ -338,54 +515,89 @@ export function ProgrammeBillingDashboard() {
                 <Input value={billingInterval} onChange={(event) => setBillingInterval(event.target.value)} placeholder="monthly, once" />
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="submit" size="sm" disabled={saving || !programmeId.trim() || !priceName.trim() || !amount.trim()}>
+                <Button type="submit" size="sm" disabled={!canManageBilling || saving || !programmeId.trim() || !priceName.trim() || !amount.trim()}>
                   Create price
                 </Button>
-                <Button type="button" size="sm" variant="secondary" disabled={saving || !priceId.trim()} onClick={() => void run(() => deactivatePrice({ variables: { priceId: priceId.trim() } }))}>
+                <Button type="button" size="sm" variant="secondary" disabled={!canManageBilling || saving || !priceId.trim()} onClick={() => void run(() => deactivatePrice({ variables: { priceId: priceId.trim() } }))}>
                   Deactivate price
                 </Button>
               </div>
             </form>
+          </div>
+          ) : null}
 
+          {showPayerWorkflow ? (
+          <div className="grid gap-5 xl:grid-cols-2">
             <form onSubmit={handleCreatePayer} className="space-y-3 rounded-lg border border-border bg-background p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Payer setup</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Who pays for this care</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} placeholder="Clinic organization UUID" />
+                <SearchableSelector
+                  id="payer-organization"
+                  label="Clinic organization"
+                  value={organizationId}
+                  options={organizationOptions}
+                  placeholder="Select clinic"
+                  emptyLabel="No clinic organizations found in your session"
+                  disabled={!canManageBilling}
+                  onChange={setOrganizationId}
+                />
+                <SearchableSelector
+                  id="payer-patient"
+                  label="Patient payer"
+                  value={payerPatientId}
+                  options={patientOptions}
+                  placeholder="Search patient"
+                  emptyLabel={patientsQuery.loading ? "Loading patients..." : "No patients found"}
+                  disabled={!canManageBilling || payerType.toLowerCase() !== "patient"}
+                  onChange={setPayerPatientId}
+                />
                 <Input value={payerType} onChange={(event) => setPayerType(event.target.value)} placeholder="patient, sponsor, employer" />
                 <Input value={payerName} onChange={(event) => setPayerName(event.target.value)} placeholder="Display name" />
                 <Input value={payerPhone} onChange={(event) => setPayerPhone(event.target.value)} placeholder="Mobile money phone" />
               </div>
-              <Button type="submit" size="sm" variant="secondary" disabled={saving || !organizationId.trim()}>
+              <Button type="submit" size="sm" variant="secondary" disabled={!canManageBilling || saving || !organizationId.trim() || (payerType.toLowerCase() === "patient" && !payerPatientId)}>
                 Create payer
               </Button>
             </form>
           </div>
+          ) : null}
 
+          {showInvoiceWorkflow ? (
           <div className="grid gap-5 xl:grid-cols-2">
             <form onSubmit={handleAssignPayer} className="space-y-3 rounded-lg border border-border bg-background p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Assign payer to enrolment</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Attach payment setup to patient</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} />
                 <Input type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} />
               </div>
-              <Button type="submit" size="sm" disabled={saving || !enrolmentId.trim() || !payerId.trim() || !priceId.trim()}>
+              <Button type="submit" size="sm" disabled={!canManageBilling || saving || !enrolmentId.trim() || !payerId.trim() || !priceId.trim()}>
                 Assign payer
               </Button>
             </form>
 
             <form onSubmit={handleGenerateInvoice} className="space-y-3 rounded-lg border border-border bg-background p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Invoice issue</p>
-              <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Cancellation or void reason" className="min-h-16" />
-              <Button type="submit" size="sm" disabled={saving || !enrolmentId.trim()}>
-                Generate and issue invoice
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Request payment</p>
+              <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason used if an invoice is later cancelled or voided" className="min-h-16" />
+              <Button type="submit" size="sm" disabled={!canManageBilling || saving || !enrolmentId.trim()}>
+                Create payment request
               </Button>
             </form>
           </div>
+          ) : null}
 
+          {showPaymentWorkflow ? (
           <div className="rounded-lg border border-border bg-background p-3">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Payment intent refresh</p>
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <Input value={paymentId} onChange={(event) => setPaymentId(event.target.value)} placeholder="Payment UUID" />
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Payment status</p>
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <SearchableSelector
+                id="payment-intent"
+                label="Payment intent"
+                value={paymentId}
+                options={paymentIntentOptions}
+                placeholder="Search payment intent"
+                emptyLabel={paymentIntentsQuery.loading ? "Loading payment intents..." : "No payment intents found"}
+                onChange={setPaymentId}
+              />
               <Button type="button" size="sm" variant="secondary" disabled={!paymentId.trim()} onClick={() => void paymentIntentQuery.refetch()}>
                 Refresh status
               </Button>
@@ -396,9 +608,12 @@ export function ProgrammeBillingDashboard() {
               </p>
             ) : null}
           </div>
+          ) : null}
         </PanelBody>
       </Panel>
+      ) : null}
 
+      {showPricesList ? (
       <Panel>
         <PanelHeader>
           <PanelTitle icon={ReceiptText} count={prices.length}>Programme Prices</PanelTitle>
@@ -413,7 +628,7 @@ export function ProgrammeBillingDashboard() {
             {prices.map((price) => (
               <button key={price.id} type="button" onClick={() => setPriceId(price.id)} className="block w-full px-5 py-4 text-left transition-colors hover:bg-background">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-text">{price.name}</p>
+                  <p className="break-words text-sm font-semibold text-text">{price.name}</p>
                   <Badge variant={price.active ? "success" : "secondary"}>{price.active ? "Active" : "Inactive"}</Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">{money(price.amount, price.currency)} · {titleCase(price.billingModel)} · {titleCase(price.billingInterval)}</p>
@@ -422,7 +637,9 @@ export function ProgrammeBillingDashboard() {
           </PanelList>
         )}
       </Panel>
+      ) : null}
 
+      {showInvoicesList ? (
       <Panel>
         <PanelHeader>
           <PanelTitle icon={ReceiptText} count={invoices.length}>Programme Invoices</PanelTitle>
@@ -444,11 +661,11 @@ export function ProgrammeBillingDashboard() {
               <div key={invoice.id} className="px-5 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-text">{invoice.invoiceNumber}</p>
+                    <p className="break-all text-sm font-semibold text-text">{invoice.invoiceNumber}</p>
                     <p className="mt-1 text-xs text-muted">
                       {formatDate(invoice.billingPeriodStart)} to {formatDate(invoice.billingPeriodEnd)}
                     </p>
-                    <p className="mt-1 text-xs text-muted">{invoice.payer.displayName}</p>
+                    <p className="mt-1 break-words text-xs text-muted">{invoice.payer.displayName}</p>
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="text-sm font-semibold text-text">{money(invoice.balance, invoice.currency)}</p>
@@ -458,13 +675,13 @@ export function ProgrammeBillingDashboard() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="secondary" disabled={saving || invoice.status !== "DRAFT"} onClick={() => void run(() => issueInvoice({ variables: { invoiceId: invoice.id } }))}>
+                  <Button type="button" size="sm" variant="secondary" disabled={!canManageBilling || saving || invoice.status !== "DRAFT"} onClick={() => void run(() => issueInvoice({ variables: { invoiceId: invoice.id } }))}>
                     Issue
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" disabled={saving || !reason.trim() || !["DRAFT", "ISSUED"].includes(invoice.status)} onClick={() => void run(() => cancelInvoice({ variables: { invoiceId: invoice.id, reason } }))}>
+                  <Button type="button" size="sm" variant="secondary" disabled={!canManageBilling || saving || !reason.trim() || !["DRAFT", "ISSUED"].includes(invoice.status)} onClick={() => void run(() => cancelInvoice({ variables: { invoiceId: invoice.id, reason } }))}>
                     Cancel
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" disabled={saving || !reason.trim() || invoice.status === "VOID"} onClick={() => void run(() => voidInvoice({ variables: { invoiceId: invoice.id, reason } }))}>
+                  <Button type="button" size="sm" variant="secondary" disabled={!canManageBilling || saving || !reason.trim() || invoice.status === "VOID"} onClick={() => void run(() => voidInvoice({ variables: { invoiceId: invoice.id, reason } }))}>
                     Void
                   </Button>
                 </div>
@@ -473,6 +690,7 @@ export function ProgrammeBillingDashboard() {
           </PanelList>
         )}
       </Panel>
+      ) : null}
     </div>
   );
 }

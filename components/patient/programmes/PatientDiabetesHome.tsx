@@ -216,10 +216,10 @@ function CarePlanPanel({ carePlan }: { carePlan: ProgrammeCarePlan | null }) {
         <PanelEmpty>Your clinic has not activated a programme care plan yet.</PanelEmpty>
       ) : (
         <PanelBody className="space-y-3">
-          <p className="text-sm font-semibold text-text">{carePlan.title}</p>
-          {carePlan.summary ? <p className="text-sm leading-6 text-muted">{carePlan.summary}</p> : null}
+          <p className="break-words text-sm font-semibold text-text">{carePlan.title}</p>
+          {carePlan.summary ? <p className="break-words text-sm leading-6 text-muted">{carePlan.summary}</p> : null}
           {carePlan.patientInstructions ? (
-            <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm leading-6 text-muted">
+            <div className="break-words rounded-lg border border-border bg-background px-4 py-3 text-sm leading-6 text-muted">
               {carePlan.patientInstructions}
             </div>
           ) : null}
@@ -275,7 +275,7 @@ function ProgrammeTasksPanel({
           <Link key={task.id} href={task.href} className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-background">
             <div className="flex min-w-0 items-center gap-3">
               {task.done ? <CheckCircle2 className="size-5 shrink-0 text-success" /> : <Clock className="size-5 shrink-0 text-warning" />}
-              <p className="truncate text-sm font-medium text-text">{task.label}</p>
+              <p className="break-words text-sm font-medium text-text">{task.label}</p>
             </div>
             <Badge variant={task.done ? "success" : "warning"}>{task.done ? "Done" : "Due"}</Badge>
           </Link>

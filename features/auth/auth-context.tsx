@@ -53,6 +53,22 @@ export type AuthUser = {
   isStaff?: boolean | null;
   isSuperuser?: boolean | null;
   isVerified: boolean;
+  clinicRoles?: string[] | null;
+  clinicPermissions?: string[] | null;
+  clinicAccess?: {
+    roles?: string[] | null;
+    permissions?: string[] | null;
+    memberships?: Array<{
+      scope?: string | null;
+      id?: string | null;
+      tenantId?: string | null;
+      tenantName?: string | null;
+      organizationId?: string | null;
+      organizationName?: string | null;
+      role?: string | null;
+      status?: string | null;
+    }> | null;
+  } | null;
 };
 
 type PatientProfile = {

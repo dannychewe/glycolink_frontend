@@ -349,7 +349,7 @@ export function GraphqlProviderDirectory() {
               {/* Footer */}
               <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs text-muted">Consultation fee</p>
+                  <p className="text-xs text-muted">Clinical access fee</p>
                   <p className="text-lg font-semibold text-text">
                     {provider.consultationFeeInitial != null
                       ? `ZMW ${provider.consultationFeeInitial}`
@@ -362,7 +362,7 @@ export function GraphqlProviderDirectory() {
                   fullWidth
                   className="sm:w-auto"
                 >
-                  View Profile
+                  View clinician
                 </Button>
               </div>
             </CardContent>

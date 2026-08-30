@@ -1786,11 +1786,59 @@ export const PROGRAMME_PAYMENT_INTENT_QUERY = gql`
   }
 `;
 
+export const PROGRAMME_PAYMENT_INTENTS_QUERY = gql`
+  query ProgrammePaymentIntents(
+    $programmeId: UUID
+    $enrolmentId: UUID
+    $payerId: UUID
+    $invoiceId: UUID
+    $status: String
+    $limit: Int
+  ) {
+    programmePaymentIntents(
+      programmeId: $programmeId
+      enrolmentId: $enrolmentId
+      payerId: $payerId
+      invoiceId: $invoiceId
+      status: $status
+      limit: $limit
+    ) {
+      id
+      programmeInvoiceId
+      purpose
+      amount
+      currency
+      method
+      status
+      expiresAt
+      confirmedAt
+    }
+  }
+`;
+
 export const PROGRAMME_PRICES_QUERY = gql`
   ${PROGRAMME_PRICE_FIELDS}
   query ProgrammePrices($programmeId: UUID, $active: Boolean) {
     programmePrices(programmeId: $programmeId, active: $active) {
       ...ProgrammePriceFields
+    }
+  }
+`;
+
+export const PROGRAMME_PAYERS_QUERY = gql`
+  query ProgrammePayers($organizationId: UUID, $search: String, $active: Boolean) {
+    programmePayers(organizationId: $organizationId, search: $search, active: $active) {
+      id
+      organizationId
+      payerType
+      displayName
+      patientId
+      payerOrganizationId
+      billingContactName
+      billingContactEmail
+      mobileMoneyPhone
+      currency
+      active
     }
   }
 `;

@@ -57,6 +57,9 @@ export const VERIFY_EMAIL_MUTATION = gql`
         primaryRole
         accountType
         isVerified
+        clinicRoles
+        clinicPermissions
+        clinicAccess
       }
     }
   }
@@ -145,6 +148,9 @@ export const ME_QUERY = gql`
       lastLoginAt
       lastName
       phone
+      clinicRoles
+      clinicPermissions
+      clinicAccess
     }
   }
 `;
@@ -174,6 +180,9 @@ export const BOOTSTRAP_CLIENT_QUERY = gql`
       lastLoginAt
       lastName
       phone
+      clinicRoles
+      clinicPermissions
+      clinicAccess
     }
     postLoginRedirect {
       route

@@ -16,6 +16,8 @@ import {
   PanelTitle,
 } from "@/components/ui/panel";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/features/auth/auth-context";
+import { hasProgrammePermission } from "@/lib/programmes/permissions";
 import {
   ALERT_INTERVENTIONS_QUERY,
   ALERT_OWNERSHIP_HISTORY_QUERY,
@@ -101,6 +103,9 @@ function AlertDetail({
   alert: MonitoringAlert;
   onChanged: () => void;
 }) {
+  const { user } = useAuth();
+  const canManageAlerts = hasProgrammePermission(user, "alerts.manage");
+  const canAssignAlerts = hasProgrammePermission(user, "alerts.assign");
   const [note, setNote] = useState("");
   const [ownerUserId, setOwnerUserId] = useState(alert.currentOwnerUserId ?? "");
   const [actionReason, setActionReason] = useState("");
@@ -182,7 +187,7 @@ function AlertDetail({
       <PanelBody className="space-y-4">
         {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
         <div className="rounded-lg border border-border bg-background px-4 py-3">
-          <p className="text-sm font-semibold text-text">{alert.message ?? titleCase(alert.type)}</p>
+          <p className="break-words text-sm font-semibold text-text">{alert.message ?? titleCase(alert.type)}</p>
           <p className="mt-1 text-xs text-muted">
             {titleCase(alert.category)} · due {formatDateTime(alert.dueAt)} · queued {formatDateTime(alert.queuedAt ?? alert.createdAt)}
           </p>
@@ -197,17 +202,17 @@ function AlertDetail({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => void run(() => claim({ variables: { alertId: alert.id } }))}>
+          <Button type="button" size="sm" variant="secondary" disabled={!canManageAlerts || saving} onClick={() => void run(() => claim({ variables: { alertId: alert.id } }))}>
             Claim
           </Button>
-          <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => void run(() => beginReview({ variables: { alertId: alert.id } }))}>
+          <Button type="button" size="sm" variant="secondary" disabled={!canManageAlerts || saving} onClick={() => void run(() => beginReview({ variables: { alertId: alert.id } }))}>
             Begin review
           </Button>
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            disabled={saving}
+            disabled={!canManageAlerts || saving}
             onClick={() =>
               void run(() =>
                 recordContact({
@@ -269,7 +274,7 @@ function AlertDetail({
               type="button"
               size="sm"
               variant="secondary"
-              disabled={saving || !ownerUserId.trim()}
+              disabled={!canAssignAlerts || saving || !ownerUserId.trim()}
               onClick={() => void run(() => assign({ variables: { alertId: alert.id, ownerUserId: ownerUserId.trim(), reason: actionReason || undefined } }))}
             >
               <UserPlus className="size-4" />
@@ -279,12 +284,12 @@ function AlertDetail({
               type="button"
               size="sm"
               variant="secondary"
-              disabled={saving || !ownerUserId.trim()}
+              disabled={!canAssignAlerts || saving || !ownerUserId.trim()}
               onClick={() => void run(() => reassign({ variables: { alertId: alert.id, ownerUserId: ownerUserId.trim(), reason: actionReason || undefined } }))}
             >
               Reassign
             </Button>
-            <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => void run(() => returnToQueue({ variables: { alertId: alert.id, reason: actionReason || undefined } }))}>
+            <Button type="button" size="sm" variant="secondary" disabled={!canAssignAlerts || saving} onClick={() => void run(() => returnToQueue({ variables: { alertId: alert.id, reason: actionReason || undefined } }))}>
               <RotateCcw className="size-4" />
               Return to queue
             </Button>
@@ -292,7 +297,7 @@ function AlertDetail({
               type="button"
               size="sm"
               variant="secondary"
-              disabled={saving || !actionReason.trim()}
+              disabled={!canAssignAlerts || saving || !actionReason.trim()}
               onClick={() =>
                 void run(() =>
                   escalate({
@@ -321,14 +326,14 @@ function AlertDetail({
             className="min-h-24"
           />
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" size="sm" disabled={saving || !note.trim()}>
+            <Button type="submit" size="sm" disabled={!canManageAlerts || saving || !note.trim()}>
               Save intervention
             </Button>
             <Button
               type="button"
               size="sm"
               variant="secondary"
-              disabled={saving || !note.trim()}
+              disabled={!canManageAlerts || saving || !note.trim()}
               onClick={() =>
                 void run(() =>
                   resolve({
@@ -347,7 +352,7 @@ function AlertDetail({
               type="button"
               size="sm"
               variant="secondary"
-              disabled={saving || !actionReason.trim()}
+              disabled={!canManageAlerts || saving || !actionReason.trim()}
               onClick={() =>
                 void run(() =>
                   dismiss({
@@ -366,7 +371,7 @@ function AlertDetail({
               type="button"
               size="sm"
               variant="secondary"
-              disabled={saving || !actionReason.trim()}
+              disabled={!canManageAlerts || saving || !actionReason.trim()}
               onClick={() => void run(() => reopen({ variables: { alertId: alert.id, reason: actionReason } }))}
             >
               Reopen
@@ -383,12 +388,12 @@ function AlertDetail({
             <div className="space-y-2">
               {(interventionsQuery.data?.alertInterventions ?? []).map((item) => (
                 <div key={item.id} className="rounded-lg border border-border bg-background px-3 py-2">
-                  <p className="text-sm font-medium text-text">{titleCase(item.actionType)}</p>
+              <p className="break-words text-sm font-medium text-text">{titleCase(item.actionType)}</p>
                   <p className="mt-1 text-xs text-muted">
                     {formatDateTime(item.occurredAt)} · {titleCase(item.visibility)}
                   </p>
                   {item.outcome || item.clinicalNote || item.coordinationNote ? (
-                    <p className="mt-1 text-sm text-muted">{item.outcome ?? item.clinicalNote ?? item.coordinationNote}</p>
+                    <p className="mt-1 break-words text-sm text-muted">{item.outcome ?? item.clinicalNote ?? item.coordinationNote}</p>
                   ) : null}
                 </div>
               ))}
@@ -403,11 +408,11 @@ function AlertDetail({
             <div className="space-y-2">
               {(ownershipQuery.data?.alertOwnershipHistory ?? []).map((item) => (
                 <div key={item.id} className="rounded-lg border border-border bg-background px-3 py-2">
-                  <p className="text-sm font-medium text-text">{item.newOwnerUserId ?? "Returned to queue"}</p>
+                  <p className="break-all text-sm font-medium text-text">{item.newOwnerUserId ?? "Returned to queue"}</p>
                   <p className="mt-1 text-xs text-muted">
                     {formatDateTime(item.changedAt)} · {titleCase(item.careTeamRole)}
                   </p>
-                  {item.reason ? <p className="mt-1 text-sm text-muted">{item.reason}</p> : null}
+                  {item.reason ? <p className="mt-1 break-words text-sm text-muted">{item.reason}</p> : null}
                 </div>
               ))}
             </div>
@@ -482,7 +487,7 @@ export function ProgrammeAlertWorkQueue({ alertId }: { alertId?: string }) {
                   <Badge variant={severityVariant(alert.severity)}>{titleCase(alert.severity)}</Badge>
                   <Badge variant={statusVariant(alert.status)}>{titleCase(alert.status)}</Badge>
                 </div>
-                <p className="mt-2 text-sm font-medium text-text">{alert.message ?? titleCase(alert.type)}</p>
+                <p className="mt-2 break-words text-sm font-medium text-text">{alert.message ?? titleCase(alert.type)}</p>
                 <p className="mt-1 text-xs text-muted">
                   {titleCase(alert.category)} · due {formatDateTime(alert.dueAt)}
                 </p>

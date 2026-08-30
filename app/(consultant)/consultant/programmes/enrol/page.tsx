@@ -4,19 +4,22 @@ import { ProgrammePermissionNotice } from "@/components/consultant/programmes/Pr
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default function ConsultantProgrammesPage() {
+export default function ConsultantProgrammeEnrolPage() {
   return (
     <Container className="space-y-6 py-2">
       <PageHeader
-        eyebrow="Clinic administration"
-        title="Care programmes"
-        description="Set up diabetes programmes, manage enrolments, assign care teams, and control programme lifecycle."
+        eyebrow="Patient enrolment"
+        title="Add patient to programme"
+        description="Select the programme, then choose an existing patient or invite a new patient into continuity care."
+        breadcrumbs={[
+          { label: "Care programmes", href: "/consultant/programmes" },
+          { label: "Enrol patient" },
+        ]}
       />
-
       <ProgrammeAccessSummary />
       <ProgrammePermissionNotice scope="admin" />
-      <ProgrammePermissionGate permissions={["programme.manage", "programme.enrol"]}>
-        <ProgrammeAdminDashboard workflow="overview" />
+      <ProgrammePermissionGate permissions={["programme.enrol"]}>
+        <ProgrammeAdminDashboard workflow="enrolment" />
       </ProgrammePermissionGate>
     </Container>
   );

@@ -1,4 +1,5 @@
 import { ProgrammeMonitoringOperationsView } from "@/components/consultant/programmes/ProgrammeMonitoringOperationsView";
+import { ProgrammeAccessSummary, ProgrammePermissionGate } from "@/components/consultant/programmes/ProgrammePermissionGate";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -11,7 +12,10 @@ export default function ConsultantMonitoringPage() {
         description="Track missed monitoring, adherence, and programme work generated from expected readings."
       />
 
-      <ProgrammeMonitoringOperationsView />
+      <ProgrammeAccessSummary />
+      <ProgrammePermissionGate permissions={["monitoring.manage", "alerts.manage"]}>
+        <ProgrammeMonitoringOperationsView />
+      </ProgrammePermissionGate>
     </Container>
   );
 }

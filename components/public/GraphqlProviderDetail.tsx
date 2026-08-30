@@ -240,7 +240,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
     return (
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-5 py-4 text-sm text-warning">
         {code === "PROVIDER_NOT_FOUND"
-          ? "This provider profile could not be found."
+          ? "This clinician profile could not be found."
             : accessDenied
               ? "Please sign in with a verified account to view provider details."
               : getGraphQLErrorMessage(error, "Unable to load this provider right now. Please try again.")}
@@ -272,7 +272,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
 
         <div className="space-y-4">
           <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-            Healthcare provider
+            Diabetes care clinician
           </p>
           <div className="space-y-1">
             <h1 className="text-3xl sm:text-4xl">{provider.displayName}</h1>
@@ -320,10 +320,10 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
           {provider.eligible ? (
             <div className="flex items-center gap-1.5 text-sm font-medium text-success">
               <BadgeCheck className="size-4" />
-              Verified provider · Accepting patients
+              Verified clinician · Available for diabetes care
             </div>
           ) : (
-            <p className="text-sm text-muted">This provider is not currently accepting new patients.</p>
+            <p className="text-sm text-muted">This clinician is not currently available for new patient care.</p>
           )}
         </div>
       </div>
@@ -372,8 +372,8 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
             {reviewsError ? (
               <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
                 {reviewsAccessDenied
-                  ? "Sign in to view provider reviews."
-                  : getGraphQLErrorMessage(reviewsError, "Unable to load provider reviews right now.")}
+                  ? "Sign in to view clinician reviews."
+                  : getGraphQLErrorMessage(reviewsError, "Unable to load clinician reviews right now.")}
               </div>
             ) : null}
 
@@ -464,7 +464,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
             </CardHeader>
             <CardContent className="space-y-5">
               <div>
-                <p className="text-xs text-muted">Consultation fee</p>
+                <p className="text-xs text-muted">Clinical access fee</p>
                 <p className="text-2xl font-semibold text-text">
                   {provider.consultationFeeInitial != null
                     ? `ZMW ${provider.consultationFeeInitial}`
@@ -495,12 +495,12 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
             {provider.eligible ? (
               isAuthenticated ? (
                 <Button href={`/patient/providers/${provider.id}/book`} size="lg" fullWidth>
-                  Book a Consultation
+                  Request Clinical Support
                 </Button>
               ) : (
                 <>
                   <Button href={`/login?next=/patient/providers/${provider.id}/book`} size="lg" fullWidth>
-                    Sign in to Book
+                    Sign in to Continue
                   </Button>
                   <Button href="/register" variant="secondary" size="lg" fullWidth>
                     Create an Account
@@ -509,7 +509,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
               )
             ) : (
               <div className="rounded-xl border border-border bg-surface px-4 py-4 text-center text-sm text-muted">
-                This provider is not currently accepting new patients.
+                This clinician is not currently available for new patient care.
               </div>
             )}
           </div>
@@ -533,7 +533,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
                 <h2 id="review-modal-title" className="text-xl font-semibold text-text">
                   Rate this consultant
                 </h2>
-                <p className="text-sm text-muted">Share your consultation experience.</p>
+                <p className="text-sm text-muted">Share your care experience.</p>
               </div>
               <button
                 type="button"
@@ -548,7 +548,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
             <div className="px-5 py-5 sm:px-6">
               {!isAuthenticated ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted">Sign in to submit a provider review.</p>
+                  <p className="text-sm text-muted">Sign in to submit a clinician review.</p>
                   <Button href={`/login?next=/providers/${provider.id}`} fullWidth>
                     Sign in
                   </Button>
@@ -556,7 +556,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
               ) : (
                 <form onSubmit={handleSubmitReview} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="appointmentId">Completed appointment</Label>
+                    <Label htmlFor="appointmentId">Completed care visit</Label>
                     <select
                       id="appointmentId"
                       value={reviewForm.appointmentId}

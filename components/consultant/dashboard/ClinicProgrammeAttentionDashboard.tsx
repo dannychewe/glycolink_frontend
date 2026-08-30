@@ -268,9 +268,9 @@ function PatientAttentionPanel({ patients }: { patients: ClinicPatientCohortRow[
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-1">
-                  <p className="truncate text-sm font-semibold text-text">{patient.patientDisplayName}</p>
-                  <p className="text-xs text-muted">{patient.programmeName}</p>
-                  <p className="text-sm text-muted">
+                  <p className="break-words text-sm font-semibold text-text">{patient.patientDisplayName}</p>
+                  <p className="break-words text-xs text-muted">{patient.programmeName}</p>
+                  <p className="break-words text-sm text-muted">
                     {patient.primaryAttentionReason ??
                       patient.primaryReadinessBlocker ??
                       "Programme follow-up required"}

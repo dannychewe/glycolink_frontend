@@ -1,4 +1,5 @@
 import { ProgrammeAlertWorkQueue } from "@/components/consultant/programmes/ProgrammeAlertWorkQueue";
+import { ProgrammeAccessSummary, ProgrammePermissionGate } from "@/components/consultant/programmes/ProgrammePermissionGate";
 import { ProgrammePermissionNotice } from "@/components/consultant/programmes/ProgrammePermissionNotice";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
@@ -18,8 +19,11 @@ export default async function ConsultantAlertDetailPage({
         description="Review ownership, interventions, escalation, dismissal, reopening, and resolution for a programme alert."
       />
 
+      <ProgrammeAccessSummary />
       <ProgrammePermissionNotice scope="clinical" />
-      <ProgrammeAlertWorkQueue alertId={alertId} />
+      <ProgrammePermissionGate permissions={["alerts.manage"]}>
+        <ProgrammeAlertWorkQueue alertId={alertId} />
+      </ProgrammePermissionGate>
     </Container>
   );
 }

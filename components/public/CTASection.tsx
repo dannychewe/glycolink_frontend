@@ -40,11 +40,11 @@ export function CTASection() {
               Start a Programme
             </Button>
             <Button
-              href="/providers"
+              href="/clinics"
               size="lg"
               className="border border-white/25 bg-white/10 text-white hover:bg-white/20"
             >
-              View Care Network
+              For Clinics
             </Button>
           </div>
 

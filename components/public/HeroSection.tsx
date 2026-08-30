@@ -66,15 +66,15 @@ export function HeroSection() {
               Start a Programme
               <ArrowRight className="size-4" />
             </Button>
-            <Button href="/providers" variant="secondary" size="lg">
-              Explore Care Team
+            <Button href="/clinics" variant="secondary" size="lg">
+              For Clinics
             </Button>
           </div>
 
           <p className="text-sm text-muted">
             Built for clinics, care coordinators, nurses, doctors, and patients managing diabetes together.{" "}
-            <Link href="/providers" className="font-medium text-primary underline-offset-4 hover:underline">
-              View clinical network
+            <Link href="/clinics" className="font-medium text-primary underline-offset-4 hover:underline">
+              See clinic workflow
             </Link>
           </p>
         </div>

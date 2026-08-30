@@ -55,12 +55,12 @@ export function ProviderCard({ provider }: ProviderCardProps) {
 
         <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm text-muted">Consultation fee</p>
+            <p className="text-sm text-muted">Clinical access fee</p>
             <p className="text-lg font-semibold text-text">${provider.consultationFee}</p>
           </div>
 
           <Button href={`/providers/${provider.slug}`} variant="secondary" fullWidth className="sm:w-auto">
-            View Profile
+            View clinician
           </Button>
         </div>
       </CardContent>

@@ -16,6 +16,8 @@ import {
   StatTile,
 } from "@/components/ui/panel";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/features/auth/auth-context";
+import { hasProgrammePermission } from "@/lib/programmes/permissions";
 import {
   ADD_PATIENT_MONITORING_REQUIREMENT_MUTATION,
   APPROVE_ACTIVATE_PROGRAMME_CARE_PLAN_MUTATION,
@@ -163,9 +165,11 @@ function ReadinessPanel({ readiness }: { readiness: EnrolmentReadiness }) {
 function BaselineReviewPanel({
   baseline,
   onChanged,
+  canManage,
 }: {
   baseline: ProgrammeBaselineAssessment | null;
   onChanged: () => void;
+  canManage: boolean;
 }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -219,10 +223,10 @@ function BaselineReviewPanel({
             className="min-h-20"
           />
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" disabled={saving || baseline.status === "APPROVED"} onClick={() => void handleApprove()}>
+            <Button type="button" size="sm" disabled={!canManage || saving || baseline.status === "APPROVED"} onClick={() => void handleApprove()}>
               Approve baseline
             </Button>
-            <Button type="button" size="sm" variant="secondary" disabled={saving || baseline.status === "APPROVED"} onClick={() => void handleReturn()}>
+            <Button type="button" size="sm" variant="secondary" disabled={!canManage || saving || baseline.status === "APPROVED"} onClick={() => void handleReturn()}>
               Return for correction
             </Button>
           </div>
@@ -236,10 +240,12 @@ function CarePlanPanel({
   enrolmentId,
   carePlan,
   onChanged,
+  canManage,
 }: {
   enrolmentId: string;
   carePlan: ProgrammeCarePlan | null;
   onChanged: () => void;
+  canManage: boolean;
 }) {
   const [title, setTitle] = useState("Diabetes continuity care plan");
   const [summary, setSummary] = useState("");
@@ -356,10 +362,10 @@ function CarePlanPanel({
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="secondary" disabled={saving || carePlan.status !== "DRAFT"} onClick={() => void handleLifecycle("submit")}>
+              <Button type="button" size="sm" variant="secondary" disabled={!canManage || saving || carePlan.status !== "DRAFT"} onClick={() => void handleLifecycle("submit")}>
                 Submit for approval
               </Button>
-              <Button type="button" size="sm" disabled={saving || !["DRAFT", "PENDING_APPROVAL"].includes(carePlan.status)} onClick={() => void handleLifecycle("activate")}>
+              <Button type="button" size="sm" disabled={!canManage || saving || !["DRAFT", "PENDING_APPROVAL"].includes(carePlan.status)} onClick={() => void handleLifecycle("activate")}>
                 Approve and activate
               </Button>
             </div>
@@ -385,7 +391,7 @@ function CarePlanPanel({
                 onInternalNotes={setInternalNotes}
                 onRevisionReason={setRevisionReason}
               />
-              <Button type="submit" size="sm" variant="secondary" disabled={saving || !title.trim() || !revisionReason.trim()}>
+              <Button type="submit" size="sm" variant="secondary" disabled={!canManage || saving || !title.trim() || !revisionReason.trim()}>
                 Create revision
               </Button>
             </form>
@@ -412,7 +418,7 @@ function CarePlanPanel({
               onInternalNotes={setInternalNotes}
               onRevisionReason={setRevisionReason}
             />
-            <Button type="submit" size="sm" disabled={saving || !title.trim()}>
+            <Button type="submit" size="sm" disabled={!canManage || saving || !title.trim()}>
               <Plus className="size-4" />
               Create care plan
             </Button>
@@ -490,11 +496,13 @@ function MonitoringSchedulePanel({
   requirements,
   windows,
   onChanged,
+  canManage,
 }: {
   enrolmentId: string;
   requirements: ProgrammeMonitoringRequirement[];
   windows: ExpectedMonitoringWindow[];
   onChanged: () => void;
+  canManage: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [selectedRequirementId, setSelectedRequirementId] = useState<string | null>(null);
@@ -587,7 +595,7 @@ function MonitoringSchedulePanel({
         <PanelTitle icon={Icons.monitoring} count={requirements.length}>
           Monitoring Schedule
         </PanelTitle>
-        <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedRequirementId(null)}>
+        <Button type="button" size="sm" variant="secondary" disabled={!canManage} onClick={() => setSelectedRequirementId(null)}>
           New requirement
         </Button>
       </PanelHeader>
@@ -629,7 +637,7 @@ function MonitoringSchedulePanel({
             </div>
           </div>
           <Textarea value={applicableDays} onChange={(event) => setApplicableDays(event.target.value)} placeholder="Applicable days, comma-separated" className="min-h-16" />
-          <Button type="submit" size="sm" disabled={saving || !observationType.trim()}>
+          <Button type="submit" size="sm" disabled={!canManage || saving || !observationType.trim()}>
             {selectedRequirementId ? "Update requirement" : "Add requirement"}
           </Button>
         </form>
@@ -646,10 +654,10 @@ function MonitoringSchedulePanel({
                   {titleCase(requirement.cadenceType)} · {requirement.timeOfDay ?? "any time"} · grace {requirement.gracePeriodDays ?? 0} days
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="secondary" onClick={() => loadRequirement(requirement)}>
+                  <Button type="button" size="sm" variant="secondary" disabled={!canManage} onClick={() => loadRequirement(requirement)}>
                     Edit
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => void handleDeactivate(requirement.id)}>
+                  <Button type="button" size="sm" variant="secondary" disabled={!canManage || saving} onClick={() => void handleDeactivate(requirement.id)}>
                     Deactivate
                   </Button>
                 </div>
@@ -734,6 +742,9 @@ function GapAdherencePanel({
 }
 
 export function PatientProgrammeContinuityPanel({ patientId }: { patientId: string }) {
+  const { user } = useAuth();
+  const canManageCarePlans = hasProgrammePermission(user, "care_plan.manage");
+  const canManageMonitoring = hasProgrammePermission(user, "monitoring.manage");
   const enrolmentsQuery = useQuery<EnrolmentsData>(PATIENT_PROGRAMME_ENROLMENTS_QUERY, {
     variables: { patientId },
     fetchPolicy: "cache-and-network",
@@ -835,13 +846,14 @@ export function PatientProgrammeContinuityPanel({ patientId }: { patientId: stri
       {readiness ? <ReadinessPanel readiness={readiness} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <BaselineReviewPanel baseline={baseline} onChanged={refetchProgramme} />
-        <CarePlanPanel enrolmentId={enrolment.id} carePlan={carePlan} onChanged={refetchProgramme} />
+        <BaselineReviewPanel baseline={baseline} onChanged={refetchProgramme} canManage={canManageCarePlans} />
+        <CarePlanPanel enrolmentId={enrolment.id} carePlan={carePlan} onChanged={refetchProgramme} canManage={canManageCarePlans} />
         <MonitoringSchedulePanel
           enrolmentId={enrolment.id}
           requirements={requirements}
           windows={windows}
           onChanged={refetchProgramme}
+          canManage={canManageMonitoring}
         />
         <GapAdherencePanel gaps={gaps} adherence={adherence} />
       </div>
