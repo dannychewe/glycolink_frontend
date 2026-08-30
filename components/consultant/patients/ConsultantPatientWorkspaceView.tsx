@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PatientPcqAssignment } from "@/components/consultant/pcq/PatientPcqAssignment";
 import { CarePlanManager } from "@/components/consultant/patients/CarePlanManager";
 import { ConsultantPatientMonitoringPanel } from "@/components/consultant/monitoring/ConsultantPatientMonitoringPanel";
+import { PatientProgrammeContinuityPanel } from "@/components/consultant/programmes/PatientProgrammeContinuityPanel";
 import { cn } from "@/lib/utils/cn";
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -196,6 +197,8 @@ export function ConsultantPatientWorkspaceView({ patientId }: Readonly<{ patient
           <Button href="/consultant/consultations">Start Consultation</Button>
         </div>
       </header>
+
+      <PatientProgrammeContinuityPanel patientId={patientId} />
 
       <Recommendations items={ws.recommendations} />
 

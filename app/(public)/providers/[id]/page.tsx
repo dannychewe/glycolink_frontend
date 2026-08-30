@@ -77,8 +77,8 @@ export async function generateMetadata({ params }: ProviderDetailPageProps): Pro
 
   if (!provider) {
     return {
-      title: "Provider Profile | Naje Health",
-      description: "View provider profile and consultation details from the provider directory.",
+      title: "Clinician Profile | Naje Health",
+      description: "View clinician profile and diabetes continuity-care details from the Naje Health care network.",
     };
   }
 
@@ -105,8 +105,8 @@ export async function generateMetadata({ params }: ProviderDetailPageProps): Pro
       ...provider.subSpecialties,
       ...provider.languages,
       "diabetes care",
-      "healthcare provider",
-      "online consultation",
+      "diabetes continuity care",
+      "clinic care programme",
       "Naje Health",
     ],
     alternates: {

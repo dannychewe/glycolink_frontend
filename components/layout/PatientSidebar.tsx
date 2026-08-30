@@ -198,14 +198,14 @@ export function PatientSidebar({
         <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
           <div>
             <p className="text-sm font-semibold tracking-tight text-text">Naje Health</p>
-            <p className="text-xs text-muted">Patient workspace</p>
+            <p className="text-xs text-muted">Diabetes care</p>
           </div>
         </Link>
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto px-4 py-6">
         <SidebarSection
-          title="Main"
+          title="Care"
           items={patientMainNavigation}
           pathname={pathname}
           onNavigate={onNavigate}
@@ -213,7 +213,7 @@ export function PatientSidebar({
 
         <div className="border-t border-border pt-6">
           <SidebarSection
-            title="Secondary"
+            title="Account"
             items={patientSecondaryNavigation}
             pathname={pathname}
             onNavigate={onNavigate}

@@ -146,7 +146,7 @@ export function GraphqlProviderDirectory() {
       <div className="space-y-4 rounded-2xl border border-border/80 bg-surface p-4 shadow-soft sm:p-5">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(210px,0.8fr)_minmax(230px,0.9fr)]">
           <div className="space-y-2">
-            <Label htmlFor="search">Search providers</Label>
+            <Label htmlFor="search">Search clinicians</Label>
             <Input
               id="search"
               placeholder="Name, specialty, or keyword"
@@ -197,7 +197,7 @@ export function GraphqlProviderDirectory() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              Consultation fee:
+              Clinical access fee:
             </span>
             {feeRanges.map(({ value, label }) => (
               <Button
@@ -220,8 +220,8 @@ export function GraphqlProviderDirectory() {
       {error ? (
         <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
           {accessDenied
-            ? "Sign in to browse our full provider directory."
-            : "Unable to load providers right now. Please try again."}
+            ? "Sign in to view the full care network."
+            : "Unable to load clinicians right now. Please try again."}
         </div>
       ) : null}
 
@@ -229,8 +229,8 @@ export function GraphqlProviderDirectory() {
       <div className="flex items-center justify-between text-sm text-muted">
         <p>
           {loading
-            ? "Finding providers..."
-            : `${providers.length} of ${total} provider${total !== 1 ? "s" : ""}`}
+            ? "Finding clinicians..."
+            : `${providers.length} of ${total} clinician${total !== 1 ? "s" : ""}`}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Button

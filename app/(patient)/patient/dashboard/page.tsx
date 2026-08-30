@@ -1,10 +1,6 @@
 import { OnboardingBanner } from "@/components/patient/dashboard/OnboardingBanner";
 import { ConsultantInvitesSection } from "@/components/patient/dashboard/ConsultantInvitesSection";
-import { GraphqlBookingOverview } from "@/components/patient/dashboard/GraphqlBookingOverview";
-import { HealthSummarySection } from "@/components/patient/dashboard/HealthSummarySection";
-import { LabSummarySection } from "@/components/patient/dashboard/LabSummarySection";
-import { NotificationsSection } from "@/components/patient/dashboard/NotificationsSection";
-import { PrescriptionSummarySection } from "@/components/patient/dashboard/PrescriptionSummarySection";
+import { PatientDiabetesHome } from "@/components/patient/programmes/PatientDiabetesHome";
 import { Container } from "@/components/ui/container";
 
 export default function PatientDashboardPage() {
@@ -19,9 +15,12 @@ export default function PatientDashboardPage() {
       <header className="flex flex-col gap-1 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-            Patient Portal
+            Diabetes Programme
           </p>
-          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Today&apos;s Care</h1>
+          <p className="max-w-2xl text-sm leading-6 text-muted">
+            Your readings, care plan, and programme billing in one place.
+          </p>
         </div>
         <p className="text-sm text-muted">{today}</p>
       </header>
@@ -30,15 +29,7 @@ export default function PatientDashboardPage() {
 
       <ConsultantInvitesSection />
 
-      <GraphqlBookingOverview />
-      <HealthSummarySection />
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <PrescriptionSummarySection />
-        <LabSummarySection />
-      </div>
-
-      <NotificationsSection />
+      <PatientDiabetesHome />
     </Container>
   );
 }

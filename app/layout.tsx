@@ -25,13 +25,13 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.najehealth.com"),
-  title: "Naje Health | Modern Diabetes Care & Online Consultation",
+  title: "Naje Health | Diabetes Continuity Care for Clinics",
   description:
-    "Consult verified healthcare providers, manage diabetes, and access structured care online.",
+    "Clinic-led diabetes continuity-of-care for monitoring, care plans, alerts, adherence, and programme billing.",
   openGraph: {
-    title: "Naje Health | Modern Diabetes Care & Online Consultation",
+    title: "Naje Health | Diabetes Continuity Care for Clinics",
     description:
-      "Consult verified healthcare providers, manage diabetes, and access structured care online.",
+      "Clinic-led diabetes continuity-of-care for monitoring, care plans, alerts, adherence, and programme billing.",
     url: "/",
     siteName: "Naje Health",
     locale: "en_ZM",
@@ -39,9 +39,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Naje Health | Modern Diabetes Care & Online Consultation",
+    title: "Naje Health | Diabetes Continuity Care for Clinics",
     description:
-      "Consult verified healthcare providers, manage diabetes, and access structured care online.",
+      "Clinic-led diabetes continuity-of-care for monitoring, care plans, alerts, adherence, and programme billing.",
   },
 };
 

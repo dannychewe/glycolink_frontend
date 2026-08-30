@@ -60,26 +60,26 @@ export function ProviderPreviewSection() {
       <Container className="space-y-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl space-y-4">
-            <SectionLabel index="03">Provider directory</SectionLabel>
-            <h2 className="text-3xl sm:text-4xl">Find Verified Healthcare Providers</h2>
+            <SectionLabel index="03">Care network</SectionLabel>
+            <h2 className="text-3xl sm:text-4xl">Connect programmes to verified clinicians</h2>
             <p>
-              Browse specialists prepared to support diabetes care with clear communication and a
-              structured digital experience.
+              Naje Health still supports specialist discovery, but the centre of the product is
+              coordinated diabetes follow-up run through clinic programmes.
             </p>
           </div>
           <Link
             href="/providers"
             className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Browse all providers →
+            View care network
           </Link>
         </div>
 
         {error ? (
           <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
             {accessDenied
-              ? "Sign in to browse our full provider directory."
-              : "Unable to load providers right now. Please try again."}
+              ? "Sign in to view the full care network."
+              : "Unable to load the care network right now. Please try again."}
           </div>
         ) : null}
 
@@ -146,7 +146,7 @@ export function ProviderPreviewSection() {
                 ) : null}
                 <div className="mt-auto flex flex-col gap-4 border-t border-border/80 pt-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-sm text-muted">Consultation fee</p>
+                    <p className="text-sm text-muted">Clinical access fee</p>
                     <p className="font-mono text-base font-medium tabular-nums text-ink">
                       {provider.consultationFeeInitial != null
                         ? `ZMW ${provider.consultationFeeInitial}`
@@ -154,7 +154,7 @@ export function ProviderPreviewSection() {
                     </p>
                   </div>
                   <Button href={`/providers/${provider.id}`} variant="secondary" fullWidth className="sm:w-auto">
-                    View Profile
+                    View clinician
                   </Button>
                 </div>
               </CardContent>
@@ -164,7 +164,7 @@ export function ProviderPreviewSection() {
           {!loading && !error && providers.length === 0 ? (
             <Card className="lg:col-span-3">
               <CardContent className="py-10 text-center text-sm text-muted">
-                No providers are available right now.
+                No clinicians are available right now.
               </CardContent>
             </Card>
           ) : null}

@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 
 const stats = [
-  { value: "120+", label: "Verified specialists" },
-  { value: "24/7", label: "Platform access" },
-  { value: "98%", label: "Patient satisfaction" },
+  { value: "Clinic", label: "Programme setup" },
+  { value: "Daily", label: "Care-team queue" },
+  { value: "Live", label: "Monitoring signals" },
 ];
 
 export function CTASection() {
@@ -20,14 +20,14 @@ export function CTASection() {
 
           <div className="relative mx-auto max-w-2xl space-y-4">
             <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-white/55">
-              Get started today
+              Diabetes care programmes
             </p>
             <h2 className="text-3xl font-medium tracking-tight text-white sm:text-4xl">
-              Your diabetes care, structured and connected
+              Give every enrolled patient a clear next step
             </h2>
             <p className="text-base leading-7 text-white/70 sm:text-lg">
-              Move from uncertainty to structured support with a healthcare experience designed for
-              consistency, clarity, and modern access.
+              Naje Health turns baseline assessment, care plans, monitoring schedules, alerts,
+              reminders, reporting, and billing into one clinic-led diabetes workflow.
             </p>
           </div>
 
@@ -37,14 +37,14 @@ export function CTASection() {
               size="lg"
               className="bg-white text-primary hover:bg-blue-50"
             >
-              Get Started Free
+              Start a Programme
             </Button>
             <Button
               href="/providers"
               size="lg"
               className="border border-white/25 bg-white/10 text-white hover:bg-white/20"
             >
-              Browse Providers
+              View Care Network
             </Button>
           </div>
 

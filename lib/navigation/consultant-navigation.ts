@@ -10,6 +10,7 @@ export type ConsultantNavigationItem = {
     | "labs"
     | "monitoring"
     | "organization"
+    | "billing"
     | "pcq"
     | "clinical-rules"
     | "messages"
@@ -21,29 +22,44 @@ export type ConsultantNavigationItem = {
 
 export const consultantMainNavigation: ConsultantNavigationItem[] = [
   {
-    label: "Dashboard",
+    label: "Today's Queue",
     href: "/consultant/dashboard",
     icon: "dashboard",
   },
   {
-    label: "Appointments",
-    href: "/consultant/appointments",
-    icon: "appointments",
-  },
-  {
-    label: "Patients",
+    label: "Diabetes Cohort",
     href: "/consultant/patients",
     icon: "patients",
   },
   {
-    label: "Consultations",
-    href: "/consultant/consultations",
-    icon: "consultations",
+    label: "Care Programmes",
+    href: "/consultant/programmes",
+    icon: "organization",
   },
   {
-    label: "Prescriptions",
-    href: "/consultant/prescriptions",
-    icon: "prescriptions",
+    label: "Monitoring Ops",
+    href: "/consultant/monitoring",
+    icon: "monitoring",
+  },
+  {
+    label: "Alert Work Queue",
+    href: "/consultant/monitoring/alerts",
+    icon: "clinical-rules",
+  },
+  {
+    label: "Programme Billing",
+    href: "/consultant/billing",
+    icon: "billing",
+  },
+  {
+    label: "Programme Reports",
+    href: "/consultant/reports",
+    icon: "monitoring",
+  },
+  {
+    label: "Baseline Templates",
+    href: "/consultant/pcq",
+    icon: "pcq",
   },
   {
     label: "Labs",
@@ -51,24 +67,29 @@ export const consultantMainNavigation: ConsultantNavigationItem[] = [
     icon: "labs",
   },
   {
-    label: "Monitoring",
-    href: "/consultant/monitoring",
-    icon: "monitoring",
+    label: "Prescriptions",
+    href: "/consultant/prescriptions",
+    icon: "prescriptions",
+  },
+  {
+    label: "Care Team Messages",
+    href: "/consultant/messages",
+    icon: "messages",
+  },
+  {
+    label: "Appointments",
+    href: "/consultant/appointments",
+    icon: "appointments",
+  },
+  {
+    label: "Consultations",
+    href: "/consultant/consultations",
+    icon: "consultations",
   },
   {
     label: "Organization",
     href: "/consultant/organization",
     icon: "organization",
-  },
-  {
-    label: "PCQ Templates",
-    href: "/consultant/pcq",
-    icon: "pcq",
-  },
-  {
-    label: "Messages",
-    href: "/consultant/messages",
-    icon: "messages",
   },
   {
     label: "Notifications",

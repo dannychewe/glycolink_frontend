@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <PublicOnly>
       <AuthCard
         title="Sign in to Naje Health"
-        description="Welcome back. Enter your details below."
+        description="Open your diabetes care workspace."
         notice={notice}
       >
         <AuthForm mode="login" />

@@ -20,42 +20,37 @@ export type PatientNavigationItem = {
 
 export const patientMainNavigation: PatientNavigationItem[] = [
   {
-    label: "Dashboard",
+    label: "Today's Care",
     href: "/patient/dashboard",
     icon: "dashboard",
   },
   {
-    label: "Appointments",
-    href: "/patient/bookings",
-    icon: "appointments",
+    label: "Monitoring",
+    href: "/patient/monitoring",
+    icon: "monitoring",
   },
   {
-    label: "Questionnaires",
+    label: "Care Baseline",
     href: "/patient/pcq",
     icon: "questionnaires",
   },
   {
-    label: "My Consultants",
-    href: "/patient/consultants",
-    icon: "consultants",
-  },
-  {
-    label: "Find Providers",
-    href: "/patient/providers",
-    icon: "providers",
-  },
-  {
-    label: "Messages",
-    href: "/patient/messages",
-    icon: "messages",
-  },
-  {
-    label: "Records",
+    label: "Care Plan",
     href: "/patient/records",
     icon: "records",
   },
   {
-    label: "Prescriptions",
+    label: "Programme Billing",
+    href: "/patient/payments",
+    icon: "payments",
+  },
+  {
+    label: "Care Team Messages",
+    href: "/patient/messages",
+    icon: "messages",
+  },
+  {
+    label: "Medicines",
     href: "/patient/prescriptions",
     icon: "prescriptions",
   },
@@ -65,14 +60,19 @@ export const patientMainNavigation: PatientNavigationItem[] = [
     icon: "labs",
   },
   {
-    label: "Monitoring",
-    href: "/patient/monitoring",
-    icon: "monitoring",
+    label: "Appointments",
+    href: "/patient/bookings",
+    icon: "appointments",
   },
   {
-    label: "Payments",
-    href: "/patient/payments",
-    icon: "payments",
+    label: "My Care Team",
+    href: "/patient/consultants",
+    icon: "consultants",
+  },
+  {
+    label: "Find Providers",
+    href: "/patient/providers",
+    icon: "providers",
   },
 ];
 

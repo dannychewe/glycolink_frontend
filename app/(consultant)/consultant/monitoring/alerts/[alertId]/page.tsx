@@ -3,20 +3,23 @@ import { ProgrammePermissionNotice } from "@/components/consultant/programmes/Pr
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default function ConsultantMonitoringAlertsPage() {
+export default async function ConsultantAlertDetailPage({
+  params,
+}: {
+  params: Promise<{ alertId: string }>;
+}) {
+  const { alertId } = await params;
+
   return (
     <Container className="space-y-6 py-2">
       <PageHeader
-        eyebrow="Diabetes programme"
-        title="Clinical work queue"
-        description="Claim, review, document, contact, and resolve programme alerts and monitoring gap work items."
-        breadcrumbs={[
-          { label: "Monitoring", href: "/consultant/monitoring" },
-          { label: "Work queue" },
-        ]}
+        eyebrow="Clinical alert"
+        title="Alert detail"
+        description="Review ownership, interventions, escalation, dismissal, reopening, and resolution for a programme alert."
       />
+
       <ProgrammePermissionNotice scope="clinical" />
-      <ProgrammeAlertWorkQueue />
+      <ProgrammeAlertWorkQueue alertId={alertId} />
     </Container>
   );
 }

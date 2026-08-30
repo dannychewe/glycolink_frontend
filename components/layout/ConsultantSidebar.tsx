@@ -92,6 +92,14 @@ function NavIcon({
     );
   }
 
+  if (icon === "billing") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">
+        <path d="M4 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Zm0 4h18M7 15h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
   if (icon === "pcq") {
     return (
       <svg viewBox="0 0 24 24" fill="none" className={iconClassName} aria-hidden="true">
@@ -168,7 +176,7 @@ export function ConsultantSidebar({
         <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
           <div>
             <p className="text-sm font-semibold tracking-tight text-text">Naje Health</p>
-            <p className="text-xs text-muted">Consultant workspace</p>
+            <p className="text-xs text-muted">Clinic diabetes care</p>
           </div>
         </Link>
       </div>
@@ -176,7 +184,7 @@ export function ConsultantSidebar({
       <div className="flex-1 space-y-6 overflow-y-auto px-4 py-6">
         <div className="space-y-2">
           <p className="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            Main
+            Clinic Care
           </p>
           <nav className="space-y-1">
             {consultantMainNavigation.map((item) => {
@@ -205,7 +213,7 @@ export function ConsultantSidebar({
         <div className="border-t border-border pt-6">
           <div className="space-y-2">
             <p className="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-              Secondary
+              Practice
             </p>
             <nav className="space-y-1">
               {consultantSecondaryNavigation.map((item) => {

@@ -3,9 +3,9 @@ import { GraphqlProviderDirectory } from "@/components/public/GraphqlProviderDir
 import { Container } from "@/components/ui/container";
 
 export const metadata: Metadata = {
-  title: "Find a Diabetes Specialist | Naje Health",
+  title: "Diabetes Care Network | Naje Health",
   description:
-    "Browse verified diabetes doctors and specialists in Zambia. Review their backgrounds, specialties, and consultation fees before booking.",
+    "Browse verified clinicians who can support clinic-led diabetes care programmes, consultations, monitoring review, and ongoing follow-up.",
 };
 
 export default function ProvidersPage() {
@@ -13,23 +13,23 @@ export default function ProvidersPage() {
     <Container className="space-y-10 py-10 sm:py-14">
       <div className="max-w-2xl space-y-3">
         <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-          Provider directory
+          Care network
         </p>
-        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Find a specialist</h1>
+        <h1 className="text-3xl font-semibold text-text sm:text-4xl">Find clinicians for diabetes continuity care</h1>
         <p className="text-base leading-7 text-muted">
-          Every provider on Naje Health is reviewed and verified. Browse by specialty, filter by
-          consultation fee, and choose a doctor who fits your care needs.
+          Naje Health connects clinic programmes with verified clinicians who can support
+          assessments, care-plan review, monitoring alerts, and patient follow-up.
         </p>
       </div>
 
       <GraphqlProviderDirectory />
 
       <section className="max-w-3xl space-y-3 border-t border-border/80 pt-8">
-        <h2 className="text-2xl">Diabetes care, close to you</h2>
+        <h2 className="text-2xl">Specialist support for structured clinic programmes</h2>
         <p className="text-muted">
-          Naje Health connects patients living with Type 1, Type 2, gestational diabetes, and
-          related conditions to verified specialists across Zambia. Book a consultation online,
-          receive structured care, and manage your health journey in one place.
+          Consultations remain available, but the strongest value is continuity: enrolled patients,
+          assigned care teams, active care plans, monitoring expectations, and clinic reporting in
+          one operating workflow.
         </p>
       </section>
     </Container>

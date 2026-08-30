@@ -10,62 +10,62 @@ import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "How Naje Health Works | Diabetes Care Platform",
+  title: "How Naje Health Works | Diabetes Continuity Care",
   description:
-    "Learn how Naje Health connects patients with verified diabetes specialists in Zambia for structured, ongoing care.",
+    "Learn how Naje Health helps clinics run diabetes care programmes with enrolment, baselines, care plans, monitoring, alerts, reporting, and billing.",
 };
 
 const steps = [
   {
     icon: UserRoundPlus,
     step: "Step 1",
-    title: "Create your health profile",
+    title: "Create a clinic programme",
     description:
-      "Register in minutes and complete your diabetes profile — including your diagnosis, medications, and medical history. This gives your provider the context they need from your very first consultation.",
+      "A clinic sets up a diabetes programme with enrolment rules, care-team roles, monitoring expectations, and billing configuration.",
   },
   {
     icon: CalendarCheck2,
     step: "Step 2",
-    title: "Choose a verified specialist",
+    title: "Enroll the patient",
     description:
-      "Browse our directory of reviewed and approved healthcare providers. Filter by specialty, language, or consultation fee, and book directly from the provider's profile.",
+      "Patients can be enrolled directly or invited to join, then complete a diabetes baseline so the care team has the right context.",
   },
   {
     icon: ClipboardPlus,
     step: "Step 3",
-    title: "Attend your consultation",
+    title: "Activate the care plan",
     description:
-      "Connect with your provider through a structured care session. Your medical history, medications, and notes are all available in one place — so every visit builds on the last.",
+      "The team creates goals, follow-up timing, lab follow-up, medication review, patient instructions, and monitoring requirements.",
   },
   {
     icon: HeartPulse,
     step: "Step 4",
-    title: "Follow your care plan",
+    title: "Work the attention queue",
     description:
-      "Receive clear guidance after each consultation. Track your health over time, review prescriptions, and stay connected to your care team between appointments.",
+      "The clinic sees missed monitoring, glucose alerts, open work, escalation, payment status, and reporting by programme.",
   },
 ];
 
 const faqs = [
   {
-    question: "Do I need a referral to book a consultation?",
+    question: "Is Naje Health only for booking consultations?",
     answer:
-      "No. You can search for and book a provider directly through Naje Health without a referral.",
+      "No. Consultations still fit into the workflow, but Naje Health is now centred on clinic-led diabetes continuity care between visits.",
   },
   {
     question: "Is my health information kept private?",
     answer:
-      "Yes. Your medical records and consultation history are private and only accessible to you and the providers you choose to share them with.",
+      "Yes. Programme records, baseline data, care plans, readings, alerts, and internal clinical notes follow tenant-scoped access rules.",
   },
   {
     question: "What types of diabetes does Naje Health support?",
     answer:
-      "Naje Health supports patients managing Type 1 diabetes, Type 2 diabetes, gestational diabetes, prediabetes, and related conditions.",
+      "Naje Health is designed for patients managing Type 1 diabetes, Type 2 diabetes, gestational diabetes, prediabetes, and related conditions.",
   },
   {
     question: "Can I use Naje Health from my phone?",
     answer:
-      "Yes. Naje Health is designed to work across all devices — phone, tablet, and desktop.",
+      "Yes. Patients can see what they need to do today, while care teams can review clinic queues from desktop or tablet workflows.",
   },
 ];
 
@@ -79,12 +79,11 @@ export default function HowItWorksPage() {
             How it works
           </p>
           <h1 className="text-3xl font-semibold sm:text-4xl">
-            Structured diabetes care, from first visit to ongoing support
+            Diabetes continuity care, from enrolment to daily follow-up
           </h1>
           <p className="text-base leading-7 text-muted">
-            Naje Health is built to make diabetes care feel manageable — not overwhelming. Here is
-            how the process works, from creating your profile to staying connected with your
-            provider.
+            Naje Health helps clinics answer the operational question that matters every day:
+            which diabetic patients need attention, and what should happen next?
           </p>
         </div>
       </Container>
@@ -139,23 +138,23 @@ export default function HowItWorksPage() {
         <div className="rounded-[2rem] border border-primary/10 bg-gradient-to-br from-primary to-blue-500 px-6 py-10 text-center text-white shadow-subtle sm:px-10 sm:py-14">
           <div className="mx-auto max-w-2xl space-y-4">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Ready to get started?
+              Ready to run structured diabetes follow-up?
             </h2>
             <p className="text-base leading-7 text-blue-50">
-              Create your account today and take the first step toward structured, consistent
-              diabetes care.
+              Start with a clinic programme, enroll patients, and give both care teams and patients
+              a clearer daily workflow.
             </p>
           </div>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Button href="/register" size="lg" className="bg-white text-primary hover:bg-blue-50">
-              Create your account
+              Start a programme
             </Button>
             <Button
               href="/providers"
               size="lg"
               className="border border-white/30 bg-white/10 text-white hover:bg-white/15"
             >
-              Browse providers
+              View care network
             </Button>
           </div>
         </div>

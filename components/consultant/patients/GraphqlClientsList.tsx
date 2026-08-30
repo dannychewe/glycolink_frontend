@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   Users, Search, UserPlus, CheckCircle, AlertCircle,
@@ -418,7 +419,7 @@ export function GraphqlClientsList() {
           <p>
             <span className="font-semibold">{activeAlerts} patient{activeAlerts !== 1 ? "s" : ""}</span>{" "}
             with unacknowledged monitoring alerts.{" "}
-            <a href="/consultant/monitoring/alerts" className="font-medium underline">Review alerts</a>
+            <Link href="/consultant/monitoring/alerts" className="font-medium underline">Review alerts</Link>
           </p>
         </div>
       ) : null}

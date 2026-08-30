@@ -7,9 +7,9 @@ import { ProviderPreviewSection } from "@/components/public/ProviderPreviewSecti
 import { TrustSection } from "@/components/public/TrustSection";
 
 export const metadata: Metadata = {
-  title: "Naje Health | Modern Diabetes Care & Online Doctor Consultation in Zambia",
+  title: "Naje Health | Diabetes Continuity Care for Clinics",
   description:
-    "Consult verified diabetes specialists online. Book appointments, manage your health, and access structured care — all in one platform.",
+    "Clinic-led diabetes continuity care with patient enrolment, care plans, monitoring schedules, glucose alerts, adherence reporting, and programme billing.",
 };
 
 export default function HomePage() {

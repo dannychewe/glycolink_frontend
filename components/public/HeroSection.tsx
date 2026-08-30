@@ -7,9 +7,9 @@ import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils/cn";
 
 const features = [
-  { icon: CalendarCheck2, label: "Book verified diabetes specialists online" },
-  { icon: ShieldCheck, label: "Secure, private medical records" },
-  { icon: HeartPulse, label: "Track your health progress over time" },
+  { icon: CalendarCheck2, label: "Run clinic diabetes programmes from one workspace" },
+  { icon: ShieldCheck, label: "Enroll patients into structured care plans" },
+  { icon: HeartPulse, label: "Spot missed readings and urgent glucose alerts sooner" },
 ];
 
 // CGM-style weekly readings. SCALE / target band drive the chart geometry.
@@ -36,17 +36,17 @@ export function HeroSection() {
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />
               <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
             </span>
-            Digital care platform for diabetes management
+            Clinic-led diabetes continuity care
           </div>
 
           <div className="space-y-5">
             <h1 className="font-display text-4xl font-medium leading-[1.04] text-ink sm:text-5xl lg:text-[3.85rem]">
-              Modern diabetes care,{" "}
-              <span className="italic text-primary">connected</span>.
+              Naje Health for{" "}
+              <span className="italic text-primary">diabetes care teams</span>.
             </h1>
             <p className="max-w-lg text-base leading-7 text-muted sm:text-lg">
-              Consult verified healthcare providers, manage your condition, and stay in control
-              — all from one platform built for Zambia.
+              Help clinics enroll diabetic patients, assign care teams, track monitoring schedules,
+              respond to alerts, and keep patients clear on what they need to do today.
             </p>
           </div>
 
@@ -63,18 +63,18 @@ export function HeroSection() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button href="/register" size="lg">
-              Get Started
+              Start a Programme
               <ArrowRight className="size-4" />
             </Button>
             <Button href="/providers" variant="secondary" size="lg">
-              Find a Provider
+              Explore Care Team
             </Button>
           </div>
 
           <p className="text-sm text-muted">
-            Trusted by patients and specialists across Zambia.{" "}
+            Built for clinics, care coordinators, nurses, doctors, and patients managing diabetes together.{" "}
             <Link href="/providers" className="font-medium text-primary underline-offset-4 hover:underline">
-              Browse providers →
+              View clinical network
             </Link>
           </p>
         </div>
@@ -90,13 +90,13 @@ export function HeroSection() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">
-                    Care overview
+                    Clinic attention queue
                   </p>
-                  <p className="text-lg font-semibold text-ink">Patient dashboard</p>
+                  <p className="text-lg font-semibold text-ink">Diabetes care today</p>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success">
                   <span className="size-1.5 rounded-full bg-success" />
-                  Live support
+                  Active programme
                 </div>
               </div>
 
@@ -107,7 +107,7 @@ export function HeroSection() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-white/70">
                       <Activity className="size-4" />
-                      Weekly glucose
+                      Cohort glucose signal
                     </div>
                     <div className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/85 ring-1 ring-inset ring-white/15">
                       <TrendingDown className="size-3 text-success" />
@@ -119,7 +119,7 @@ export function HeroSection() {
                     <p className="font-mono text-4xl font-medium tabular-nums tracking-tight text-white">
                       108
                     </p>
-                    <p className="font-mono text-xs text-white/55">avg mg/dL · this week</p>
+                    <p className="font-mono text-xs text-white/55">avg mg/dL, this week</p>
                   </div>
 
                   {/* Bars with a shaded target band (80–140 mg/dL). */}
@@ -167,9 +167,9 @@ export function HeroSection() {
                 <div className="rounded-xl border border-border bg-background p-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-ink">
                     <Calendar className="size-3.5 text-primary" />
-                    Next visit
+                    Next care action
                   </div>
-                  <p className="mt-2 font-mono text-sm tabular-nums text-muted">Tue 15 Apr · 09:30</p>
+                  <p className="mt-2 font-mono text-sm tabular-nums text-muted">Review missed reading</p>
                   <div className="mt-3 h-1.5 rounded-full bg-primary/10">
                     <div className="h-1.5 w-2/3 rounded-full bg-primary" />
                   </div>
@@ -177,10 +177,10 @@ export function HeroSection() {
                 <div className="rounded-xl border border-border bg-background p-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-ink">
                     <ShieldPlus className="size-3.5 text-primary" />
-                    Secure records
+                    Patient tasks
                   </div>
                   <p className="mt-2 text-sm leading-5 text-muted">
-                    Health data encrypted and organized in one place.
+                    Clear daily monitoring, visits, labs, and payment status.
                   </p>
                 </div>
               </div>
