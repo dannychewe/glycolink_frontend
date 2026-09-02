@@ -139,6 +139,16 @@ function NavIcon({
   );
 }
 
+export function PatientNavIcon({
+  icon,
+  isActive,
+}: Readonly<{
+  icon: PatientNavigationItem["icon"];
+  isActive: boolean;
+}>) {
+  return <NavIcon icon={icon} isActive={isActive} />;
+}
+
 function SidebarSection({
   title,
   items,

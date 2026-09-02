@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PatientHeader } from "@/components/layout/PatientHeader";
+import { PatientMobileNavigation } from "@/components/layout/PatientMobileNavigation";
 import { PatientSidebar } from "@/components/layout/PatientSidebar";
 import { cn } from "@/lib/utils/cn";
 
@@ -27,10 +28,12 @@ export function PatientShell({ children }: PatientShellProps) {
       <div className="md:pl-60">
         <PatientHeader onMenuClick={() => setIsDrawerOpen(true)} />
 
-        <main className="min-h-[calc(100dvh-4rem)] px-4 py-5 sm:px-6 md:px-8 md:py-8">
+        <main className="min-h-[calc(100dvh-4rem)] px-4 pb-28 pt-4 sm:px-6 md:px-8 md:py-8">
           {children}
         </main>
       </div>
+
+      <PatientMobileNavigation onMoreClick={() => setIsDrawerOpen(true)} />
 
       <div
         className={cn(

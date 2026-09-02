@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
 import {
   ADMIN_CREATE_CORPORATE_ACCOUNT_MUTATION,
   ADMIN_ORGANIZATIONS_DROPDOWN_QUERY,
@@ -17,8 +18,6 @@ import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
 type OrgItem = { id: string; name: string; type: string };
-
-const selectClass = "flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 function InlineAlert({ alert, onDismiss }: Readonly<{ alert: AlertState; onDismiss: () => void }>) {
   if (!alert) return null;
@@ -46,6 +45,11 @@ export function AdminCorporateCreateView() {
     systemOrganizations: { items: OrgItem[] };
   }>(ADMIN_ORGANIZATIONS_DROPDOWN_QUERY, { fetchPolicy: "cache-first" });
   const orgs = orgsData?.systemOrganizations?.items ?? [];
+  const orgOptions = orgs.map((org) => ({
+    value: org.id,
+    label: org.name,
+    badge: org.type,
+  }));
 
   const [createCorporateAccount, { loading }] = useMutation(ADMIN_CREATE_CORPORATE_ACCOUNT_MUTATION);
 
@@ -103,25 +107,16 @@ export function AdminCorporateCreateView() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="org-select">Organisation</Label>
-              <select
-                id="org-select"
-                className={selectClass}
-                value={form.organizationId}
-                onChange={(e) => setForm((c) => ({ ...c, organizationId: e.target.value }))}
-                disabled={orgsLoading}
-                required
-              >
-                <option value="">— Select organisation —</option>
-                {orgs.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name} ({org.type})
-                  </option>
-                ))}
-              </select>
-              {orgsLoading ? <p className="text-xs text-muted">Loading organisations…</p> : null}
-            </div>
+            <SearchableSelector
+              id="org-select"
+              label="Organisation"
+              value={form.organizationId}
+              options={orgOptions}
+              placeholder="Search organisation"
+              emptyLabel={orgsLoading ? "Loading organisations..." : "No organisations found"}
+              disabled={orgsLoading}
+              onChange={(organizationId) => setForm((current) => ({ ...current, organizationId }))}
+            />
 
             <div className="flex gap-3 pt-1">
               <Button type="submit" disabled={loading || !form.organizationId}>

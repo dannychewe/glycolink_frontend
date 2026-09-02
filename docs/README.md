@@ -18,6 +18,7 @@ These documents are produced and maintained before and during screen redesign. T
 | 04 | [Information Architecture & Navigation](./04-information-architecture.md) | Navigation structure, deep-linking, and IA for Patient / Consultant / Admin. |
 | 05 | [Screen Redesign Framework](./05-screen-redesign-framework.md) | The repeatable 12-section methodology every screen redesign follows. |
 | 06 | [Frontend Design System Architecture](./06-frontend-design-system-architecture.md) | Reusable frontend foundation — folder structure, token layer, component APIs, layouts, roadmap. |
+| 07 | [Frontend Implementation Rules](./07-frontend-implementation-rules.md) | Practical rules for forms, backend choices, UUID selection, page separation, details pages, and modals. |
 
 ## How the documents relate
 
@@ -29,6 +30,8 @@ These documents are produced and maintained before and during screen redesign. T
                           (validated by re-scoring on 01)
 06 Frontend DS Arch ────► HOW the design system is built in code
                           (tokens → ui/ primitives → design-system/ → screens)
+07 Frontend Rules ──────► HOW implementation avoids raw IDs, raw choices,
+                          overloaded pages, and misplaced forms
 ```
 
 ## Redesign order (from the audit)
@@ -48,5 +51,6 @@ These documents are produced and maintained before and during screen redesign. T
 | IA & Navigation System | 1.0 | ✅ Complete |
 | Screen Redesign Framework | 1.0 | ✅ Complete |
 | Frontend Design System Architecture | 1.0 | ✅ Complete (palette: teal/flat; charts: Recharts) |
+| Frontend Implementation Rules | 1.0 | ✅ Complete |
 | Screen redesign specs | — | 🟡 Monitoring spec drafted (not yet built) |
 | Design system build | — | ⬜ Not started (next: Phase 0 — token layer) |

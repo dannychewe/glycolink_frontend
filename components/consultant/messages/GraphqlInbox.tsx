@@ -24,6 +24,8 @@ import {
 } from "@/lib/consultant/messages-graphql";
 import { Badge } from "@/components/ui/badge";
 import { DetailModal } from "@/components/ui/detail-modal";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
+import { MY_ENCOUNTERS_QUERY } from "@/lib/consultant/consultation-graphql";
 import { cn } from "@/lib/utils/cn";
 
 // ─── Types ───────────────────────────────────────────────
@@ -80,6 +82,14 @@ type Message = {
 };
 
 type FilterTab = "all" | "unread";
+type EncounterOption = {
+  id: string;
+  appointmentId: string;
+  patientId: string;
+  encounterType: string | null;
+  status: string;
+  startedAt: string;
+};
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -746,14 +756,28 @@ function ClinicalNoteModal({
   const [plan, setPlan] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const encountersQuery = useQuery<{ myEncounters: EncounterOption[] }>(MY_ENCOUNTERS_QUERY, {
+    skip: Boolean(thread.encounterId),
+    fetchPolicy: "cache-and-network",
+  });
   const [createNote, { loading }] = useMutation(CREATE_CLINICAL_NOTE_FROM_THREAD_MUTATION);
 
   const needsEncounterId = !thread.encounterId;
+  const encounterOptions = (encountersQuery.data?.myEncounters ?? [])
+    .filter((encounter) => !thread.patientId || encounter.patientId === thread.patientId)
+    .map((encounter) => ({
+      value: encounter.id,
+      label: `${formatFullTime(encounter.startedAt)} consultation`,
+      description: [encounter.encounterType?.replace(/_/g, " "), `Appointment ${encounter.appointmentId.slice(0, 8)}`]
+        .filter(Boolean)
+        .join(" · "),
+      badge: encounter.status,
+    }));
 
   async function handleSubmit() {
     setError(null);
     if (needsEncounterId && !encounterId.trim()) {
-      setError("This thread isn't linked to an encounter — provide an encounter ID.");
+      setError("This thread isn't linked to an encounter. Select the encounter for the note.");
       return;
     }
     // Only send provided SOAP fields; omit empties so the backend can
@@ -815,16 +839,16 @@ function ClinicalNoteModal({
           </div>
         ) : null}
         {needsEncounterId ? (
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-text">Encounter ID</label>
-            <input
-              type="text"
-              value={encounterId}
-              onChange={(e) => setEncounterId(e.target.value)}
-              placeholder="Target encounter UUID"
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          <SearchableSelector
+            id="note-encounter"
+            label="Encounter"
+            value={encounterId}
+            options={encounterOptions}
+            placeholder="Search encounter"
+            emptyLabel={encountersQuery.loading ? "Loading encounters..." : "No encounters found for this patient"}
+            disabled={encountersQuery.loading}
+            onChange={setEncounterId}
+          />
         ) : null}
         {([
           ["Subjective", subjective, setSubjective, "Symptoms and history (blank = use thread messages)"],

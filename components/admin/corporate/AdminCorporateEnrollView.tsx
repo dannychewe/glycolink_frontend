@@ -2,20 +2,35 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { AlertCircle, ArrowLeft, CheckCircle, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
 import {
   ADMIN_CORPORATE_MEMBERS_QUERY,
   ADMIN_ENROLL_CORPORATE_MEMBER_MUTATION,
+  ADMIN_PATIENT_SELECTOR_QUERY,
 } from "@/lib/admin/graphql";
 import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
+type PatientSelectorUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  phone: string | null;
+  patientProfile: {
+    id: string;
+    fullName: string | null;
+    email: string;
+    phone: string | null;
+    diabetesType: string | null;
+  } | null;
+};
 
 function InlineAlert({ alert, onDismiss }: Readonly<{ alert: AlertState; onDismiss: () => void }>) {
   if (!alert) return null;
@@ -38,6 +53,24 @@ export function AdminCorporateEnrollView({ corporateId }: Readonly<{ corporateId
   const router = useRouter();
   const [alert, setAlert] = useState<AlertState>(null);
   const [form, setForm] = useState({ patientId: "", employeeId: "" });
+
+  const patientsQuery = useQuery<{
+    systemUsers: { items: PatientSelectorUser[]; total: number };
+  }>(ADMIN_PATIENT_SELECTOR_QUERY, {
+    variables: { page: 1, limit: 100 },
+    fetchPolicy: "cache-and-network",
+  });
+  const patientOptions = (patientsQuery.data?.systemUsers.items ?? [])
+    .filter((patient) => patient.patientProfile?.id)
+    .map((patient) => ({
+      value: patient.patientProfile?.id ?? "",
+      label: patient.patientProfile?.fullName ?? patient.fullName ?? patient.email,
+      description: [
+        patient.patientProfile?.email ?? patient.email,
+        patient.patientProfile?.phone ?? patient.phone,
+        patient.patientProfile?.diabetesType?.replace(/_/g, " "),
+      ].filter(Boolean).join(" · "),
+    }));
 
   const [enrollMember, { loading }] = useMutation(ADMIN_ENROLL_CORPORATE_MEMBER_MUTATION);
 
@@ -90,13 +123,22 @@ export function AdminCorporateEnrollView({ corporateId }: Readonly<{ corporateId
         <CardContent>
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="patient-id">Patient ID</Label>
-              <Input
+              <input
+                type="hidden"
                 id="patient-id"
                 value={form.patientId}
-                placeholder="Patient UUID"
-                onChange={(e) => setForm((c) => ({ ...c, patientId: e.target.value }))}
+                readOnly
                 required
+              />
+              <SearchableSelector
+                id="member-patient"
+                label="Patient"
+                value={form.patientId}
+                options={patientOptions}
+                placeholder="Search patient"
+                emptyLabel={patientsQuery.loading ? "Loading patients..." : "No patients found"}
+                disabled={patientsQuery.loading}
+                onChange={(patientId) => setForm((current) => ({ ...current, patientId }))}
               />
             </div>
 
@@ -114,7 +156,7 @@ export function AdminCorporateEnrollView({ corporateId }: Readonly<{ corporateId
             </div>
 
             <div className="flex gap-3 pt-1">
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || !form.patientId}>
                 {loading ? "Enrolling…" : "Enroll Member"}
               </Button>
               <Button href={`/admin/corporate/${corporateId}`} variant="secondary" type="button">

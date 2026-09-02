@@ -10,6 +10,7 @@ import { CONSULTANT_CLIENTS_QUERY } from "@/lib/consultant/clients-graphql";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
 
 type ThresholdFormValues = {
   patientId: string;
@@ -41,6 +42,7 @@ export function SetThresholdForm() {
     register,
     handleSubmit,
     reset,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<ThresholdFormValues>({
@@ -51,7 +53,13 @@ export function SetThresholdForm() {
     },
   });
 
+  const patientId = watch("patientId");
   const glucoseLow = watch("glucoseLow");
+  const patientOptions = clients.map((client) => ({
+    value: client.patientId,
+    label: client.patientName ?? client.email ?? "Patient",
+    description: [client.email, client.diabetesType?.replace(/_/g, " ")].filter(Boolean).join(" · "),
+  }));
 
   const onSubmit = handleSubmit(async (values) => {
     await setThreshold({
@@ -94,24 +102,21 @@ export function SetThresholdForm() {
 
       <form className="grid gap-4 sm:grid-cols-2" onSubmit={onSubmit}>
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="patient-id">Patient</Label>
-          <select
+          <input
+            type="hidden"
             id="patient-id"
-            disabled={clientsLoading}
-            className="flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
             {...register("patientId", { required: "Please select a patient." })}
-          >
-            <option value="">
-              {clientsLoading ? "Loading patients…" : "Select a patient"}
-            </option>
-            {clients.map((c) => (
-              <option key={c.patientId} value={c.patientId}>
-                {c.patientName ?? c.email ?? c.patientId}
-                {c.email && c.patientName ? ` — ${c.email}` : ""}
-                {c.diabetesType ? ` (${c.diabetesType.replace(/_/g, " ")})` : ""}
-              </option>
-            ))}
-          </select>
+          />
+          <SearchableSelector
+            id="threshold-patient"
+            label="Patient"
+            value={patientId}
+            options={patientOptions}
+            placeholder="Search patient"
+            emptyLabel={clientsLoading ? "Loading patients..." : "No patients found"}
+            disabled={clientsLoading}
+            onChange={(nextPatientId) => setValue("patientId", nextPatientId, { shouldValidate: true })}
+          />
           {errors.patientId?.message ? (
             <p className="text-sm text-danger">{errors.patientId.message}</p>
           ) : null}

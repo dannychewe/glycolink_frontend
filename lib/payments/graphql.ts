@@ -53,3 +53,29 @@ export const RETRY_PAYMENT_MUTATION = gql`
     }
   }
 `;
+
+export const RECORD_APPOINTMENT_CASH_PAYMENT_MUTATION = gql`
+  mutation RecordAppointmentCashPayment(
+    $appointmentId: UUID!
+    $amount: Decimal
+    $reference: String
+    $note: String
+  ) {
+    recordAppointmentCashPayment(
+      appointmentId: $appointmentId
+      amount: $amount
+      reference: $reference
+      note: $note
+    ) {
+      payment {
+        id
+        appointmentId
+        amount
+        currency
+        method
+        status
+        confirmedAt
+      }
+    }
+  }
+`;

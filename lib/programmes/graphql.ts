@@ -131,6 +131,46 @@ export type CareProgramme = {
   } | null;
 };
 
+export type ProgrammeShareLink = {
+  id: UUID;
+  token: string;
+  shareUrl: string;
+  label?: string | null;
+  active: boolean;
+  expiresAt?: DateTimeString | null;
+  lastViewedAt?: DateTimeString | null;
+  lastUsedAt?: DateTimeString | null;
+  viewCount: number;
+  enrolmentCount: number;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+  programme: CareProgramme;
+};
+
+export type PublicProgrammePrice = {
+  id: UUID;
+  name: string;
+  description?: string | null;
+  currency: string;
+  amount: DecimalString;
+  billingModel: string;
+  billingInterval?: string | null;
+  includedServiceSummary?: string | null;
+};
+
+export type PublicProgrammeShareLink = {
+  token: string;
+  programmeId: UUID;
+  programmeName: string;
+  programmeCode: string;
+  programmeDescription?: string | null;
+  organizationName?: string | null;
+  defaultDurationDays?: number | null;
+  defaultMonitoringCadenceDays: number;
+  enrolmentOpen: boolean;
+  prices: PublicProgrammePrice[];
+};
+
 export type ProgrammeCareTeamAssignment = {
   id: UUID;
   role: string;
@@ -236,6 +276,40 @@ export type ProgrammeMonitoringRequirement = {
   active: boolean;
   approvedByProvider?: ProgrammeProviderSummary | null;
   approvedAt?: DateTimeString | null;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+};
+
+export type ProgrammeScheduleItemStatus =
+  | "SCHEDULED"
+  | "DUE"
+  | "DONE"
+  | "MISSED"
+  | "SKIPPED"
+  | "RESCHEDULED"
+  | "CANCELLED"
+  | string;
+
+export type ProgrammeScheduleItem = {
+  id: UUID;
+  programme: CareProgramme;
+  enrolmentId: UUID;
+  carePlanId?: UUID | null;
+  patient: ProgrammePatientSummary;
+  provider?: ProgrammeProviderSummary | null;
+  title: string;
+  description?: string | null;
+  eventType: string;
+  dayNumber?: number | null;
+  scheduledDate: DateString;
+  scheduledEndDate?: DateString | null;
+  scheduledStartTime?: string | null;
+  scheduledEndTime?: string | null;
+  status: ProgrammeScheduleItemStatus;
+  completedAt?: DateTimeString | null;
+  completedByUserId?: UUID | null;
+  skippedReason?: string | null;
+  metadataJson: JsonValue;
   createdAt: DateTimeString;
   updatedAt: DateTimeString;
 };
@@ -715,6 +789,27 @@ export const CARE_PROGRAMME_FIELDS = gql`
   }
 `;
 
+export const PROGRAMME_SHARE_LINK_FIELDS = gql`
+  ${CARE_PROGRAMME_FIELDS}
+  fragment ProgrammeShareLinkFields on ProgrammeShareLinkType {
+    id
+    token
+    shareUrl
+    label
+    active
+    expiresAt
+    lastViewedAt
+    lastUsedAt
+    viewCount
+    enrolmentCount
+    createdAt
+    updatedAt
+    programme {
+      ...CareProgrammeFields
+    }
+  }
+`;
+
 export const PROGRAMME_ENROLMENT_FIELDS = gql`
   ${CARE_PROGRAMME_FIELDS}
   fragment ProgrammeEnrolmentFields on ProgrammeEnrolmentType {
@@ -860,6 +955,43 @@ export const PROGRAMME_MONITORING_REQUIREMENT_FIELDS = gql`
       displayName
     }
     approvedAt
+    createdAt
+    updatedAt
+  }
+`;
+
+export const PROGRAMME_SCHEDULE_ITEM_FIELDS = gql`
+  ${CARE_PROGRAMME_FIELDS}
+  fragment ProgrammeScheduleItemFields on ProgrammeScheduleItemType {
+    id
+    programme {
+      ...CareProgrammeFields
+    }
+    enrolmentId
+    carePlanId
+    patient {
+      id
+      fullName
+      email
+      diabetesType
+    }
+    provider {
+      id
+      displayName
+    }
+    title
+    description
+    eventType
+    dayNumber
+    scheduledDate
+    scheduledEndDate
+    scheduledStartTime
+    scheduledEndTime
+    status
+    completedAt
+    completedByUserId
+    skippedReason
+    metadataJson
     createdAt
     updatedAt
   }
@@ -1082,6 +1214,41 @@ export const CARE_PROGRAMME_QUERY = gql`
   }
 `;
 
+export const PUBLIC_PROGRAMME_SHARE_LINK_QUERY = gql`
+  query PublicProgrammeShareLink($token: String!) {
+    publicProgrammeShareLink(token: $token) {
+      token
+      programmeId
+      programmeName
+      programmeCode
+      programmeDescription
+      organizationName
+      defaultDurationDays
+      defaultMonitoringCadenceDays
+      enrolmentOpen
+      prices {
+        id
+        name
+        description
+        currency
+        amount
+        billingModel
+        billingInterval
+        includedServiceSummary
+      }
+    }
+  }
+`;
+
+export const PROGRAMME_SHARE_LINKS_QUERY = gql`
+  ${PROGRAMME_SHARE_LINK_FIELDS}
+  query ProgrammeShareLinks($programmeId: UUID!) {
+    programmeShareLinks(programmeId: $programmeId) {
+      ...ProgrammeShareLinkFields
+    }
+  }
+`;
+
 export const CLINIC_PROGRAMME_ENROLMENTS_QUERY = gql`
   ${PROGRAMME_ENROLMENT_FIELDS}
   query ClinicProgrammeEnrolments(
@@ -1169,6 +1336,33 @@ export const EFFECTIVE_MONITORING_REQUIREMENTS_QUERY = gql`
   query EffectiveMonitoringRequirements($enrolmentId: UUID!) {
     effectiveMonitoringRequirements(enrolmentId: $enrolmentId) {
       ...ProgrammeMonitoringRequirementFields
+    }
+  }
+`;
+
+export const PROGRAMME_SCHEDULE_QUERY = gql`
+  ${PROGRAMME_SCHEDULE_ITEM_FIELDS}
+  query ProgrammeSchedule($enrolmentId: UUID!) {
+    programmeSchedule(enrolmentId: $enrolmentId) {
+      ...ProgrammeScheduleItemFields
+    }
+  }
+`;
+
+export const MY_PROGRAMME_SCHEDULE_QUERY = gql`
+  ${PROGRAMME_SCHEDULE_ITEM_FIELDS}
+  query MyProgrammeSchedule($enrolmentId: UUID) {
+    myProgrammeSchedule(enrolmentId: $enrolmentId) {
+      ...ProgrammeScheduleItemFields
+    }
+  }
+`;
+
+export const CLINIC_PROGRAMME_SCHEDULE_QUERY = gql`
+  ${PROGRAMME_SCHEDULE_ITEM_FIELDS}
+  query ClinicProgrammeSchedule($programmeId: UUID, $dateFrom: Date, $dateTo: Date, $status: String) {
+    clinicProgrammeSchedule(programmeId: $programmeId, dateFrom: $dateFrom, dateTo: $dateTo, status: $status) {
+      ...ProgrammeScheduleItemFields
     }
   }
 `;
@@ -2062,6 +2256,52 @@ export const INVITE_PATIENT_TO_PROGRAMME_MUTATION = gql`
   }
 `;
 
+export const CREATE_PROGRAMME_SHARE_LINK_MUTATION = gql`
+  ${PROGRAMME_SHARE_LINK_FIELDS}
+  mutation CreateProgrammeShareLink($programmeId: UUID!, $label: String, $expiresAt: DateTime) {
+    createProgrammeShareLink(programmeId: $programmeId, label: $label, expiresAt: $expiresAt) {
+      shareLink {
+        ...ProgrammeShareLinkFields
+      }
+    }
+  }
+`;
+
+export const REGISTER_FOR_PROGRAMME_SHARE_LINK_MUTATION = gql`
+  ${PROGRAMME_ENROLMENT_FIELDS}
+  mutation RegisterForProgrammeShareLink(
+    $token: String!
+    $email: String!
+    $password: String!
+    $fullName: String
+    $phone: String
+  ) {
+    registerForProgrammeShareLink(
+      token: $token
+      email: $email
+      password: $password
+      fullName: $fullName
+      phone: $phone
+    ) {
+      user {
+        id
+        email
+        firstName
+        lastName
+        phone
+        primaryRole
+        accountType
+        isVerified
+      }
+      enrolment {
+        ...ProgrammeEnrolmentFields
+      }
+      verificationRequired
+      verificationToken
+    }
+  }
+`;
+
 export const ASSIGN_PROGRAMME_CARE_TEAM_MUTATION = gql`
   ${PROGRAMME_ENROLMENT_FIELDS}
   mutation AssignProgrammeCareTeam($enrolmentId: UUID!, $assignments: [CareTeamAssignmentInput]!) {
@@ -2237,6 +2477,50 @@ export const DEACTIVATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION = gql`
     deactivateProgrammeMonitoringRequirement(requirementId: $requirementId) {
       requirement {
         ...ProgrammeMonitoringRequirementFields
+      }
+    }
+  }
+`;
+
+export const GENERATE_PROGRAMME_SCHEDULE_MUTATION = gql`
+  ${PROGRAMME_SCHEDULE_ITEM_FIELDS}
+  mutation GenerateProgrammeSchedule($carePlanId: UUID!, $replace: Boolean) {
+    generateProgrammeSchedule(carePlanId: $carePlanId, replace: $replace) {
+      scheduleItems {
+        ...ProgrammeScheduleItemFields
+      }
+    }
+  }
+`;
+
+export const MARK_PROGRAMME_SCHEDULE_ITEM_DONE_MUTATION = gql`
+  ${PROGRAMME_SCHEDULE_ITEM_FIELDS}
+  mutation MarkProgrammeScheduleItemDone($itemId: UUID!) {
+    markProgrammeScheduleItemDone(itemId: $itemId) {
+      scheduleItem {
+        ...ProgrammeScheduleItemFields
+      }
+    }
+  }
+`;
+
+export const SKIP_PROGRAMME_SCHEDULE_ITEM_MUTATION = gql`
+  ${PROGRAMME_SCHEDULE_ITEM_FIELDS}
+  mutation SkipProgrammeScheduleItem($itemId: UUID!, $reason: String) {
+    skipProgrammeScheduleItem(itemId: $itemId, reason: $reason) {
+      scheduleItem {
+        ...ProgrammeScheduleItemFields
+      }
+    }
+  }
+`;
+
+export const RESCHEDULE_PROGRAMME_SCHEDULE_ITEM_MUTATION = gql`
+  ${PROGRAMME_SCHEDULE_ITEM_FIELDS}
+  mutation RescheduleProgrammeScheduleItem($itemId: UUID!, $data: ProgrammeScheduleRescheduleInput!) {
+    rescheduleProgrammeScheduleItem(itemId: $itemId, data: $data) {
+      scheduleItem {
+        ...ProgrammeScheduleItemFields
       }
     }
   }
@@ -2569,6 +2853,33 @@ export const RETRY_PROGRAMME_PAYMENT_MUTATION = gql`
         status
         requestedAt
         completedAt
+      }
+    }
+  }
+`;
+
+export const RECORD_PROGRAMME_CASH_PAYMENT_MUTATION = gql`
+  mutation RecordProgrammeCashPayment(
+    $invoiceId: UUID!
+    $amount: Decimal
+    $reference: String
+    $note: String
+  ) {
+    recordProgrammeCashPayment(
+      invoiceId: $invoiceId
+      amount: $amount
+      reference: $reference
+      note: $note
+    ) {
+      payment {
+        id
+        programmeInvoiceId
+        purpose
+        amount
+        currency
+        method
+        status
+        confirmedAt
       }
     }
   }

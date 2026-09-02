@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useQuery } from "@apollo/client";
-import { AlertCircle, CheckCircle2, Clock, ReceiptText } from "lucide-react";
+import { useMutation, useQuery } from "@apollo/client";
+import { AlertCircle, CalendarCheck2, CalendarRange, CheckCircle2, Clock, ReceiptText, Stethoscope, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DetailModal } from "@/components/ui/detail-modal";
 import {
   Panel,
   PanelBody,
@@ -21,8 +22,10 @@ import {
   MY_CURRENT_PROGRAMME_ENROLMENT_QUERY,
   MY_MONITORING_SCHEDULE_QUERY,
   MY_NEXT_EXPECTED_READINGS_QUERY,
+  MY_PROGRAMME_SCHEDULE_QUERY,
   MY_PROGRAMME_ENTITLEMENTS_QUERY,
   MY_PROGRAMME_INVOICES_QUERY,
+  MARK_PROGRAMME_SCHEDULE_ITEM_DONE_MUTATION,
   PATIENT_MONITORING_ADHERENCE_SUMMARY_QUERY,
   PROGRAMME_CURRENT_BASELINE_QUERY,
   PROGRAMME_CURRENT_CARE_PLAN_QUERY,
@@ -32,7 +35,9 @@ import {
   type ProgrammeEnrolment,
   type ProgrammeEntitlement,
   type ProgrammeInvoicePage,
+  type ProgrammeScheduleItem,
 } from "@/lib/programmes/graphql";
+import { labelForChoice, PROGRAMME_CARE_TEAM_ROLE_OPTIONS, PROGRAMME_MONITORING_CADENCE_TYPE_OPTIONS } from "@/lib/programmes/choices";
 import { Icons } from "@/components/ui/icons";
 
 type EnrolmentData = {
@@ -66,6 +71,10 @@ type ScheduleData = {
       source: string;
     }[];
   }[];
+};
+
+type CareJourneyData = {
+  myProgrammeSchedule: ProgrammeScheduleItem[];
 };
 
 type InvoicesData = {
@@ -118,6 +127,22 @@ function formatDateTime(value: string | null | undefined) {
   });
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return "Not scheduled";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-ZM", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
+  const startLabel = formatDate(start);
+  if (!end || end === start) return startLabel;
+  return `${startLabel} - ${formatDate(end)}`;
+}
+
 function money(amount: string, currency: string) {
   const value = Number(amount);
   if (Number.isNaN(value)) return `${currency} ${amount}`;
@@ -126,6 +151,14 @@ function money(amount: string, currency: string) {
   } catch {
     return `${currency} ${value.toFixed(2)}`;
   }
+}
+
+function isDueDate(value: string) {
+  const due = new Date(value);
+  if (Number.isNaN(due.getTime())) return false;
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return due <= today;
 }
 
 function isTodayOrOverdue(value: string) {
@@ -145,17 +178,25 @@ function TodayReadingsPanel({
   onLogged: () => void;
 }) {
   const [mode, setMode] = useState<"glucose" | "vitals">("glucose");
+  const [logModalOpen, setLogModalOpen] = useState(false);
   const actionableReadings = readings.filter(
     (reading) => reading.status !== "SATISFIED" && isTodayOrOverdue(reading.dueAt),
   );
 
   return (
     <Panel>
-      <PanelHeader>
+      <PanelHeader className="flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <PanelTitle icon={Icons.monitoring} count={actionableReadings.length} countTone="warning">
           Today&apos;s Monitoring
         </PanelTitle>
-        <Button href="/patient/monitoring" size="sm" variant="secondary">Full log</Button>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:flex-wrap">
+          <Button type="button" size="sm" className="h-10 rounded-full" onClick={() => setLogModalOpen(true)}>
+            Log reading
+          </Button>
+          <Button href="/patient/monitoring" size="sm" variant="secondary" className="h-10 rounded-full">
+            Full log
+          </Button>
+        </div>
       </PanelHeader>
       <PanelBody className="space-y-5">
         {actionableReadings.length === 0 ? (
@@ -163,9 +204,9 @@ function TodayReadingsPanel({
             No readings are due before the end of today.
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-border">
             {actionableReadings.slice(0, 4).map((reading) => (
-              <div key={reading.id} className="flex flex-col gap-2 rounded-lg border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div key={reading.id} className="flex items-center justify-between gap-3 py-3">
                 <div>
                   <p className="text-sm font-semibold text-text">
                     {titleCase(reading.observationContext ?? reading.observationType)}
@@ -177,30 +218,61 @@ function TodayReadingsPanel({
             ))}
           </div>
         )}
-
-        <div className="flex gap-2 border-b border-border pb-3">
-          <button
-            type="button"
-            onClick={() => setMode("glucose")}
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              mode === "glucose" ? "bg-primary/10 text-primary" : "text-muted hover:bg-background"
-            }`}
-          >
-            Glucose
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("vitals")}
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              mode === "vitals" ? "bg-primary/10 text-primary" : "text-muted hover:bg-background"
-            }`}
-          >
-            Vitals
-          </button>
-        </div>
-
-        {mode === "glucose" ? <GlucoseLogForm onSuccess={onLogged} /> : <VitalsLogForm onSuccess={onLogged} />}
       </PanelBody>
+      {logModalOpen ? (
+        <DetailModal
+          title="Log reading"
+          subtitle="Record today's programme monitoring"
+          onClose={() => setLogModalOpen(false)}
+          className="sm:max-w-2xl"
+          footer={
+            <div className="flex justify-end">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setLogModalOpen(false)}>
+                <X className="size-4" />
+                Close
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-5">
+            <div className="flex gap-2 border-b border-border pb-3">
+              <button
+                type="button"
+                onClick={() => setMode("glucose")}
+                className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                  mode === "glucose" ? "bg-primary/10 text-primary" : "text-muted hover:bg-background"
+                }`}
+              >
+                Glucose
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("vitals")}
+                className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                  mode === "vitals" ? "bg-primary/10 text-primary" : "text-muted hover:bg-background"
+                }`}
+              >
+                Vitals
+              </button>
+            </div>
+            {mode === "glucose" ? (
+              <GlucoseLogForm
+                onSuccess={() => {
+                  onLogged();
+                  setLogModalOpen(false);
+                }}
+              />
+            ) : (
+              <VitalsLogForm
+                onSuccess={() => {
+                  onLogged();
+                  setLogModalOpen(false);
+                }}
+              />
+            )}
+          </div>
+        </DetailModal>
+      ) : null}
     </Panel>
   );
 }
@@ -285,6 +357,119 @@ function ProgrammeTasksPanel({
   );
 }
 
+function WhatsNextPanel({
+  enrolment,
+  baseline,
+  carePlan,
+  openInvoiceCount,
+}: {
+  enrolment: ProgrammeEnrolment;
+  baseline: ProgrammeBaselineAssessment | null;
+  carePlan: ProgrammeCarePlan | null;
+  openInvoiceCount: number;
+}) {
+  const steps = [
+    {
+      label: "Create your patient account",
+      detail: "Your programme enrolment is connected to this dashboard.",
+      done: true,
+      href: "/patient/dashboard",
+    },
+    {
+      label: "Confirm your diabetes baseline",
+      detail: baseline?.status === "APPROVED" ? "Your baseline has been reviewed." : "Share your current history and readings context.",
+      done: baseline?.status === "APPROVED",
+      href: "/patient/pcq/baseline",
+    },
+    {
+      label: "Review your care plan",
+      detail: carePlan?.status === "ACTIVE" ? "Your active plan is ready." : "Your clinic will publish this after review.",
+      done: carePlan?.status === "ACTIVE",
+      href: "/patient/dashboard",
+    },
+    {
+      label: "Book your programme consultant",
+      detail: enrolment.leadProvider ? `Lead consultant: ${enrolment.leadProvider.displayName ?? "Assigned consultant"}` : "A lead consultant will appear here when assigned.",
+      done: Boolean(enrolment.leadProvider),
+      href: enrolment.leadProvider ? `/patient/providers/${enrolment.leadProvider.id}/book` : "/patient/consultants",
+    },
+    {
+      label: "Settle programme billing",
+      detail: openInvoiceCount > 0 ? `${openInvoiceCount} invoice${openInvoiceCount === 1 ? "" : "s"} need attention.` : "No outstanding programme balance.",
+      done: openInvoiceCount === 0,
+      href: "/patient/payments",
+    },
+  ];
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={CalendarCheck2}>What Happens Next</PanelTitle>
+        <Badge variant={statusVariant(enrolment.status)}>{titleCase(enrolment.status)}</Badge>
+      </PanelHeader>
+      <PanelList>
+        {steps.map((step) => (
+          <Link key={step.label} href={step.href} className="flex items-start gap-3 px-5 py-4 transition-colors hover:bg-background">
+            {step.done ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" /> : <Clock className="mt-0.5 size-5 shrink-0 text-warning" />}
+            <div className="min-w-0">
+              <p className="break-words text-sm font-semibold text-text">{step.label}</p>
+              <p className="mt-1 break-words text-xs leading-5 text-muted">{step.detail}</p>
+            </div>
+          </Link>
+        ))}
+      </PanelList>
+    </Panel>
+  );
+}
+
+function CareTeamPanel({ enrolment }: { enrolment: ProgrammeEnrolment }) {
+  const activeAssignments = enrolment.careTeamAssignments.filter((assignment) => assignment.active);
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={Stethoscope} count={activeAssignments.length + (enrolment.leadProvider ? 1 : 0)}>
+          Meet Your Care Team
+        </PanelTitle>
+      </PanelHeader>
+      <PanelBody className="space-y-3">
+        {enrolment.leadProvider ? (
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-text">{enrolment.leadProvider.displayName ?? "Lead consultant"}</p>
+              <p className="mt-1 text-xs text-muted">Lead consultant</p>
+            </div>
+            <Button href={`/patient/providers/${enrolment.leadProvider.id}/book`} size="sm" variant="secondary">
+              Book
+            </Button>
+          </div>
+        ) : (
+          <p className="rounded-lg border border-border bg-background px-4 py-3 text-sm text-muted">
+            Your clinic has not assigned a lead consultant yet.
+          </p>
+        )}
+        {activeAssignments.length > 0 ? (
+          <div className="divide-y divide-border rounded-lg border border-border bg-background">
+            {activeAssignments.map((assignment) => (
+              <div key={assignment.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-text">{assignment.provider?.displayName ?? "Care team member"}</p>
+                  <p className="mt-1 text-xs text-muted">{labelForChoice(PROGRAMME_CARE_TEAM_ROLE_OPTIONS, assignment.role, titleCase(assignment.role))}</p>
+                </div>
+                {assignment.provider ? (
+                  <Button href={`/patient/providers/${assignment.provider.id}/book`} size="sm" variant="ghost">
+                    Book
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </PanelBody>
+    </Panel>
+  );
+}
+
 function SchedulePanel({ schedule }: { schedule: ScheduleData["myMonitoringSchedule"] }) {
   const requirements = schedule.flatMap((item) =>
     item.requirements.map((requirement) => ({
@@ -308,12 +493,105 @@ function SchedulePanel({ schedule }: { schedule: ScheduleData["myMonitoringSched
                 {titleCase(requirement.observationContext ?? requirement.observationType)}
               </p>
               <p className="mt-1 text-xs text-muted">
-                {requirement.programmeName} · {titleCase(requirement.cadenceType)}
+                {requirement.programmeName} | {labelForChoice(PROGRAMME_MONITORING_CADENCE_TYPE_OPTIONS, requirement.cadenceType)}
                 {requirement.timeOfDay ? ` · ${requirement.timeOfDay}` : ""}
               </p>
             </div>
           ))}
         </PanelList>
+      )}
+    </Panel>
+  );
+}
+
+function CareJourneyPanel({
+  items,
+  onChanged,
+}: {
+  items: ProgrammeScheduleItem[];
+  onChanged: () => void;
+}) {
+  const [markDone, markState] = useMutation(MARK_PROGRAMME_SCHEDULE_ITEM_DONE_MUTATION);
+  const actionable = items.filter((item) => !["DONE", "SKIPPED", "CANCELLED"].includes(item.status));
+  const dueNow = actionable.filter((item) => isDueDate(item.scheduledDate));
+  const upcoming = actionable.filter((item) => !isDueDate(item.scheduledDate)).slice(0, 5);
+  const visible = [...dueNow, ...upcoming].slice(0, 7);
+  const completedCount = items.filter((item) => item.status === "DONE").length;
+  const progress = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
+
+  async function complete(itemId: string) {
+    await markDone({ variables: { itemId } });
+    onChanged();
+  }
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={CalendarRange} count={items.length}>Care Journey</PanelTitle>
+      </PanelHeader>
+      {visible.length === 0 ? (
+        <PanelEmpty>Your dated care plan calendar will appear after your consultant activates your care plan.</PanelEmpty>
+      ) : (
+        <>
+          <PanelBody className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <StatTile label="Due now" value={dueNow.length} tone={dueNow.length ? "warning" : "success"} />
+              <StatTile label="Completed" value={completedCount} tone="success" />
+              <StatTile label="Progress" value={`${progress}%`} />
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-border">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+          </PanelBody>
+          <PanelList>
+            {visible.map((item, index) => (
+              <div key={item.id} className="grid grid-cols-[28px_1fr] gap-3 px-5 py-4">
+                <div className="flex flex-col items-center">
+                  <span className={`mt-1 size-3 rounded-full ${isDueDate(item.scheduledDate) ? "bg-warning" : "bg-primary"}`} />
+                  {index < visible.length - 1 ? <span className="mt-2 min-h-16 w-px flex-1 bg-border" /> : null}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={isDueDate(item.scheduledDate) ? "warning" : statusVariant(item.status)}>
+                        {item.dayNumber && item.scheduledEndDate && item.scheduledEndDate !== item.scheduledDate ? `Day ${item.dayNumber}+` : item.dayNumber ? `Day ${item.dayNumber}` : titleCase(item.status)}
+                      </Badge>
+                      <p className="text-xs text-muted">{formatDateRange(item.scheduledDate, item.scheduledEndDate)}</p>
+                    </div>
+                    <p className="mt-2 break-words text-sm font-semibold text-text">{item.title}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {titleCase(item.eventType)}
+                      {item.provider?.displayName ? ` | ${item.provider.displayName}` : ""}
+                    </p>
+                    {item.description ? <p className="mt-2 text-xs leading-5 text-muted">{item.description}</p> : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {item.eventType === "MEASUREMENT_TASK" ? (
+                      <Button href="/patient/monitoring" size="sm">
+                        Log reading
+                      </Button>
+                    ) : null}
+                    {item.eventType === "VIDEO_CONSULTATION" || item.eventType === "CONSULTANT_REVIEW" ? (
+                      <Button href={item.provider?.id ? `/patient/providers/${item.provider.id}/book` : "/patient/appointments"} size="sm">
+                        Book
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={markState.loading}
+                      onClick={() => void complete(item.id)}
+                    >
+                      <CheckCircle2 className="size-4" />
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </PanelList>
+        </>
       )}
     </Panel>
   );
@@ -384,6 +662,11 @@ export function PatientDiabetesHome() {
     skip: !enrolmentId,
     fetchPolicy: "cache-and-network",
   });
+  const careJourneyQuery = useQuery<CareJourneyData>(MY_PROGRAMME_SCHEDULE_QUERY, {
+    variables: { enrolmentId },
+    skip: !enrolmentId,
+    fetchPolicy: "cache-and-network",
+  });
   const scheduleQuery = useQuery<ScheduleData>(MY_MONITORING_SCHEDULE_QUERY, {
     skip: !enrolmentId,
     fetchPolicy: "cache-and-network",
@@ -410,6 +693,7 @@ export function PatientDiabetesHome() {
     [nextReadingsQuery.data?.myNextExpectedReadings],
   );
   const schedule = scheduleQuery.data?.myMonitoringSchedule ?? [];
+  const careJourney = careJourneyQuery.data?.myProgrammeSchedule ?? [];
   const invoices = invoicesQuery.data?.myProgrammeInvoices;
   const entitlements = entitlementsQuery.data?.myProgrammeEntitlements ?? [];
   const openInvoiceCount = invoices?.items.filter((invoice) => Number(invoice.balance) > 0).length ?? 0;
@@ -420,6 +704,7 @@ export function PatientDiabetesHome() {
 
   function refetchCareData() {
     void nextReadingsQuery.refetch();
+    void careJourneyQuery.refetch();
     void adherenceQuery.refetch();
   }
 
@@ -447,29 +732,35 @@ export function PatientDiabetesHome() {
   }
 
   return (
-    <div className="space-y-6">
-      <Panel>
-        <PanelBody className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              {enrolment.programme.name}
-            </p>
-            <h2 className="mt-1 text-xl font-semibold text-text">Your Diabetes Care Today</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Complete due monitoring, review your care plan, and keep programme billing current.
-            </p>
-          </div>
+    <div className="space-y-5 sm:space-y-6">
+      <section className="flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            {enrolment.programme.name}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-text">Your Diabetes Care Today</h2>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            Complete due monitoring, review your care plan, and keep programme billing current.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {enrolment.leadProvider ? (
+            <Button href={`/patient/providers/${enrolment.leadProvider.id}/book`} size="sm">
+              Book consultant
+            </Button>
+          ) : null}
           <Badge variant={statusVariant(enrolment.status)}>{titleCase(enrolment.status)}</Badge>
-        </PanelBody>
-      </Panel>
+        </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid divide-y divide-border rounded-none border-y border-border sm:divide-y-0 sm:gap-4 sm:border-y-0 md:grid-cols-3">
         <StatTile
           label="Due Today"
           value={actionableReadings.length}
           sublabel="monitoring tasks"
           icon={Icons.monitoring}
           tone={actionableReadings.length > 0 ? "warning" : "success"}
+          className="rounded-none border-0 bg-transparent px-0 sm:rounded-lg sm:border sm:bg-surface sm:px-4"
         />
         <StatTile
           label="Open Gaps"
@@ -477,6 +768,7 @@ export function PatientDiabetesHome() {
           sublabel="missed monitoring"
           icon={Icons.warning}
           tone={(adherenceQuery.data?.patientMonitoringAdherenceSummary.openGapCount ?? 0) > 0 ? "danger" : "neutral"}
+          className="rounded-none border-0 bg-transparent px-0 sm:rounded-lg sm:border sm:bg-surface sm:px-4"
         />
         <StatTile
           label="Invoices"
@@ -484,18 +776,24 @@ export function PatientDiabetesHome() {
           sublabel="with balance due"
           icon={ReceiptText}
           tone={openInvoiceCount > 0 ? "warning" : "success"}
+          className="rounded-none border-0 bg-transparent px-0 sm:rounded-lg sm:border sm:bg-surface sm:px-4"
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
-        <TodayReadingsPanel readings={nextReadings} onLogged={refetchCareData} />
         <div className="space-y-6">
-          <ProgrammeTasksPanel
+          <WhatsNextPanel
             enrolment={enrolment}
             baseline={baseline}
             carePlan={carePlan}
             openInvoiceCount={openInvoiceCount}
           />
+          <CareJourneyPanel items={careJourney} onChanged={refetchCareData} />
+          <TodayReadingsPanel readings={nextReadings} onLogged={refetchCareData} />
+        </div>
+        <div className="space-y-6">
+          <CareTeamPanel enrolment={enrolment} />
+          <ProgrammeTasksPanel enrolment={enrolment} baseline={baseline} carePlan={carePlan} openInvoiceCount={openInvoiceCount} />
           <CarePlanPanel carePlan={carePlan} />
           <SchedulePanel schedule={schedule} />
           <BillingPanel invoices={invoices} entitlements={entitlements} />

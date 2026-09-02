@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Panel, PanelBody, PanelEmpty, PanelHeader, PanelList, PanelTitle, StatTile } from "@/components/ui/panel";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
 import {
   CLINIC_CARE_PROGRAMMES_QUERY,
   CLINIC_RESPONSE_PERFORMANCE_SUMMARY_QUERY,
@@ -109,6 +110,12 @@ export function ProgrammeReportingDashboard() {
   const response = responseQuery.data?.clinicResponsePerformanceSummary.responsePerformance;
   const trends = trendsQuery.data?.operationalTrendSeries.buckets ?? [];
   const comparison = comparisonQuery.data?.programmeComparison.items ?? [];
+  const programmeOptions = (programmesQuery.data?.clinicCareProgrammes ?? []).map((programme) => ({
+    value: programme.id,
+    label: programme.name,
+    description: programme.code,
+    badge: programme.status,
+  }));
   const loading = workQueueQuery.loading || responseQuery.loading || trendsQuery.loading || comparisonQuery.loading;
   const error = workQueueQuery.error || responseQuery.error || trendsQuery.error || comparisonQuery.error || adherenceQuery.error;
 
@@ -132,21 +139,16 @@ export function ProgrammeReportingDashboard() {
         <PanelBody>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="space-y-1.5">
-              <Label htmlFor="report-programme">Programme ID</Label>
-              <Input
+              <SearchableSelector
                 id="report-programme"
-                list="report-programme-options"
+                label="Programme"
                 value={programmeId}
-                onChange={(event) => setProgrammeId(event.target.value)}
-                placeholder="Required for adherence"
+                options={programmeOptions}
+                placeholder="Search programme"
+                emptyLabel={programmesQuery.loading ? "Loading programmes..." : "No programmes found"}
+                disabled={programmesQuery.loading}
+                onChange={setProgrammeId}
               />
-              <datalist id="report-programme-options">
-                {(programmesQuery.data?.clinicCareProgrammes ?? []).map((programme) => (
-                  <option key={programme.id} value={programme.id}>
-                    {programme.name}
-                  </option>
-                ))}
-              </datalist>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="report-start">Start date</Label>

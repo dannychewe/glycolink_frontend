@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { AlertCircle, CheckCircle2, ClipboardCheck, Plus } from "lucide-react";
+import { AlertCircle, CalendarRange, CheckCircle2, ClipboardCheck, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   Panel,
   PanelBody,
@@ -35,6 +36,7 @@ import {
   PROGRAMME_ENROLMENT_READINESS_QUERY,
   RETURN_PROGRAMME_BASELINE_MUTATION,
   SUBMIT_PROGRAMME_CARE_PLAN_MUTATION,
+  UPDATE_DRAFT_PROGRAMME_CARE_PLAN_MUTATION,
   UPDATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION,
   type EnrolmentReadiness,
   type ExpectedMonitoringWindow,
@@ -87,6 +89,88 @@ type AdherenceData = {
     consecutiveMissedCount: number;
   };
 };
+
+type ScheduleTemplateItem = {
+  id: string;
+  title: string;
+  eventType: string;
+  day: string;
+  endDay: string;
+  description: string;
+};
+
+const scheduleEventOptions = [
+  { value: "measurement_task", label: "Measurement task" },
+  { value: "consultant_review", label: "Consultant review" },
+  { value: "video_consultation", label: "Video consultation" },
+  { value: "medication_check", label: "Medication check" },
+  { value: "lab_reminder", label: "Lab reminder" },
+  { value: "education", label: "Education" },
+  { value: "care_team_check_in", label: "Care team check-in" },
+  { value: "payment_renewal", label: "Payment renewal" },
+  { value: "programme_review", label: "Programme review" },
+];
+
+const defaultScheduleTemplate: ScheduleTemplateItem[] = [
+  { id: "welcome", title: "Welcome and care plan review", eventType: "care_team_check_in", day: "1", endDay: "", description: "Confirm goals, monitoring expectations, and how follow-up will work." },
+  { id: "fasting", title: "Daily fasting glucose", eventType: "measurement_task", day: "1", endDay: "7", description: "Log fasting glucose every morning before the first review." },
+  { id: "review", title: "First glucose trend review", eventType: "consultant_review", day: "7", endDay: "", description: "Consultant reviews early readings and adjusts care direction if needed." },
+  { id: "video", title: "Video follow-up consultation", eventType: "video_consultation", day: "14", endDay: "", description: "Remote review of progress, medication tolerance, and next steps." },
+  { id: "close", title: "Programme progress review", eventType: "programme_review", day: "30", endDay: "", description: "Review outcomes and agree renewal, maintenance, or discharge plan." },
+];
+
+function textLinesFromItems(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object" && "description" in item) return String(item.description ?? "");
+        if (item && typeof item === "object" && "label" in item) return String(item.label ?? "");
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (value && typeof value === "object" && "items" in value) {
+    return textLinesFromItems((value as { items?: unknown }).items);
+  }
+  return "";
+}
+
+function scheduleItemsFromJson(value: unknown): ScheduleTemplateItem[] {
+  const rawItems = value && typeof value === "object" && "items" in value ? (value as { items?: unknown }).items : value;
+  if (!Array.isArray(rawItems)) return defaultScheduleTemplate;
+  const parsed = rawItems
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const raw = item as Record<string, unknown>;
+      const title = String(raw.title ?? raw.label ?? raw.description ?? "").trim();
+      if (!title) return null;
+      return {
+        id: `existing-${index}-${title}`,
+        title,
+        eventType: String(raw.eventType ?? raw.event_type ?? raw.type ?? "care_team_check_in"),
+        day: String(raw.day ?? raw.dayNumber ?? raw.offsetDays ?? raw.offset_days ?? index + 1),
+        endDay: String(raw.endDay ?? raw.end_day ?? raw.untilDay ?? raw.until_day ?? ""),
+        description: String(raw.description ?? raw.detail ?? ""),
+      };
+    })
+    .filter((item): item is ScheduleTemplateItem => Boolean(item));
+  return parsed.length ? parsed : defaultScheduleTemplate;
+}
+
+function goalsFromJson(value: unknown) {
+  if (!Array.isArray(value)) return "Maintain safe fasting glucose\nReduce missed readings";
+  const lines = value
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object" && "description" in item) return String(item.description ?? "");
+      if (item && typeof item === "object" && "label" in item) return String(item.label ?? "");
+      return "";
+    })
+    .filter(Boolean);
+  return lines.length ? lines.join("\n") : "Maintain safe fasting glucose\nReduce missed readings";
+}
 
 function titleCase(value: string | null | undefined) {
   if (!value) return "Unknown";
@@ -251,17 +335,34 @@ function CarePlanPanel({
   const [summary, setSummary] = useState("");
   const [instructions, setInstructions] = useState("");
   const [goals, setGoals] = useState("Maintain safe fasting glucose\nReduce missed readings");
-  const [followUpSchedule, setFollowUpSchedule] = useState("Care coordinator check-in weekly\nClinician review every 30 days");
+  const [scheduleItems, setScheduleItems] = useState<ScheduleTemplateItem[]>(defaultScheduleTemplate);
   const [labFollowUp, setLabFollowUp] = useState("HbA1c review every 90 days");
   const [medicationReview, setMedicationReview] = useState("Review adherence, side effects, and refill risk at every clinician review.");
   const [internalNotes, setInternalNotes] = useState("");
   const [revisionReason, setRevisionReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [createPlan, createState] = useMutation(CREATE_PROGRAMME_CARE_PLAN_MUTATION);
+  const [updatePlan, updateState] = useMutation(UPDATE_DRAFT_PROGRAMME_CARE_PLAN_MUTATION);
   const [createRevision, revisionState] = useMutation(CREATE_PROGRAMME_CARE_PLAN_REVISION_MUTATION);
   const [submitPlan, submitState] = useMutation(SUBMIT_PROGRAMME_CARE_PLAN_MUTATION);
   const [approvePlan, approveState] = useMutation(APPROVE_ACTIVATE_PROGRAMME_CARE_PLAN_MUTATION);
-  const saving = createState.loading || revisionState.loading || submitState.loading || approveState.loading;
+  const saving = createState.loading || updateState.loading || revisionState.loading || submitState.loading || approveState.loading;
+
+  useEffect(() => {
+    if (!carePlan) return;
+    setTitle(carePlan.title || "Diabetes continuity care plan");
+    setSummary(carePlan.summary || "");
+    setInstructions(carePlan.patientInstructions || "");
+    setGoals(goalsFromJson(carePlan.goalsJson));
+    setScheduleItems(scheduleItemsFromJson(carePlan.followUpScheduleJson));
+    setLabFollowUp(textLinesFromItems(carePlan.laboratoryFollowUpJson) || "HbA1c review every 90 days");
+    setMedicationReview(
+      carePlan.medicationReviewJson && typeof carePlan.medicationReviewJson === "object" && "notes" in carePlan.medicationReviewJson
+        ? String(carePlan.medicationReviewJson.notes ?? "")
+        : "Review adherence, side effects, and refill risk at every clinician review.",
+    );
+    setInternalNotes(carePlan.internalNotes || "");
+  }, [carePlan]);
 
   function carePlanPayload() {
     return {
@@ -273,11 +374,15 @@ function CarePlanPanel({
         .filter(Boolean)
         .map((description) => ({ description, status: "active" })),
       followUpScheduleJson: {
-        items: followUpSchedule
-          .split("\n")
-          .map((item) => item.trim())
-          .filter(Boolean)
-          .map((description) => ({ description })),
+        items: scheduleItems
+          .filter((item) => item.title.trim() && Number(item.day) > 0)
+          .map((item) => ({
+            title: item.title.trim(),
+            eventType: item.eventType,
+            day: Number(item.day),
+            endDay: Number(item.endDay) > 0 ? Number(item.endDay) : undefined,
+            description: item.description.trim() || undefined,
+          })),
       },
       laboratoryFollowUpJson: {
         items: labFollowUp
@@ -314,12 +419,21 @@ function CarePlanPanel({
     if (!carePlan) return;
     setError(null);
     try {
-      await createRevision({
-        variables: {
-          carePlanId: carePlan.id,
-          data: carePlanPayload(),
-        },
-      });
+      if (carePlan.status === "DRAFT") {
+        await updatePlan({
+          variables: {
+            carePlanId: carePlan.id,
+            data: carePlanPayload(),
+          },
+        });
+      } else {
+        await createRevision({
+          variables: {
+            carePlanId: carePlan.id,
+            data: carePlanPayload(),
+          },
+        });
+      }
       onChanged();
     } catch (err) {
       setError(mapError(err));
@@ -370,13 +484,15 @@ function CarePlanPanel({
               </Button>
             </div>
             <form onSubmit={(event) => void handleRevision(event)} className="space-y-3 border-t border-border pt-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Revision draft</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                {carePlan.status === "DRAFT" ? "Edit draft care plan" : "Revision draft"}
+              </p>
               <StructuredCarePlanFields
                 title={title}
                 summary={summary}
                 instructions={instructions}
                 goals={goals}
-                followUpSchedule={followUpSchedule}
+                scheduleItems={scheduleItems}
                 labFollowUp={labFollowUp}
                 medicationReview={medicationReview}
                 internalNotes={internalNotes}
@@ -385,14 +501,19 @@ function CarePlanPanel({
                 onSummary={setSummary}
                 onInstructions={setInstructions}
                 onGoals={setGoals}
-                onFollowUpSchedule={setFollowUpSchedule}
+                onScheduleItems={setScheduleItems}
                 onLabFollowUp={setLabFollowUp}
                 onMedicationReview={setMedicationReview}
                 onInternalNotes={setInternalNotes}
                 onRevisionReason={setRevisionReason}
               />
-              <Button type="submit" size="sm" variant="secondary" disabled={!canManage || saving || !title.trim() || !revisionReason.trim()}>
-                Create revision
+              <Button
+                type="submit"
+                size="sm"
+                variant="secondary"
+                disabled={!canManage || saving || !title.trim() || (carePlan.status !== "DRAFT" && !revisionReason.trim())}
+              >
+                {carePlan.status === "DRAFT" ? "Save care plan changes" : "Create revision"}
               </Button>
             </form>
           </>
@@ -403,7 +524,7 @@ function CarePlanPanel({
               summary={summary}
               instructions={instructions}
               goals={goals}
-              followUpSchedule={followUpSchedule}
+              scheduleItems={scheduleItems}
               labFollowUp={labFollowUp}
               medicationReview={medicationReview}
               internalNotes={internalNotes}
@@ -412,7 +533,7 @@ function CarePlanPanel({
               onSummary={setSummary}
               onInstructions={setInstructions}
               onGoals={setGoals}
-              onFollowUpSchedule={setFollowUpSchedule}
+              onScheduleItems={setScheduleItems}
               onLabFollowUp={setLabFollowUp}
               onMedicationReview={setMedicationReview}
               onInternalNotes={setInternalNotes}
@@ -434,7 +555,7 @@ function StructuredCarePlanFields({
   summary,
   instructions,
   goals,
-  followUpSchedule,
+  scheduleItems,
   labFollowUp,
   medicationReview,
   internalNotes,
@@ -443,7 +564,7 @@ function StructuredCarePlanFields({
   onSummary,
   onInstructions,
   onGoals,
-  onFollowUpSchedule,
+  onScheduleItems,
   onLabFollowUp,
   onMedicationReview,
   onInternalNotes,
@@ -453,7 +574,7 @@ function StructuredCarePlanFields({
   summary: string;
   instructions: string;
   goals: string;
-  followUpSchedule: string;
+  scheduleItems: ScheduleTemplateItem[];
   labFollowUp: string;
   medicationReview: string;
   internalNotes: string;
@@ -462,12 +583,34 @@ function StructuredCarePlanFields({
   onSummary: (value: string) => void;
   onInstructions: (value: string) => void;
   onGoals: (value: string) => void;
-  onFollowUpSchedule: (value: string) => void;
+  onScheduleItems: (value: ScheduleTemplateItem[]) => void;
   onLabFollowUp: (value: string) => void;
   onMedicationReview: (value: string) => void;
   onInternalNotes: (value: string) => void;
   onRevisionReason: (value: string) => void;
 }) {
+  function updateScheduleItem(id: string, updates: Partial<ScheduleTemplateItem>) {
+    onScheduleItems(scheduleItems.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  }
+
+  function addScheduleItem() {
+    onScheduleItems([
+      ...scheduleItems,
+      {
+        id: `schedule-${Date.now()}`,
+        title: "",
+        eventType: "care_team_check_in",
+        day: "1",
+        endDay: "",
+        description: "",
+      },
+    ]);
+  }
+
+  function removeScheduleItem(id: string) {
+    onScheduleItems(scheduleItems.filter((item) => item.id !== id));
+  }
+
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -481,7 +624,74 @@ function StructuredCarePlanFields({
         </div>
       </div>
       <Textarea value={goals} onChange={(event) => onGoals(event.target.value)} placeholder="Goals, one per line" className="min-h-20" />
-      <Textarea value={followUpSchedule} onChange={(event) => onFollowUpSchedule(event.target.value)} placeholder="Follow-up schedule, one item per line" className="min-h-20" />
+      <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold text-text">Care journey calendar</p>
+            <p className="mt-1 text-xs text-muted">Build Day 1, Day 1-7, review, video, lab, and completion milestones.</p>
+          </div>
+          <Button type="button" size="sm" variant="secondary" onClick={addScheduleItem}>
+            <CalendarRange className="size-4" />
+            Add item
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {scheduleItems.map((item, index) => (
+            <div key={item.id} className="rounded-lg border border-border bg-surface p-3">
+              <div className="grid gap-3 lg:grid-cols-[1fr_180px_96px_96px_auto] lg:items-end">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`schedule-title-${item.id}`}>Title</Label>
+                  <Input
+                    id={`schedule-title-${item.id}`}
+                    value={item.title}
+                    onChange={(event) => updateScheduleItem(item.id, { title: event.target.value })}
+                    placeholder={`Milestone ${index + 1}`}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`schedule-type-${item.id}`}>Type</Label>
+                  <Select
+                    id={`schedule-type-${item.id}`}
+                    value={item.eventType}
+                    options={scheduleEventOptions}
+                    onChange={(event) => updateScheduleItem(item.id, { eventType: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`schedule-day-${item.id}`}>Start day</Label>
+                  <Input
+                    id={`schedule-day-${item.id}`}
+                    type="number"
+                    min={1}
+                    value={item.day}
+                    onChange={(event) => updateScheduleItem(item.id, { day: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`schedule-end-day-${item.id}`}>End day</Label>
+                  <Input
+                    id={`schedule-end-day-${item.id}`}
+                    type="number"
+                    min={1}
+                    value={item.endDay}
+                    onChange={(event) => updateScheduleItem(item.id, { endDay: event.target.value })}
+                    placeholder="-"
+                  />
+                </div>
+                <Button type="button" size="sm" variant="ghost" onClick={() => removeScheduleItem(item.id)} disabled={scheduleItems.length <= 1}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+              <Textarea
+                value={item.description}
+                onChange={(event) => updateScheduleItem(item.id, { description: event.target.value })}
+                placeholder="Patient-facing details for this step"
+                className="mt-3 min-h-16"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
       <Textarea value={labFollowUp} onChange={(event) => onLabFollowUp(event.target.value)} placeholder="Lab follow-up, one item per line" className="min-h-20" />
       <Textarea value={medicationReview} onChange={(event) => onMedicationReview(event.target.value)} placeholder="Medication review notes" className="min-h-20" />
       <Textarea value={instructions} onChange={(event) => onInstructions(event.target.value)} placeholder="Patient instructions" className="min-h-20" />

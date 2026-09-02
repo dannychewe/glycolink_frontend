@@ -8,14 +8,8 @@ import { LOG_VITALS_MUTATION } from "@/lib/monitoring/graphql";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const vitalTypeOptions = [
-  { value: "blood_pressure_systolic", label: "Blood Pressure — Systolic", unit: "mmHg" },
-  { value: "blood_pressure_diastolic", label: "Blood Pressure — Diastolic", unit: "mmHg" },
-  { value: "heart_rate", label: "Heart Rate", unit: "bpm" },
-  { value: "weight", label: "Weight", unit: "kg" },
-  { value: "spo2", label: "Oxygen Saturation (SpO2)", unit: "%" },
-];
+import { Select } from "@/components/ui/select";
+import { VITAL_READING_TYPE_OPTIONS, VITAL_READING_UNITS } from "@/lib/monitoring/choices";
 
 type VitalsFormValues = {
   vitalType: string;
@@ -51,8 +45,7 @@ export function VitalsLogForm({ onSuccess }: VitalsLogFormProps) {
   });
 
   const selectedType = watch("vitalType");
-  const selectedOption = vitalTypeOptions.find((o) => o.value === selectedType);
-  const unit = selectedOption?.unit ?? "";
+  const unit = VITAL_READING_UNITS[selectedType as keyof typeof VITAL_READING_UNITS] ?? "";
 
   const onSubmit = handleSubmit(async (values) => {
     await logVitals({
@@ -96,15 +89,11 @@ export function VitalsLogForm({ onSuccess }: VitalsLogFormProps) {
       <form className="grid gap-4 sm:grid-cols-2" onSubmit={onSubmit}>
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="vital-type">Vital type</Label>
-          <select
+          <Select
             id="vital-type"
             {...register("vitalType")}
-            className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            {vitalTypeOptions.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+            options={[...VITAL_READING_TYPE_OPTIONS]}
+          />
         </div>
 
         <div className="space-y-2">

@@ -119,15 +119,17 @@ export function StatTile({
   sublabel,
   icon: Icon,
   tone = "neutral",
+  className,
 }: {
   label: string;
   value: React.ReactNode;
   sublabel?: string;
   icon?: LucideIcon;
   tone?: Tone;
+  className?: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className={cn("rounded-lg border border-border bg-surface p-4", className)}>
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-xs font-medium uppercase tracking-wider text-muted">{label}</p>
         {Icon ? <Icon className="size-4 shrink-0 text-muted" /> : null}

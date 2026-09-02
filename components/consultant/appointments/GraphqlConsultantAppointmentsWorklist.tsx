@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import { Calendar, Clock, CheckCircle, AlertCircle, ChevronDown, ChevronRight, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -17,6 +18,7 @@ import {
 import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 import { canJoinVideoConsultation } from "@/lib/video-consultation-graphql";
+import { RECORD_APPOINTMENT_CASH_PAYMENT_MUTATION } from "@/lib/payments/graphql";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -260,7 +262,68 @@ function CancelPanel({
 
 // ─── Appointment Card ─────────────────────────────────────
 
-type PanelOpen = "reschedule" | "cancel" | null;
+type PanelOpen = "reschedule" | "cancel" | "cash" | null;
+
+function CashPaymentPanel({
+  appointment,
+  onDone,
+}: {
+  appointment: Appointment;
+  onDone: () => void;
+}) {
+  const [alert, setAlert] = useState<AlertState>(null);
+  const [reference, setReference] = useState("");
+  const [note, setNote] = useState("");
+  const [recordCash, { loading }] = useMutation(RECORD_APPOINTMENT_CASH_PAYMENT_MUTATION);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setAlert(null);
+    try {
+      await recordCash({
+        variables: {
+          appointmentId: appointment.id,
+          reference: reference || undefined,
+          note: note || undefined,
+        },
+        refetchQueries: [
+          { query: MY_APPOINTMENTS_QUERY, variables: { limit: 100 } },
+          { query: TODAYS_APPOINTMENTS_QUERY },
+          { query: UPCOMING_APPOINTMENTS_QUERY, variables: { limit: 100 } },
+        ],
+      });
+      setAlert({ type: "success", message: "Cash payment recorded and appointment confirmed." });
+      setTimeout(onDone, 1200);
+    } catch (error) {
+      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Failed to record cash payment.") });
+    }
+  }
+
+  return (
+    <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-3 rounded-lg border border-success/20 bg-success/5 px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-success">Cash payment</p>
+      <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Input
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+          placeholder="Receipt or reference"
+        />
+        <Input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Optional note"
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={loading}>
+          {loading ? "Recording..." : "Record cash"}
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onDone}>Cancel</Button>
+      </div>
+    </form>
+  );
+}
 
 function AppointmentCard({
   appointment,
@@ -271,6 +334,7 @@ function AppointmentCard({
 }) {
   const [panel, setPanel] = useState<PanelOpen>(null);
   const actionable = isActionable(appointment.status);
+  const awaitingPayment = normalizeStatus(appointment.status) === "AWAITING_PAYMENT";
   const isCompleted = normalizeStatus(appointment.status) === "COMPLETED";
   const isCancelled = ["CANCELLED", "NO_SHOW", "RESCHEDULED"].includes(normalizeStatus(appointment.status));
   const canJoinVideo = canJoinVideoConsultation(appointment.consultationType, appointment.status);
@@ -328,6 +392,21 @@ function AppointmentCard({
 
           {actionable ? (
             <>
+              {awaitingPayment ? (
+                <button
+                  type="button"
+                  onClick={() => setPanel(panel === "cash" ? null : "cash")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition",
+                    panel === "cash"
+                      ? "border-success bg-success/10 text-success"
+                      : "border-border bg-background text-text hover:bg-surface",
+                  )}
+                >
+                  {panel === "cash" ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                  Record cash
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setPanel(panel === "reschedule" ? null : "reschedule")}
@@ -364,6 +443,9 @@ function AppointmentCard({
         ) : null}
         {panel === "cancel" ? (
           <CancelPanel appointment={appointment} onDone={() => setPanel(null)} />
+        ) : null}
+        {panel === "cash" ? (
+          <CashPaymentPanel appointment={appointment} onDone={() => setPanel(null)} />
         ) : null}
       </div>
     </div>

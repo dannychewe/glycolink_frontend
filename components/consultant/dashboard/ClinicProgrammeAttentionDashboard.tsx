@@ -24,6 +24,7 @@ import {
   type ClinicProgrammeDashboardOverview,
   type MonitoringAlert,
 } from "@/lib/programmes/graphql";
+import { labelForChoice, PROGRAMME_CARE_TEAM_ROLE_OPTIONS } from "@/lib/programmes/choices";
 import { cn } from "@/lib/utils/cn";
 
 type OverviewData = {
@@ -128,13 +129,14 @@ function AttentionStats({ overview, queueTotal }: { overview: ClinicProgrammeDas
   const adherenceRate = overview.monitoringAdherence.adherenceRate;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid divide-y divide-border border-y border-border md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4">
       <StatTile
         label="Needs Attention"
         value={queueTotal}
         sublabel="active queue items"
         icon={Icons.actionRequired}
         tone={queueTotal > 0 ? "danger" : "success"}
+        className="rounded-none border-0 bg-transparent px-0 md:px-4"
       />
       <StatTile
         label="Clinical Alerts"
@@ -142,6 +144,7 @@ function AttentionStats({ overview, queueTotal }: { overview: ClinicProgrammeDas
         sublabel={`${overview.clinicalAlerts.overdueActiveAlerts} overdue`}
         icon={Icons.alerts}
         tone={activeAlerts > 0 ? "danger" : "neutral"}
+        className="rounded-none border-0 bg-transparent px-0 md:px-4"
       />
       <StatTile
         label="Monitoring Gaps"
@@ -149,6 +152,7 @@ function AttentionStats({ overview, queueTotal }: { overview: ClinicProgrammeDas
         sublabel={`${overview.monitoringAdherence.patientsWithOpenMonitoringGaps} patients`}
         icon={Icons.monitoring}
         tone={openGaps > 0 ? "warning" : "success"}
+        className="rounded-none border-0 bg-transparent px-0 md:px-4"
       />
       <StatTile
         label="Adherence"
@@ -156,6 +160,7 @@ function AttentionStats({ overview, queueTotal }: { overview: ClinicProgrammeDas
         sublabel={`${blocked} activation blockers`}
         icon={Icons.trend}
         tone={blocked > 0 ? "warning" : "neutral"}
+        className="rounded-none border-0 bg-transparent px-0 md:px-4"
       />
     </div>
   );
@@ -206,7 +211,11 @@ function AlertRow({ alert }: { alert: MonitoringAlert }) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={severityVariant(alert.severity)}>{titleCase(alert.severity)}</Badge>
           <Badge variant={statusVariant(alert.status)}>{titleCase(alert.status)}</Badge>
-          {alert.ownerCareTeamRole ? <Badge variant="secondary">{titleCase(alert.ownerCareTeamRole)}</Badge> : null}
+          {alert.ownerCareTeamRole ? (
+            <Badge variant="secondary">
+              {labelForChoice(PROGRAMME_CARE_TEAM_ROLE_OPTIONS, alert.ownerCareTeamRole)}
+            </Badge>
+          ) : null}
         </div>
         <p className="text-sm font-medium text-text">{alert.message ?? titleCase(alert.type)}</p>
         <p className="text-xs text-muted">
@@ -372,12 +381,10 @@ export function ClinicProgrammeAttentionDashboard() {
   return (
     <div className="space-y-6">
       {hasError ? (
-        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+        <div className="border-l-4 border-warning bg-warning/5 px-4 py-3 text-sm text-warning">
           Some programme dashboard sections could not refresh. The visible data may be partial.
         </div>
       ) : null}
-
-      <AttentionStats overview={overview} queueTotal={queue?.total ?? 0} />
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
         <div className="space-y-6">
@@ -402,6 +409,18 @@ export function ClinicProgrammeAttentionDashboard() {
         </div>
 
         <div className="space-y-6">
+          <section className="space-y-3">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Clinic Snapshot</p>
+                <h2 className="text-lg font-semibold text-ink">Programme Signals</h2>
+              </div>
+              <Button href="/consultant/programmes/reporting" size="sm" variant="secondary" className="rounded-full">
+                Reports
+              </Button>
+            </div>
+            <AttentionStats overview={overview} queueTotal={queue?.total ?? 0} />
+          </section>
           <PopulationPanel overview={overview} />
           <ProgrammeReadinessPanel overview={overview} />
         </div>

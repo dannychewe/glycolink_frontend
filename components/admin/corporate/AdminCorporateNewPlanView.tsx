@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
 import {
   ADMIN_CORPORATE_PLANS_QUERY,
   ADMIN_CREATE_BENEFIT_PLAN_MUTATION,
+  ADMIN_PROVIDERS_QUERY,
   SPECIALTIES_QUERY,
 } from "@/lib/admin/graphql";
 import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
@@ -18,6 +20,13 @@ import { cn } from "@/lib/utils/cn";
 
 type AlertState = { type: "success" | "error"; message: string } | null;
 type Specialty = { id: string; name: string };
+type ProviderItem = {
+  id: string;
+  displayName: string;
+  hpczNumber: string | null;
+  status: string;
+  organization: { name: string } | null;
+};
 
 function InlineAlert({ alert, onDismiss }: Readonly<{ alert: AlertState; onDismiss: () => void }>) {
   if (!alert) return null;
@@ -40,10 +49,11 @@ export function AdminCorporateNewPlanView({ corporateId }: Readonly<{ corporateI
   const router = useRouter();
   const [alert, setAlert] = useState<AlertState>(null);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [providerPick, setProviderPick] = useState("");
   const [form, setForm] = useState({
     maxConsultations: "",
     discountPercentage: "",
-    approvedProviders: "",
   });
 
   const { data: specialtiesData, loading: specialtiesLoading } = useQuery<{ specialties: Specialty[] }>(
@@ -51,6 +61,24 @@ export function AdminCorporateNewPlanView({ corporateId }: Readonly<{ corporateI
     { fetchPolicy: "cache-first" },
   );
   const specialties = specialtiesData?.specialties ?? [];
+  const providersQuery = useQuery<{
+    systemProviders: { items: ProviderItem[] };
+  }>(ADMIN_PROVIDERS_QUERY, {
+    variables: { page: 1, limit: 100 },
+    fetchPolicy: "cache-and-network",
+  });
+  const providers = providersQuery.data?.systemProviders.items ?? [];
+  const providerOptions = providers
+    .filter((provider) => !selectedProviders.includes(provider.id))
+    .map((provider) => ({
+      value: provider.id,
+      label: provider.displayName,
+      description: [provider.organization?.name, provider.hpczNumber].filter(Boolean).join(" · "),
+      badge: provider.status,
+    }));
+  const selectedProviderDetails = selectedProviders.map(
+    (providerId) => providers.find((provider) => provider.id === providerId) ?? null,
+  );
 
   const [createBenefitPlan, { loading }] = useMutation(ADMIN_CREATE_BENEFIT_PLAN_MUTATION);
 
@@ -71,9 +99,7 @@ export function AdminCorporateNewPlanView({ corporateId }: Readonly<{ corporateI
             maxConsultations: form.maxConsultations ? Number(form.maxConsultations) : undefined,
             discountPercentage: form.discountPercentage ? Number(form.discountPercentage) : undefined,
             allowedSpecialties: selectedSpecialties.length > 0 ? selectedSpecialties : undefined,
-            approvedProviders: form.approvedProviders
-              ? form.approvedProviders.split(",").map((s) => s.trim()).filter(Boolean)
-              : undefined,
+            approvedProviders: selectedProviders.length > 0 ? selectedProviders : undefined,
           },
         },
         refetchQueries: [
@@ -177,17 +203,41 @@ export function AdminCorporateNewPlanView({ corporateId }: Readonly<{ corporateI
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="approved-providers">
-                Approved provider IDs{" "}
-                <span className="font-normal text-muted">(optional — comma-separated UUIDs)</span>
-              </Label>
-              <Input
+            <div className="space-y-3">
+              <SearchableSelector
                 id="approved-providers"
-                value={form.approvedProviders}
-                placeholder="uuid1, uuid2, …"
-                onChange={(e) => setForm((c) => ({ ...c, approvedProviders: e.target.value }))}
+                label="Approved providers"
+                value={providerPick}
+                options={providerOptions}
+                placeholder="Search provider"
+                emptyLabel={providersQuery.loading ? "Loading providers..." : "No providers found"}
+                disabled={providersQuery.loading}
+                onChange={(providerId) => {
+                  setSelectedProviders((current) =>
+                    current.includes(providerId) ? current : [...current, providerId],
+                  );
+                  setProviderPick("");
+                }}
               />
+              {selectedProviders.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedProviders.map((providerId, index) => {
+                    const provider = selectedProviderDetails[index];
+                    return (
+                      <button
+                        key={providerId}
+                        type="button"
+                        onClick={() =>
+                          setSelectedProviders((current) => current.filter((currentId) => currentId !== providerId))
+                        }
+                        className="rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                      >
+                        {provider?.displayName ?? `Provider ${providerId.slice(0, 8)}`} ×
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
 
             <div className="flex gap-3 pt-1">

@@ -94,7 +94,6 @@ type PatientOnboardingReadiness = {
 const nextActionLabels: Record<string, string> = {
   UPDATE_PROFILE: "Save profile",
   ADD_EMERGENCY_CONTACT: "Add emergency contact",
-  COMPLETE_BASELINE_PCQ: "Complete questionnaire",
   UPDATE_PRIVACY_PREFERENCES: "Save preferences",
   OPEN_DASHBOARD: "Go to dashboard",
 };
@@ -193,9 +192,7 @@ export function PatientOnboardingWizard() {
   const readiness = readinessData?.patientOnboardingReadiness ?? null;
   const nextAction = readiness?.nextAction ?? null;
   const primaryLabel = isLastStep
-    ? nextAction === "COMPLETE_BASELINE_PCQ"
-      ? "Save and continue to questionnaire"
-      : nextAction === "OPEN_DASHBOARD"
+    ? nextAction === "OPEN_DASHBOARD"
         ? "Save and go to dashboard"
         : nextAction
           ? nextActionLabels[nextAction] ?? "Save and continue"
@@ -326,11 +323,6 @@ export function PatientOnboardingWizard() {
       const updatedNextAction =
         readinessResult.data?.patientOnboardingReadiness?.nextAction ?? null;
 
-      if (updatedNextAction === "COMPLETE_BASELINE_PCQ") {
-        router.push("/patient/pcq/baseline");
-        return;
-      }
-
       if (updatedNextAction === "OPEN_DASHBOARD") {
         router.push("/patient/dashboard");
         return;
@@ -435,7 +427,7 @@ export function PatientOnboardingWizard() {
               ))}
               {incompleteRequiredItems.length ? (
                 <p className="text-xs text-muted">
-                  Required items, including the baseline questionnaire, cannot be skipped.
+                  Required items keep your clinic profile usable and can be finished in a few minutes.
                 </p>
               ) : null}
             </div>

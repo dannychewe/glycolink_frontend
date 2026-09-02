@@ -1,12 +1,14 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { AlertTriangle, CheckCircle2, ClipboardList, RotateCcw, Send, UserPlus, PhoneCall } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelector } from "@/components/ui/searchable-selector";
+import { Select } from "@/components/ui/select";
 import {
   Panel,
   PanelBody,
@@ -17,6 +19,11 @@ import {
 } from "@/components/ui/panel";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-context";
+import {
+  labelForChoice,
+  PROGRAMME_CARE_TEAM_ROLE_OPTIONS,
+  type ProgrammeCareTeamRoleValue,
+} from "@/lib/programmes/choices";
 import { hasProgrammePermission } from "@/lib/programmes/permissions";
 import {
   ALERT_INTERVENTIONS_QUERY,
@@ -32,12 +39,14 @@ import {
   RECORD_PATIENT_CONTACT_MUTATION,
   REASSIGN_ALERT_MUTATION,
   REOPEN_ALERT_MUTATION,
+  PROGRAMME_ENROLMENT_QUERY,
   RETURN_ALERT_TO_QUEUE_MUTATION,
   RESOLVE_ALERT_MUTATION,
   type AlertOwnershipEvent,
   type AlertIntervention,
   type AlertWorkQueue,
   type MonitoringAlert,
+  type ProgrammeEnrolment,
 } from "@/lib/programmes/graphql";
 
 type QueueData = {
@@ -54,6 +63,10 @@ type OwnershipData = {
 
 type AlertDetailData = {
   alertDetail: MonitoringAlert | null;
+};
+
+type AlertEnrolmentData = {
+  programmeEnrolment: ProgrammeEnrolment | null;
 };
 
 function titleCase(value: string | null | undefined) {
@@ -96,6 +109,11 @@ function mapError(error: unknown) {
   return "The alert could not be updated.";
 }
 
+function staffLabel(value: string | null | undefined) {
+  if (!value) return "Queue";
+  return `Staff ${value.slice(0, 8)}`;
+}
+
 function AlertDetail({
   alert,
   onChanged,
@@ -109,7 +127,7 @@ function AlertDetail({
   const [note, setNote] = useState("");
   const [ownerUserId, setOwnerUserId] = useState(alert.currentOwnerUserId ?? "");
   const [actionReason, setActionReason] = useState("");
-  const [escalationRole, setEscalationRole] = useState("lead_doctor");
+  const [escalationRole, setEscalationRole] = useState<ProgrammeCareTeamRoleValue>("doctor");
   const [escalationPolicyRef, setEscalationPolicyRef] = useState("");
   const [error, setError] = useState<string | null>(null);
   const interventionsQuery = useQuery<InterventionsData>(ALERT_INTERVENTIONS_QUERY, {
@@ -120,6 +138,27 @@ function AlertDetail({
     variables: { alertId: alert.id },
     fetchPolicy: "cache-and-network",
   });
+  const enrolmentQuery = useQuery<AlertEnrolmentData>(PROGRAMME_ENROLMENT_QUERY, {
+    variables: { id: alert.programmeEnrolmentId },
+    skip: !alert.programmeEnrolmentId,
+    fetchPolicy: "cache-and-network",
+  });
+  const careTeamOptions = useMemo(
+    () =>
+      (enrolmentQuery.data?.programmeEnrolment?.careTeamAssignments ?? [])
+        .filter((assignment) => assignment.active)
+        .map((assignment) => ({
+          value: assignment.assignedUserId,
+          label: assignment.provider?.displayName ?? `Staff ${assignment.assignedUserId.slice(0, 8)}`,
+          description: labelForChoice(PROGRAMME_CARE_TEAM_ROLE_OPTIONS, assignment.role),
+          badge: labelForChoice(PROGRAMME_CARE_TEAM_ROLE_OPTIONS, assignment.role),
+        })),
+    [enrolmentQuery.data?.programmeEnrolment?.careTeamAssignments],
+  );
+
+  useEffect(() => {
+    setOwnerUserId(alert.currentOwnerUserId ?? "");
+  }, [alert.currentOwnerUserId, alert.id]);
   const [claim, claimState] = useMutation(CLAIM_ALERT_MUTATION);
   const [assign, assignState] = useMutation(ASSIGN_ALERT_MUTATION);
   const [reassign, reassignState] = useMutation(REASSIGN_ALERT_MUTATION);
@@ -197,7 +236,7 @@ function AlertDetail({
             </p>
           ) : null}
           <p className="mt-2 text-xs text-muted">
-            Owner: {alert.currentOwnerUserId ?? "Queue"} · role {titleCase(alert.ownerCareTeamRole)}
+            Assigned to: {staffLabel(alert.currentOwnerUserId)} | role {labelForChoice(PROGRAMME_CARE_TEAM_ROLE_OPTIONS, alert.ownerCareTeamRole)}
           </p>
         </div>
 
@@ -233,16 +272,19 @@ function AlertDetail({
             <PhoneCall className="size-4" />
             Contact recorded
           </Button>
-        </div>
+          </div>
 
         <div className="grid gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-2">
-          <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor={`alert-owner-${alert.id}`}>Owner user ID</Label>
-            <Input
+          <div className="md:col-span-2">
+            <SearchableSelector
               id={`alert-owner-${alert.id}`}
+              label="Assign to staff member"
               value={ownerUserId}
-              onChange={(event) => setOwnerUserId(event.target.value)}
-              placeholder="Care team user UUID"
+              options={careTeamOptions}
+              placeholder="Search care team"
+              emptyLabel={enrolmentQuery.loading ? "Loading care team..." : "No active care-team members found"}
+              disabled={!canAssignAlerts || !alert.programmeEnrolmentId}
+              onChange={setOwnerUserId}
             />
           </div>
           <div className="space-y-1.5">
@@ -256,11 +298,12 @@ function AlertDetail({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`alert-escalation-role-${alert.id}`}>Escalation role</Label>
-            <Input
+            <Select
               id={`alert-escalation-role-${alert.id}`}
               value={escalationRole}
-              onChange={(event) => setEscalationRole(event.target.value)}
-              placeholder="lead_doctor, nurse, care_coordinator"
+              options={[...PROGRAMME_CARE_TEAM_ROLE_OPTIONS]}
+              disabled={!canAssignAlerts}
+              onChange={(event) => setEscalationRole(event.target.value as ProgrammeCareTeamRoleValue)}
             />
           </div>
           <Input
@@ -305,7 +348,7 @@ function AlertDetail({
                       alertId: alert.id,
                       reason: actionReason,
                       toUserId: ownerUserId.trim() || undefined,
-                      toRole: escalationRole.trim() || undefined,
+                      toRole: escalationRole,
                       policyRef: escalationPolicyRef.trim() || undefined,
                     },
                   }),
@@ -408,9 +451,11 @@ function AlertDetail({
             <div className="space-y-2">
               {(ownershipQuery.data?.alertOwnershipHistory ?? []).map((item) => (
                 <div key={item.id} className="rounded-lg border border-border bg-background px-3 py-2">
-                  <p className="break-all text-sm font-medium text-text">{item.newOwnerUserId ?? "Returned to queue"}</p>
+                  <p className="break-words text-sm font-medium text-text">
+                    {item.newOwnerUserId ? staffLabel(item.newOwnerUserId) : "Returned to queue"}
+                  </p>
                   <p className="mt-1 text-xs text-muted">
-                    {formatDateTime(item.changedAt)} · {titleCase(item.careTeamRole)}
+                    {formatDateTime(item.changedAt)} | {labelForChoice(PROGRAMME_CARE_TEAM_ROLE_OPTIONS, item.careTeamRole)}
                   </p>
                   {item.reason ? <p className="mt-1 break-words text-sm text-muted">{item.reason}</p> : null}
                 </div>

@@ -4,22 +4,30 @@ import { ProgrammePermissionNotice } from "@/components/consultant/programmes/Pr
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default function ConsultantProgrammeEnrolPage() {
+type ConsultantProgrammeDetailPageProps = Readonly<{
+  params: Promise<{ id: string }>;
+}>;
+
+export default async function ConsultantProgrammeDetailPage({
+  params,
+}: ConsultantProgrammeDetailPageProps) {
+  const { id } = await params;
+
   return (
     <Container className="space-y-6 py-2">
       <PageHeader
-        eyebrow="Patient enrolment"
-        title="Choose a care plan"
-        description="Open a care plan details page to enrol an existing patient or invite a new patient into continuity care."
+        eyebrow="Care plan details"
+        title="Care plan"
+        description="Review plan status, enrolled patients, readiness, care-team assignments, and enrol new patients."
         breadcrumbs={[
           { label: "Care programmes", href: "/consultant/programmes" },
-          { label: "Enrol patient" },
+          { label: "Details" },
         ]}
       />
       <ProgrammeAccessSummary />
       <ProgrammePermissionNotice scope="admin" />
-      <ProgrammePermissionGate permissions={["programme.enrol"]}>
-        <ProgrammeAdminDashboard workflow="overview" />
+      <ProgrammePermissionGate permissions={["programme.manage", "programme.enrol"]}>
+        <ProgrammeAdminDashboard workflow="details" programmeId={id} />
       </ProgrammePermissionGate>
     </Container>
   );

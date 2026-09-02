@@ -6,6 +6,7 @@ import { AlertTriangle, CreditCard, ReceiptText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Panel,
   PanelBody,
@@ -18,6 +19,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-context";
 import { CONSULTANT_CLIENTS_QUERY } from "@/lib/consultant/clients-graphql";
+import {
+  PROGRAMME_BILLING_INTERVAL_OPTIONS,
+  PROGRAMME_PAYER_TYPE_OPTIONS,
+  PROGRAMME_PRICE_BILLING_MODEL_OPTIONS,
+} from "@/lib/payments/choices";
 import { hasProgrammePermission } from "@/lib/programmes/permissions";
 import { SearchableSelector } from "@/components/ui/searchable-selector";
 import {
@@ -36,6 +42,7 @@ import {
   PROGRAMME_INVOICES_QUERY,
   PROGRAMME_PAYERS_QUERY,
   PROGRAMME_PRICES_QUERY,
+  RECORD_PROGRAMME_CASH_PAYMENT_MUTATION,
   VOID_PROGRAMME_INVOICE_MUTATION,
   type CareProgramme,
   type ClinicProgrammeBillingSummary,
@@ -142,7 +149,7 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
   const [priceName, setPriceName] = useState("Diabetes continuity monthly");
   const [amount, setAmount] = useState("250");
   const [currencyInput, setCurrencyInput] = useState("ZMW");
-  const [billingModel, setBillingModel] = useState("subscription");
+  const [billingModel, setBillingModel] = useState("monthly");
   const [billingInterval, setBillingInterval] = useState("monthly");
   const [payerName, setPayerName] = useState("");
   const [payerType, setPayerType] = useState("patient");
@@ -150,6 +157,8 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
   const [reason, setReason] = useState("");
+  const [cashReference, setCashReference] = useState("");
+  const [cashNote, setCashNote] = useState("");
   const [paymentId, setPaymentId] = useState("");
   const [adminError, setAdminError] = useState<string | null>(null);
   const organizationOptions = useMemo(() => {
@@ -220,6 +229,7 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
   const [issueInvoice, issueInvoiceState] = useMutation(ISSUE_PROGRAMME_INVOICE_MUTATION);
   const [cancelInvoice, cancelInvoiceState] = useMutation(CANCEL_PROGRAMME_INVOICE_MUTATION);
   const [voidInvoice, voidInvoiceState] = useMutation(VOID_PROGRAMME_INVOICE_MUTATION);
+  const [recordCashPayment, recordCashPaymentState] = useMutation(RECORD_PROGRAMME_CASH_PAYMENT_MUTATION);
 
   const summary = summaryQuery.data?.clinicProgrammeBillingSummary;
   const invoices = invoicesQuery.data?.programmeInvoices.items ?? [];
@@ -285,7 +295,8 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
     generateInvoiceState.loading ||
     issueInvoiceState.loading ||
     cancelInvoiceState.loading ||
-    voidInvoiceState.loading;
+    voidInvoiceState.loading ||
+    recordCashPaymentState.loading;
   const showAdminPanel = workflow !== "overview";
   const showPriceWorkflow = workflow === "prices";
   const showPayerWorkflow = workflow === "payers";
@@ -511,8 +522,18 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
                 <Input value={priceName} onChange={(event) => setPriceName(event.target.value)} placeholder="Price name" />
                 <Input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Amount" />
                 <Input value={currencyInput} onChange={(event) => setCurrencyInput(event.target.value)} placeholder="Currency" />
-                <Input value={billingModel} onChange={(event) => setBillingModel(event.target.value)} placeholder="subscription, package" />
-                <Input value={billingInterval} onChange={(event) => setBillingInterval(event.target.value)} placeholder="monthly, once" />
+                <Select
+                  value={billingModel}
+                  onChange={(event) => setBillingModel(event.target.value)}
+                  options={PROGRAMME_PRICE_BILLING_MODEL_OPTIONS}
+                  aria-label="Billing model"
+                />
+                <Select
+                  value={billingInterval}
+                  onChange={(event) => setBillingInterval(event.target.value)}
+                  options={PROGRAMME_BILLING_INTERVAL_OPTIONS}
+                  aria-label="Billing interval"
+                />
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" size="sm" disabled={!canManageBilling || saving || !programmeId.trim() || !priceName.trim() || !amount.trim()}>
@@ -551,7 +572,15 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
                   disabled={!canManageBilling || payerType.toLowerCase() !== "patient"}
                   onChange={setPayerPatientId}
                 />
-                <Input value={payerType} onChange={(event) => setPayerType(event.target.value)} placeholder="patient, sponsor, employer" />
+                <Select
+                  value={payerType}
+                  onChange={(event) => {
+                    setPayerType(event.target.value);
+                    if (event.target.value !== "patient") setPayerPatientId("");
+                  }}
+                  options={PROGRAMME_PAYER_TYPE_OPTIONS}
+                  aria-label="Payer type"
+                />
                 <Input value={payerName} onChange={(event) => setPayerName(event.target.value)} placeholder="Display name" />
                 <Input value={payerPhone} onChange={(event) => setPayerPhone(event.target.value)} placeholder="Mobile money phone" />
               </div>
@@ -607,6 +636,18 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
                 {paymentIntentQuery.data.programmePaymentIntent.status} · {money(paymentIntentQuery.data.programmePaymentIntent.amount, paymentIntentQuery.data.programmePaymentIntent.currency)} · {titleCase(paymentIntentQuery.data.programmePaymentIntent.method)}
               </p>
             ) : null}
+            <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+              <Input
+                value={cashReference}
+                onChange={(event) => setCashReference(event.target.value)}
+                placeholder="Cash receipt or reference"
+              />
+              <Input
+                value={cashNote}
+                onChange={(event) => setCashNote(event.target.value)}
+                placeholder="Optional cash note"
+              />
+            </div>
           </div>
           ) : null}
         </PanelBody>
@@ -683,6 +724,24 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
                   </Button>
                   <Button type="button" size="sm" variant="secondary" disabled={!canManageBilling || saving || !reason.trim() || invoice.status === "VOID"} onClick={() => void run(() => voidInvoice({ variables: { invoiceId: invoice.id, reason } }))}>
                     Void
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!canManageBilling || saving || Number(invoice.balance) <= 0 || !["ISSUED", "PARTIALLY_PAID", "OVERDUE"].includes(invoice.status)}
+                    onClick={() =>
+                      void run(() =>
+                        recordCashPayment({
+                          variables: {
+                            invoiceId: invoice.id,
+                            reference: cashReference || undefined,
+                            note: cashNote || undefined,
+                          },
+                        }),
+                      )
+                    }
+                  >
+                    Record cash
                   </Button>
                 </div>
               </div>

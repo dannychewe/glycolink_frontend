@@ -8,14 +8,8 @@ import { LOG_GLUCOSE_MUTATION } from "@/lib/monitoring/graphql";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const contextOptions = [
-  { value: "fasting", label: "Fasting" },
-  { value: "pre_meal", label: "Before meal" },
-  { value: "post_meal", label: "After meal (2 hr)" },
-  { value: "random", label: "Random" },
-  { value: "bedtime", label: "Bedtime" },
-];
+import { Select } from "@/components/ui/select";
+import { GLUCOSE_CONTEXT_OPTIONS } from "@/lib/monitoring/choices";
 
 type GlucoseFormValues = {
   value: number;
@@ -108,15 +102,11 @@ export function GlucoseLogForm({ onSuccess }: GlucoseLogFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="glucose-context">Context</Label>
-          <select
+          <Select
             id="glucose-context"
             {...register("context")}
-            className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            {contextOptions.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+            options={[...GLUCOSE_CONTEXT_OPTIONS]}
+          />
         </div>
 
         <div className="space-y-2">

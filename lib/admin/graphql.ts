@@ -75,6 +75,27 @@ export const ADMIN_DASHBOARD_USERS_QUERY = gql`
   }
 `;
 
+export const ADMIN_PATIENT_SELECTOR_QUERY = gql`
+  query AdminPatientSelector($search: String, $page: Int, $limit: Int) {
+    systemUsers(search: $search, role: "patient", isActive: true, page: $page, limit: $limit) {
+      items {
+        id
+        email
+        fullName
+        phone
+        patientProfile {
+          id
+          fullName
+          email
+          phone
+          diabetesType
+        }
+      }
+      total
+    }
+  }
+`;
+
 export const ADMIN_DASHBOARD_ORGANIZATIONS_QUERY = gql`
   query AdminDashboardOrganizations {
     systemOrganizations(page: 1, limit: 10) {
