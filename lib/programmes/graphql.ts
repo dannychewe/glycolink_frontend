@@ -158,6 +158,14 @@ export type PublicProgrammePrice = {
   includedServiceSummary?: string | null;
 };
 
+export type ProgrammeCareJourneyMilestone = {
+  title: string;
+  description?: string | null;
+  eventType: string;
+  day: number;
+  endDay?: number | null;
+};
+
 export type PublicProgrammeShareLink = {
   token: string;
   programmeId: UUID;
@@ -167,6 +175,10 @@ export type PublicProgrammeShareLink = {
   organizationName?: string | null;
   defaultDurationDays?: number | null;
   defaultMonitoringCadenceDays: number;
+  patientOffer?: string | null;
+  whoItIsFor?: string | null;
+  whatHappensNext?: string | null;
+  careJourneyPreview: ProgrammeCareJourneyMilestone[];
   enrolmentOpen: boolean;
   prices: PublicProgrammePrice[];
 };
@@ -1226,6 +1238,16 @@ export const PUBLIC_PROGRAMME_SHARE_LINK_QUERY = gql`
       defaultDurationDays
       defaultMonitoringCadenceDays
       enrolmentOpen
+      patientOffer
+      whoItIsFor
+      whatHappensNext
+      careJourneyPreview {
+        title
+        description
+        eventType
+        day
+        endDay
+      }
       prices {
         id
         name
@@ -1297,6 +1319,15 @@ export const MY_CURRENT_PROGRAMME_ENROLMENT_QUERY = gql`
   }
 `;
 
+export const MY_PROGRAMME_ENROLMENTS_QUERY = gql`
+  ${PROGRAMME_ENROLMENT_FIELDS}
+  query MyProgrammeEnrolments($status: [String]) {
+    myProgrammeEnrolments(status: $status) {
+      ...ProgrammeEnrolmentFields
+    }
+  }
+`;
+
 export const PROGRAMME_ENROLMENT_READINESS_QUERY = gql`
   query ProgrammeEnrolmentReadiness($enrolmentId: UUID!) {
     programmeEnrolmentReadiness(enrolmentId: $enrolmentId) {
@@ -1326,6 +1357,15 @@ export const PROGRAMME_CURRENT_CARE_PLAN_QUERY = gql`
   ${PROGRAMME_CARE_PLAN_FIELDS}
   query ProgrammeCurrentCarePlan($enrolmentId: UUID!) {
     programmeCurrentCarePlan(enrolmentId: $enrolmentId) {
+      ...ProgrammeCarePlanFields
+    }
+  }
+`;
+
+export const PROGRAMME_CARE_PLAN_HISTORY_QUERY = gql`
+  ${PROGRAMME_CARE_PLAN_FIELDS}
+  query ProgrammeCarePlanHistory($enrolmentId: UUID!) {
+    programmeCarePlanHistory(enrolmentId: $enrolmentId) {
       ...ProgrammeCarePlanFields
     }
   }
@@ -2337,8 +2377,8 @@ export const UPDATE_PROGRAMME_BASELINE_MUTATION = gql`
 
 export const SUBMIT_PROGRAMME_BASELINE_MUTATION = gql`
   ${PROGRAMME_BASELINE_FIELDS}
-  mutation SubmitProgrammeBaseline($baselineId: UUID!) {
-    submitProgrammeBaseline(baselineId: $baselineId) {
+  mutation SubmitProgrammeBaseline($baselineId: UUID!, $pcqResponseId: UUID) {
+    submitProgrammeBaseline(baselineId: $baselineId, pcqResponseId: $pcqResponseId) {
       baseline {
         ...ProgrammeBaselineFields
       }

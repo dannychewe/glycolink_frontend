@@ -18,11 +18,19 @@ function getNotificationTypeVariant(type: NotificationType) {
     return "secondary";
   }
 
+  if (type === "CARE_JOURNEY_STAGE_REACHED") {
+    return "success";
+  }
+
   return "primary";
 }
+
+const notificationTypeLabels: Partial<Record<NotificationType, string>> = {
+  CARE_JOURNEY_STAGE_REACHED: "Care journey",
+};
 
 export function NotificationTypeBadge({
   type,
 }: NotificationTypeBadgeProps) {
-  return <Badge variant={getNotificationTypeVariant(type)}>{type}</Badge>;
+  return <Badge variant={getNotificationTypeVariant(type)}>{notificationTypeLabels[type] ?? type}</Badge>;
 }

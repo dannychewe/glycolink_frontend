@@ -3,7 +3,7 @@
 import { useQuery } from "@apollo/client";
 import { Wifi, WifiOff, MonitorSmartphone } from "lucide-react";
 import { MY_DEVICE_CONNECTIONS_QUERY } from "@/lib/monitoring/graphql";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type StatusTone } from "@/components/design-system";
 
 type DeviceConnection = {
   id: string;
@@ -29,11 +29,11 @@ function formatDate(value: string) {
   });
 }
 
-function statusVariant(status: string): "success" | "secondary" | "danger" {
+function statusTone(status: string): StatusTone {
   const s = status.toUpperCase();
   if (s === "CONNECTED" || s === "ACTIVE") return "success";
   if (s === "REVOKED" || s === "DISCONNECTED") return "danger";
-  return "secondary";
+  return "neutral";
 }
 
 export function PatientDevicesList() {
@@ -104,9 +104,12 @@ export function PatientDevicesList() {
               </div>
             </div>
 
-            <Badge variant={statusVariant(device.status)} className="shrink-0 self-start sm:self-auto">
-              {device.status}
-            </Badge>
+            <StatusBadge
+              tone={statusTone(device.status)}
+              label={device.status}
+              size="sm"
+              className="shrink-0 self-start sm:self-auto"
+            />
           </div>
         );
       })}

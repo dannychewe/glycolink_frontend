@@ -16,6 +16,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { LogoutButton } from "@/components/layout/LogoutButton";
+import { Logo } from "@/components/ui/logo";
 import {
   adminMainNavigation,
   adminSecondaryNavigation,
@@ -115,12 +116,10 @@ export function AdminSidebar({ className, onNavigate }: AdminSidebarProps) {
         className,
       )}
     >
-      <div className="border-b border-border px-5 py-5">
-        <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
-          <div>
-            <p className="text-sm font-semibold tracking-tight text-text">Naje Health</p>
-            <p className="text-xs text-muted">Admin workspace</p>
-          </div>
+      <div className="border-b border-border px-4 py-5">
+        <Link href="/" onClick={onNavigate} className="flex flex-col items-start gap-1">
+          <Logo variant="horizontal" className="h-5 w-auto" />
+          <p className="text-xs text-muted">Admin workspace</p>
         </Link>
       </div>
 

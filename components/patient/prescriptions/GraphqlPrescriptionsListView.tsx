@@ -2,19 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
-import { Pill } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge, statusKeyForMedicationOrder, type StatusKey } from "@/components/design-system";
 import { MY_PRESCRIPTIONS_QUERY } from "@/lib/patient/prescriptions-graphql";
 import { cn } from "@/lib/utils/cn";
 
 type PrescriptionItem = {
   id: string;
   drugName: string;
-  dosage: string;
-  frequency: string;
-  duration: string | null;
+  dosage: string | null;
+  frequency: string | null;
+  duration: number | null;
   route: string | null;
   instructions: string | null;
   status: string;
@@ -35,16 +34,26 @@ type MyPrescriptionsData = {
 type PrescriptionTab = "Active" | "Past";
 const tabs: PrescriptionTab[] = ["Active", "Past"];
 
-function normalizeStatus(status: string) {
-  return status.trim().toUpperCase();
+/**
+ * The backend's top-level `Prescription.status` is only ever ISSUED or REVOKED
+ * (PrescriptionsPrescriptionStatusChoices) — ACTIVE/COMPLETED/EXPIRED only exist
+ * on each medication order (PrescriptionsMedicationOrderStatusChoices). "Is this
+ * prescription active" has to be derived from its items, never read off
+ * `prescription.status` directly.
+ */
+function derivedPrescriptionStatus(prescription: Prescription): StatusKey {
+  if (prescription.status.trim().toUpperCase() === "REVOKED") return "REVOKED";
+  const itemStatuses = prescription.items.map((item) => item.status.trim().toUpperCase());
+  if (itemStatuses.includes("ACTIVE")) return "ACTIVE";
+  if (itemStatuses.includes("ISSUED")) return "ISSUED";
+  if (itemStatuses.length > 0 && itemStatuses.every((s) => s === "COMPLETED")) return "COMPLETED";
+  if (itemStatuses.includes("EXPIRED")) return "EXPIRED";
+  return "ISSUED";
 }
 
-function getStatusVariant(status: string): "success" | "warning" | "danger" | "secondary" {
-  const s = normalizeStatus(status);
-  if (s === "ACTIVE") return "success";
-  if (s === "REVOKED") return "danger";
-  if (s === "COMPLETED") return "secondary";
-  return "secondary";
+function isCurrentlyActive(prescription: Prescription) {
+  const status = derivedPrescriptionStatus(prescription);
+  return status === "ACTIVE" || status === "ISSUED";
 }
 
 function formatDate(value: string | null) {
@@ -52,6 +61,38 @@ function formatDate(value: string | null) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toLocaleDateString("en-ZM", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function Fact({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-[13px] font-semibold uppercase tracking-[0.04em] text-muted">{label}</span>
+      <span className="text-[15px] font-bold tabular-nums text-text">{value}</span>
+      {unit ? <span className="text-xs text-muted">{unit}</span> : null}
+    </div>
+  );
+}
+
+function PrescriptionItemRow({ item }: { item: PrescriptionItem }) {
+  return (
+    <div className="flex flex-col gap-4 px-6 py-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-xl font-bold leading-tight text-text">{item.drugName}</p>
+        <StatusBadge status={statusKeyForMedicationOrder(item.status)} />
+      </div>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-lg border border-border bg-background px-4 py-3">
+        {item.dosage ? <Fact label="Dose" value={item.dosage} /> : null}
+        {item.frequency ? <Fact label="Frequency" value={item.frequency} /> : null}
+        {item.duration != null ? <Fact label="Duration" value={item.duration} unit="days" /> : null}
+        {item.route ? <Fact label="Route" value={item.route} /> : null}
+      </div>
+
+      {item.instructions ? (
+        <p className="text-sm leading-6 text-muted">{item.instructions}</p>
+      ) : null}
+    </div>
+  );
 }
 
 export function GraphqlPrescriptionsListView() {
@@ -64,11 +105,7 @@ export function GraphqlPrescriptionsListView() {
   const prescriptions = useMemo(() => data?.myPrescriptions ?? [], [data?.myPrescriptions]);
 
   const filtered = useMemo(() => {
-    return prescriptions.filter((p) =>
-      activeTab === "Active"
-        ? normalizeStatus(p.status) === "ACTIVE"
-        : normalizeStatus(p.status) !== "ACTIVE",
-    );
+    return prescriptions.filter((p) => (activeTab === "Active" ? isCurrentlyActive(p) : !isCurrentlyActive(p)));
   }, [activeTab, prescriptions]);
 
   return (
@@ -76,10 +113,10 @@ export function GraphqlPrescriptionsListView() {
       <PageHeader
         eyebrow="Medications"
         title="Prescriptions"
-        description="Prescriptions issued by your care team during consultations."
+        description="Every dose, frequency and duration shown in full — never truncated."
       />
 
-      <div className="flex gap-1 border-b border-border">
+      <div className="inline-flex gap-1 rounded-lg border border-border bg-surface p-1">
         {tabs.map((tab) => {
           const isActive = tab === activeTab;
           return (
@@ -88,10 +125,8 @@ export function GraphqlPrescriptionsListView() {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none",
-                isActive
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted hover:text-text",
+                "rounded-md px-4 py-1.5 text-sm font-semibold transition-colors",
+                isActive ? "bg-primary/10 text-primary" : "text-muted hover:text-text",
               )}
             >
               {tab}
@@ -101,7 +136,7 @@ export function GraphqlPrescriptionsListView() {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-l-4 border-l-warning bg-surface px-4 py-3 text-sm text-warning">
+        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
           Unable to load prescriptions right now.
         </div>
       ) : null}
@@ -109,65 +144,44 @@ export function GraphqlPrescriptionsListView() {
       {loading ? (
         <div className="grid gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="h-36 animate-pulse bg-border/40" />
+            <div key={i} className="h-40 animate-pulse rounded-lg border border-border bg-border/30" />
           ))}
         </div>
       ) : null}
 
       {!loading && filtered.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="grid gap-5">
           {filtered.map((prescription) => (
-            <Card key={prescription.id} className="border-border/80">
-              <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
-                    <Pill className="size-5" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                      {prescription.items.length} medication{prescription.items.length !== 1 ? "s" : ""}
-                    </p>
-                    <p className="font-semibold text-text">
-                      {prescription.items.map((i) => i.drugName).join(", ")}
-                    </p>
-                    <div className="flex flex-wrap gap-3 text-xs text-muted">
-                      {formatDate(prescription.issuedAt) ? (
-                        <span>{formatDate(prescription.issuedAt)}</span>
-                      ) : null}
-                      {prescription.revokedAt ? (
-                        <span>· Revoked {formatDate(prescription.revokedAt)}</span>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-                <Badge variant={getStatusVariant(prescription.status)}>
-                  {normalizeStatus(prescription.status)}
-                </Badge>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-0">
+            <div key={prescription.id} className="overflow-hidden rounded-lg border border-border bg-surface">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background px-6 py-3">
+                <p className="text-sm text-muted">
+                  Issued {formatDate(prescription.issuedAt) ?? "date unknown"}
+                  {prescription.revokedAt ? ` · Revoked ${formatDate(prescription.revokedAt)}` : ""}
+                </p>
+                <StatusBadge status={derivedPrescriptionStatus(prescription)} size="sm" />
+              </div>
+              <div className="divide-y divide-border">
                 {prescription.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-xl border border-border/70 bg-background px-4 py-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-semibold text-text">{item.drugName}</p>
-                      <span className="text-xs text-muted">{item.dosage}</span>
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted">{item.frequency}</p>
-                    {item.instructions ? (
-                      <p className="mt-1.5 text-xs leading-5 text-muted">{item.instructions}</p>
-                    ) : null}
-                  </div>
+                  <PrescriptionItemRow key={item.id} item={item} />
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex justify-end gap-2 border-t border-border bg-background px-6 py-4">
+                <Button type="button" variant="secondary" size="sm">
+                  View details
+                </Button>
+                {isCurrentlyActive(prescription) ? (
+                  <Button type="button" size="sm">
+                    Request refill
+                  </Button>
+                ) : null}
+              </div>
+            </div>
           ))}
         </div>
       ) : null}
 
       {!loading && filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
           <p className="text-base font-medium text-text">No prescriptions found</p>
           <p className="mt-1 text-sm text-muted">
             {activeTab === "Active"

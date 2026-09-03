@@ -38,7 +38,7 @@ export function ConsultantCard({ invite }: { invite: PatientConsultantInvite }) 
     >
       <div className="flex items-start gap-4">
         <div className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10 ring-1 ring-border">
-          <span className="font-display text-base font-semibold text-primary">
+          <span className="text-base font-semibold text-primary">
             {initialsOf(provider.displayName) || "Dr"}
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element -- avoids next/image SVG/remote config */}

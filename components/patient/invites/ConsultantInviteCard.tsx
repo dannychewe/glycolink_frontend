@@ -81,7 +81,7 @@ export function ConsultantInviteCard({ invite, onChanged, onAccepted }: Props) {
       <div className="flex items-start gap-4">
         <div className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-md bg-primary/10 ring-1 ring-border">
           {/* Initials placeholder always renders; the image covers it when it loads. */}
-          <span className="font-display text-base font-semibold text-primary">{initials || "Dr"}</span>
+          <span className="text-base font-semibold text-primary">{initials || "Dr"}</span>
           {/* eslint-disable-next-line @next/next/no-img-element -- avoids next/image SVG/remote config */}
           <img
             src={avatar}

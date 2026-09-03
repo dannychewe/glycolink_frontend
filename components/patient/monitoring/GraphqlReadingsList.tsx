@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { MY_READINGS_QUERY } from "@/lib/monitoring/graphql";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusBadge, glucoseStatusKey } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
 
 type Reading = {
@@ -135,13 +136,7 @@ export function GraphqlReadingsList() {
                   <Badge variant={isGlucose ? "primary" : "secondary"}>
                     {isGlucose ? "Glucose" : "Vital"}
                   </Badge>
-                  {isGlucose && flag === "low" ? (
-                    <Badge variant="danger">Low</Badge>
-                  ) : isGlucose && flag === "high" ? (
-                    <Badge variant="warning">High</Badge>
-                  ) : isGlucose ? (
-                    <Badge variant="success">Normal</Badge>
-                  ) : null}
+                  {isGlucose ? <StatusBadge status={glucoseStatusKey(flag)} size="sm" /> : null}
                 </div>
               </div>
             );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
+import { Logo } from "@/components/ui/logo";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 
 type DashboardShellProps = Readonly<{
@@ -16,8 +17,8 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
       <header className="border-b border-border bg-surface">
         <Container className="flex items-center justify-between py-5">
           <div className="space-y-1">
-            <Link href="/" className="text-lg font-semibold tracking-tight text-text">
-              Naje Health
+            <Link href="/">
+              <Logo variant="horizontal" className="h-6 w-auto" />
             </Link>
             <p className="text-sm text-muted">{role} workspace</p>
           </div>

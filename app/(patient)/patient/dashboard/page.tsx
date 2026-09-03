@@ -4,6 +4,7 @@ import { OnboardingBanner } from "@/components/patient/dashboard/OnboardingBanne
 import { ConsultantInvitesSection } from "@/components/patient/dashboard/ConsultantInvitesSection";
 import { PatientDiabetesHome } from "@/components/patient/programmes/PatientDiabetesHome";
 import { Container } from "@/components/ui/container";
+import { PageHeader } from "@/components/ui/page-header";
 
 const quickActions = [
   {
@@ -37,18 +38,12 @@ export default function PatientDashboardPage() {
 
   return (
     <Container className="space-y-5 py-1 sm:space-y-6 sm:py-2">
-      <header className="flex flex-col gap-2 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between sm:pb-5">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-            Diabetes Programme
-          </p>
-          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">Today&apos;s Care</h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted">
-            Your readings, care plan, and programme billing in one place.
-          </p>
-        </div>
-        <p className="text-xs font-semibold text-muted sm:text-sm">{today}</p>
-      </header>
+      <PageHeader
+        eyebrow="Diabetes Programme"
+        title="Today's Care"
+        description="Your readings, care plan, and programme billing in one place."
+        actions={<p className="text-sm font-semibold text-muted">{today}</p>}
+      />
 
       <section className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:hidden" aria-label="Quick actions">
         {quickActions.map(({ href, label, icon: Icon }) => (

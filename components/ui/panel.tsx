@@ -109,16 +109,37 @@ const valueToneClass: Record<Tone, string> = {
   primary: "text-primary",
   danger: "text-danger",
   warning: "text-warning",
-  success: "text-secondary",
+  success: "text-success",
 };
 
-/** Single KPI metric, bordered and flat. */
+const tintSurfaceClass: Record<Tone, string> = {
+  neutral: "border-border bg-surface",
+  primary: "border-primary/30 bg-primary/5",
+  danger: "border-danger/30 bg-danger/5",
+  warning: "border-warning/30 bg-warning/5",
+  success: "border-success/30 bg-success/5",
+};
+
+const tintLabelClass: Record<Tone, string> = {
+  neutral: "text-muted",
+  primary: "text-primary",
+  danger: "text-danger",
+  warning: "text-warning",
+  success: "text-success",
+};
+
+/**
+ * Single KPI metric, bordered and flat. Pass `tint` to fill the tile's own
+ * background/border/label from `tone` — the bold, decisive treatment for a KPI
+ * that needs attention (non-zero due/overdue counts), not a default look.
+ */
 export function StatTile({
   label,
   value,
   sublabel,
   icon: Icon,
   tone = "neutral",
+  tint = false,
   className,
 }: {
   label: string;
@@ -126,13 +147,29 @@ export function StatTile({
   sublabel?: string;
   icon?: LucideIcon;
   tone?: Tone;
+  tint?: boolean;
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-lg border border-border bg-surface p-4", className)}>
+    <div
+      className={cn(
+        "rounded-lg border p-4",
+        tint ? tintSurfaceClass[tone] : "border-border bg-surface",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-xs font-medium uppercase tracking-wider text-muted">{label}</p>
-        {Icon ? <Icon className="size-4 shrink-0 text-muted" /> : null}
+        <p
+          className={cn(
+            "truncate text-xs font-medium uppercase tracking-wider",
+            tint ? tintLabelClass[tone] : "text-muted",
+          )}
+        >
+          {label}
+        </p>
+        {Icon ? (
+          <Icon className={cn("size-4 shrink-0", tint ? tintLabelClass[tone] : "text-muted")} />
+        ) : null}
       </div>
       <p className={cn("mt-2 text-3xl font-semibold leading-none tabular-nums", valueToneClass[tone])}>
         {value}
