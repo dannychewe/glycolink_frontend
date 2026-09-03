@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/features/auth/auth-context";
 import { canAccessConsultantRoute } from "@/lib/programmes/permissions";
 import { LogoutButton } from "@/components/layout/LogoutButton";
+import { Logo } from "@/components/ui/logo";
 
 type ConsultantSidebarProps = Readonly<{
   className?: string;
@@ -177,12 +178,10 @@ export function ConsultantSidebar({
         className,
       )}
     >
-      <div className="border-b border-border px-5 py-5">
-        <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
-          <div>
-            <p className="text-sm font-semibold tracking-tight text-text">Naje Health</p>
-            <p className="text-xs text-muted">Clinic diabetes care</p>
-          </div>
+      <div className="border-b border-border px-4 py-5">
+        <Link href="/" onClick={onNavigate} className="flex flex-col items-start gap-1">
+          <Logo variant="horizontal" className="h-5 w-auto" />
+          <p className="text-xs text-muted">Clinic diabetes care</p>
         </Link>
       </div>
 

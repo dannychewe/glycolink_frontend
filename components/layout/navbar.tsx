@@ -8,6 +8,7 @@ import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/features/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
@@ -35,7 +36,7 @@ export function Navbar() {
       <Container className="flex h-16 items-center justify-between gap-6">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <span className="font-display text-xl font-bold tracking-tight text-ink">Naje Health</span>
+          <Logo variant="horizontal" className="h-7 w-auto" />
         </Link>
 
         {/* Desktop nav links */}

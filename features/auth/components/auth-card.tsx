@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Logo } from "@/components/ui/logo";
 
 type AuthCardProps = Readonly<{
   title: string;
@@ -13,12 +14,9 @@ export function AuthCard({ title, description, notice, children }: AuthCardProps
   return (
     <div className="flex min-h-[calc(100vh-4.5rem)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <Link
-            href="/"
-            className="text-xl font-semibold tracking-tight text-text hover:text-primary transition-colors"
-          >
-            Naje Health
+        <div className="flex justify-center">
+          <Link href="/" className="inline-flex opacity-90 transition-opacity hover:opacity-100">
+            <Logo variant="horizontal" className="h-7 w-auto" />
           </Link>
         </div>
 

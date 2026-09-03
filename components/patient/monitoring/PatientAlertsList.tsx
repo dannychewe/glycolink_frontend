@@ -3,7 +3,7 @@
 import { useQuery } from "@apollo/client";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { MY_ALERTS_QUERY } from "@/lib/monitoring/graphql";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type StatusTone } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
 
 type Alert = {
@@ -19,10 +19,10 @@ type AlertsData = {
   myAlerts: Alert[];
 };
 
-function severityVariant(severity: string) {
+function severityTone(severity: string): StatusTone {
   if (severity === "HIGH") return "danger";
   if (severity === "MEDIUM") return "warning";
-  return "secondary";
+  return "neutral";
 }
 
 function severityBorder(severity: string) {
@@ -99,9 +99,7 @@ export function PatientAlertsList() {
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium text-text">{alert.message}</p>
-                <Badge variant={severityVariant(alert.severity)} className="shrink-0">
-                  {alert.severity}
-                </Badge>
+                <StatusBadge tone={severityTone(alert.severity)} label={alert.severity} size="sm" className="shrink-0" />
               </div>
               <p className="mt-1.5 text-xs text-muted">{formatDate(alert.createdAt)}</p>
             </div>
@@ -121,7 +119,7 @@ export function PatientAlertsList() {
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm text-text">{alert.message}</p>
-                <Badge variant="secondary" className="shrink-0">Resolved</Badge>
+                <StatusBadge tone="neutral" label="Resolved" size="sm" className="shrink-0" />
               </div>
               <p className="mt-1.5 text-xs text-muted">{formatDate(alert.createdAt)}</p>
             </div>

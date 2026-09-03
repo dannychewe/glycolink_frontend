@@ -8,7 +8,7 @@ export type SelectOption = {
 };
 
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
-  options: SelectOption[];
+  options: readonly SelectOption[];
   placeholder?: string;
 };
 

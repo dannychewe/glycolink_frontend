@@ -28,6 +28,11 @@ export const metadata: Metadata = {
   title: "Naje Health | Diabetes Continuity Care for Clinics",
   description:
     "Clinic-led diabetes continuity-of-care for monitoring, care plans, alerts, adherence, and programme billing.",
+  icons: {
+    icon: "/img/logo.svg",
+    shortcut: "/img/logo.svg",
+    apple: "/img/logo.svg",
+  },
   openGraph: {
     title: "Naje Health | Diabetes Continuity Care for Clinics",
     description:

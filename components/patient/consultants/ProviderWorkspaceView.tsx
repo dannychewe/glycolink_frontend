@@ -254,7 +254,7 @@ export function ProviderWorkspaceView({ inviteId }: { inviteId: string }) {
       {/* Provider header */}
       <header className="flex flex-col gap-5 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-center sm:p-6">
         <div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/10 ring-1 ring-border">
-          <span className="font-display text-xl font-semibold text-primary">{initials || "Dr"}</span>
+          <span className="text-xl font-semibold text-primary">{initials || "Dr"}</span>
           {/* eslint-disable-next-line @next/next/no-img-element -- avoids next/image SVG/remote config */}
           <img
             src={avatar}

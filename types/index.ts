@@ -58,7 +58,7 @@ export type DashboardNotification = {
   timestamp: string;
 };
 
-export type NotificationType = "APPOINTMENT" | "PAYMENT" | "LAB" | "SYSTEM";
+export type NotificationType = "APPOINTMENT" | "PAYMENT" | "LAB" | "SYSTEM" | "CARE_JOURNEY_STAGE_REACHED";
 
 export type PatientNotification = {
   id: string;

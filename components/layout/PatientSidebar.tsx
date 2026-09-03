@@ -10,6 +10,7 @@ import {
   type PatientNavigationItem,
 } from "@/lib/navigation/patient-navigation";
 import { LogoutButton } from "@/components/layout/LogoutButton";
+import { Logo } from "@/components/ui/logo";
 
 type PatientSidebarProps = Readonly<{
   className?: string;
@@ -204,12 +205,10 @@ export function PatientSidebar({
         className,
       )}
     >
-      <div className="border-b border-border px-5 py-5">
-        <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5">
-          <div>
-            <p className="text-sm font-semibold tracking-tight text-text">Naje Health</p>
-            <p className="text-xs text-muted">Diabetes care</p>
-          </div>
+      <div className="border-b border-border px-4 py-5">
+        <Link href="/" onClick={onNavigate} className="flex flex-col items-start gap-1">
+          <Logo variant="horizontal" className="h-5 w-auto" />
+          <p className="text-xs text-muted">Diabetes care</p>
         </Link>
       </div>
 

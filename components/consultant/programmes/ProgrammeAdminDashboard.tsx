@@ -21,6 +21,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { OnboardingStepper } from "@/components/patient/onboarding/OnboardingStepper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DetailModal } from "@/components/ui/detail-modal";
@@ -44,6 +45,7 @@ import { PROVIDERS_QUERY } from "@/lib/providers/directory-graphql";
 import {
   labelForChoice,
   PROGRAMME_CARE_TEAM_ROLE_OPTIONS,
+  PROGRAMME_TYPE_OPTIONS,
   type ProgrammeCareTeamRoleValue,
 } from "@/lib/programmes/choices";
 import {
@@ -55,6 +57,7 @@ import {
   CLINIC_CARE_PROGRAMMES_QUERY,
   CLINIC_PROGRAMME_ENROLMENTS_QUERY,
   CLINIC_PROGRAMME_SCHEDULE_QUERY,
+  CREATE_PROGRAMME_PRICE_MUTATION,
   CREATE_PROGRAMME_SHARE_LINK_MUTATION,
   CREATE_CARE_PROGRAMME_MUTATION,
   ENROL_PATIENT_IN_PROGRAMME_MUTATION,
@@ -87,6 +90,14 @@ type EnrolmentsData = {
 
 type ClinicScheduleData = {
   clinicProgrammeSchedule: ProgrammeScheduleItem[];
+};
+
+type CreateProgrammeData = {
+  createCareProgramme?: {
+    programme?: {
+      id: string;
+    };
+  };
 };
 
 type CreateShareLinkData = {
@@ -122,16 +133,66 @@ type ProvidersData = {
 
 type ProgrammeAdminWorkflow = "overview" | "setup" | "enrolment" | "activation" | "details";
 
+type ProgrammeWizardCalendarItem = {
+  id: string;
+  title: string;
+  eventType: string;
+  day: string;
+  endDay: string;
+  description: string;
+};
+
+const programmeCalendarEventOptions = [
+  { value: "measurement_task", label: "Measurement task" },
+  { value: "consultant_review", label: "Consultant review" },
+  { value: "video_consultation", label: "Video consultation" },
+  { value: "medication_check", label: "Medication check" },
+  { value: "lab_reminder", label: "Lab reminder" },
+  { value: "education", label: "Education" },
+  { value: "care_team_check_in", label: "Care team check-in" },
+  { value: "payment_renewal", label: "Payment renewal" },
+  { value: "programme_review", label: "Programme review" },
+];
+
+const programmeBillingModelOptions = [
+  { value: "one_time", label: "Once-off" },
+  { value: "monthly", label: "Monthly" },
+  { value: "fixed_period", label: "Fixed period" },
+];
+
+function calendarEventLabel(value: string) {
+  return programmeCalendarEventOptions.find((option) => option.value === value)?.label ?? titleCase(value);
+}
+
+const defaultProgrammeCalendarItems: ProgrammeWizardCalendarItem[] = [
+  { id: "welcome", title: "Welcome and care plan review", eventType: "care_team_check_in", day: "1", endDay: "", description: "Confirm goals, monitoring expectations, and how follow-up will work." },
+  { id: "fasting", title: "Daily fasting glucose", eventType: "measurement_task", day: "1", endDay: "7", description: "Log fasting glucose every morning before the first review." },
+  { id: "review", title: "First glucose trend review", eventType: "consultant_review", day: "7", endDay: "", description: "Review early readings and adjust the plan if needed." },
+  { id: "video", title: "Video follow-up consultation", eventType: "video_consultation", day: "14", endDay: "", description: "Remote review of progress, medication tolerance, and next steps." },
+  { id: "finish", title: "Programme progress review", eventType: "programme_review", day: "30", endDay: "", description: "Review outcomes and agree renewal, maintenance, or discharge plan." },
+];
+
 const emptyProgrammeForm = {
   organizationId: "",
   name: "Clinic diabetes continuity programme",
-  code: "DIABETES-CONTINUITY",
+  code: "",
+  programmeType: "diabetes",
   description: "",
+  patientOffer: "A structured diabetes support programme with monitoring, care-team follow-up, and consultant reviews.",
+  whoItIsFor: "Adults living with diabetes who need regular follow-up, glucose review, and clearer next steps.",
+  whatHappensNext: "After joining, the patient meets the care team, follows a dated care journey, logs readings, and books reviews when needed.",
   defaultDurationDays: "180",
   defaultMonitoringCadenceDays: "1",
-  startsAt: "",
-  endsAt: "",
+  startsAt: new Date().toISOString().slice(0, 10),
+  endsAt: calculateProgrammeEndDate(new Date().toISOString().slice(0, 10), "180"),
   enrolmentOpen: true,
+  calendarItems: defaultProgrammeCalendarItems,
+  priceName: "Diabetes continuity package",
+  priceAmount: "150",
+  priceCurrency: "ZMW",
+  billingModel: "monthly",
+  billingInterval: "month",
+  includedServiceSummary: "Care journey calendar, glucose monitoring review, care-team follow-up, and consultant booking.",
 };
 
 function titleCase(value: string | null | undefined) {
@@ -169,6 +230,60 @@ function formatDateRange(start: string | null | undefined, end: string | null | 
   return `${startLabel} - ${formatDate(end)}`;
 }
 
+function calculateProgrammeEndDate(startDate: string, durationDays: string) {
+  const duration = Number(durationDays);
+  if (!startDate || !Number.isFinite(duration) || duration < 1) return "";
+  const date = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() + duration - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function programmeCodeFromName(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+function parseProgrammeSettings(value: string | null | undefined) {
+  try {
+    const parsed = JSON.parse(value || "{}") as {
+      patientOffer?: string;
+      whoItIsFor?: string;
+      whatHappensNext?: string;
+      careJourneyTemplate?: { items?: unknown };
+    };
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function calendarItemsFromSettings(value: unknown): ProgrammeWizardCalendarItem[] {
+  const items = value && typeof value === "object" && "items" in value ? (value as { items?: unknown }).items : value;
+  if (!Array.isArray(items)) return defaultProgrammeCalendarItems;
+  const parsed = items
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const raw = item as Record<string, unknown>;
+      const title = String(raw.title ?? raw.label ?? "").trim();
+      if (!title) return null;
+      return {
+        id: `programme-calendar-${index}-${title}`,
+        title,
+        eventType: String(raw.eventType ?? raw.event_type ?? "care_team_check_in"),
+        day: String(raw.day ?? raw.dayNumber ?? index + 1),
+        endDay: String(raw.endDay ?? raw.end_day ?? ""),
+        description: String(raw.description ?? raw.detail ?? ""),
+      };
+    })
+    .filter((item): item is ProgrammeWizardCalendarItem => Boolean(item));
+  return parsed.length ? parsed : defaultProgrammeCalendarItems;
+}
+
 function readinessItems(enrolment: ProgrammeEnrolment | null) {
   if (!enrolment) return [];
   return [
@@ -199,12 +314,29 @@ function programmePayload(form: typeof emptyProgrammeForm) {
   return {
     organizationId: form.organizationId || undefined,
     name: form.name,
-    code: form.code,
+    code: form.code || programmeCodeFromName(form.name),
     description: form.description || undefined,
-    programmeType: "diabetes",
+    programmeType: form.programmeType,
     defaultDurationDays: Number(form.defaultDurationDays) || undefined,
     defaultMonitoringCadenceDays: Number(form.defaultMonitoringCadenceDays) || 1,
-    settingsJson: JSON.stringify({ condition: "diabetes", continuityCare: true }),
+    settingsJson: JSON.stringify({
+      condition: "diabetes",
+      continuityCare: true,
+      patientOffer: form.patientOffer,
+      whoItIsFor: form.whoItIsFor,
+      whatHappensNext: form.whatHappensNext,
+      careJourneyTemplate: {
+        items: form.calendarItems
+          .filter((item) => item.title.trim() && Number(item.day) > 0)
+          .map((item) => ({
+            title: item.title.trim(),
+            eventType: item.eventType,
+            day: Number(item.day),
+            endDay: Number(item.endDay) > 0 ? Number(item.endDay) : undefined,
+            description: item.description.trim() || undefined,
+          })),
+      },
+    }),
     enrolmentOpen: form.enrolmentOpen,
     startsAt: form.startsAt || undefined,
     endsAt: form.endsAt || undefined,
@@ -223,25 +355,47 @@ function ProgrammeSetupForm({
   const router = useRouter();
   const { user } = useAuth();
   const canManageProgrammes = hasProgrammePermission(user, "programme.manage");
-  const [form, setForm] = useState(() =>
-    selectedProgramme
-      ? {
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState(() => {
+    if (selectedProgramme) {
+      const settings = parseProgrammeSettings(selectedProgramme.settingsJson);
+      return {
           organizationId: selectedProgramme.organization?.id ?? "",
           name: selectedProgramme.name,
           code: selectedProgramme.code,
+          programmeType: selectedProgramme.programmeType,
           description: selectedProgramme.description ?? "",
+          patientOffer: settings.patientOffer ?? emptyProgrammeForm.patientOffer,
+          whoItIsFor: settings.whoItIsFor ?? emptyProgrammeForm.whoItIsFor,
+          whatHappensNext: settings.whatHappensNext ?? emptyProgrammeForm.whatHappensNext,
           defaultDurationDays: String(selectedProgramme.defaultDurationDays ?? 180),
           defaultMonitoringCadenceDays: String(selectedProgramme.defaultMonitoringCadenceDays ?? 1),
           startsAt: selectedProgramme.startsAt ?? "",
-          endsAt: selectedProgramme.endsAt ?? "",
+          endsAt: selectedProgramme.endsAt ?? calculateProgrammeEndDate(selectedProgramme.startsAt ?? "", String(selectedProgramme.defaultDurationDays ?? 180)),
           enrolmentOpen: selectedProgramme.enrolmentOpen,
-        }
-      : emptyProgrammeForm,
-  );
+          calendarItems: calendarItemsFromSettings(settings.careJourneyTemplate),
+          priceName: emptyProgrammeForm.priceName,
+          priceAmount: emptyProgrammeForm.priceAmount,
+          priceCurrency: emptyProgrammeForm.priceCurrency,
+          billingModel: emptyProgrammeForm.billingModel,
+          billingInterval: emptyProgrammeForm.billingInterval,
+          includedServiceSummary: emptyProgrammeForm.includedServiceSummary,
+        };
+    }
+    return emptyProgrammeForm;
+  });
   const [error, setError] = useState<string | null>(null);
-  const [createProgramme, createState] = useMutation(CREATE_CARE_PROGRAMME_MUTATION);
+  const [createProgramme, createState] = useMutation<CreateProgrammeData>(CREATE_CARE_PROGRAMME_MUTATION);
   const [updateProgramme, updateState] = useMutation(UPDATE_DRAFT_CARE_PROGRAMME_MUTATION);
-  const saving = createState.loading || updateState.loading;
+  const [createPrice, createPriceState] = useMutation(CREATE_PROGRAMME_PRICE_MUTATION);
+  const saving = createState.loading || updateState.loading || createPriceState.loading;
+  const canSubmitProgramme =
+    canManageProgrammes &&
+    !saving &&
+    Boolean(form.name.trim()) &&
+    Number(form.defaultDurationDays) > 0 &&
+    Boolean(form.startsAt) &&
+    Boolean(form.endsAt);
   const organizationOptions = useMemo(() => {
     const memberships = user?.clinicAccess?.memberships ?? [];
     const seen = new Set<string>();
@@ -260,9 +414,93 @@ function ProgrammeSetupForm({
       });
   }, [user?.clinicAccess?.memberships]);
 
+  function updateTiming(updates: Partial<Pick<typeof emptyProgrammeForm, "defaultDurationDays" | "startsAt">>) {
+    setForm((current) => {
+      const next = { ...current, ...updates };
+      const calculatedEnd = calculateProgrammeEndDate(next.startsAt, next.defaultDurationDays);
+      return { ...next, endsAt: calculatedEnd };
+    });
+  }
+
+  function updateCalendarItem(id: string, updates: Partial<ProgrammeWizardCalendarItem>) {
+    setForm((current) => ({
+      ...current,
+      calendarItems: current.calendarItems.map((item) => (item.id === id ? { ...item, ...updates } : item)),
+    }));
+  }
+
+  function addCalendarItem() {
+    setForm((current) => ({
+      ...current,
+      calendarItems: [
+        ...current.calendarItems,
+        { id: `programme-step-${Date.now()}`, title: "", eventType: "care_team_check_in", day: "1", endDay: "", description: "" },
+      ],
+    }));
+  }
+
+  function removeCalendarItem(id: string) {
+    setForm((current) => ({
+      ...current,
+      calendarItems: current.calendarItems.filter((item) => item.id !== id),
+    }));
+  }
+
+  const steps = [
+    "Basics",
+    "Dates",
+    "Patient offer",
+    "Calendar",
+    "Pricing",
+    "Review",
+  ];
+
+  function canContinue() {
+    return !continueBlockedReason();
+  }
+
+  function continueBlockedReason(): string | null {
+    if (step === 0) {
+      if (!form.name.trim()) return "Enter a programme name.";
+      if (!form.programmeType) return "Choose a programme type.";
+      if (!form.organizationId) return "Select a clinic organization.";
+      return null;
+    }
+    if (step === 1) {
+      if (!(Number(form.defaultDurationDays) > 0)) return "Enter a duration of at least 1 day.";
+      if (!form.startsAt) return "Choose a start date.";
+      if (!form.endsAt) return "An end date is needed — check the start date and duration.";
+      if (!(Number(form.defaultMonitoringCadenceDays) > 0)) return "Enter a monitoring cadence of at least 1 day.";
+      return null;
+    }
+    if (step === 2) {
+      if (!form.patientOffer.trim()) return "Add a public-facing description.";
+      if (!form.whoItIsFor.trim()) return "Describe who this programme is for.";
+      if (!form.whatHappensNext.trim()) return "Explain what happens after joining.";
+      return null;
+    }
+    if (step === 3) {
+      return form.calendarItems.some((item) => item.title.trim() && Number(item.day) > 0)
+        ? null
+        : "Add at least one milestone with a title and day.";
+    }
+    if (step === 4) {
+      if (selectedProgramme) return null;
+      if (!form.priceName.trim()) return "Enter a package name.";
+      if (!(Number(form.priceAmount) > 0)) return "Enter a price greater than 0.";
+      if (!form.priceCurrency.trim()) return "Enter a currency.";
+      return null;
+    }
+    return canSubmitProgramme ? null : "Fill in the required fields before creating this programme.";
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    if (!form.startsAt || !form.endsAt || Number(form.defaultDurationDays) <= 0) {
+      setError("Programme duration, start date, and end date are required.");
+      return;
+    }
     try {
       if (selectedProgramme?.status === "DRAFT") {
         await updateProgramme({ variables: { programmeId: selectedProgramme.id, data: programmePayload(form) } });
@@ -270,7 +508,23 @@ function ProgrammeSetupForm({
         return;
       }
       const response = await createProgramme({ variables: { data: programmePayload(form) } });
-      const createdId = response.data?.createCareProgramme?.id as string | undefined;
+      const createdId = response.data?.createCareProgramme?.programme?.id;
+      if (createdId && Number(form.priceAmount) > 0) {
+        await createPrice({
+          variables: {
+            programmeId: createdId,
+            data: {
+              name: form.priceName,
+              currency: form.priceCurrency,
+              amount: form.priceAmount,
+              billingModel: form.billingModel,
+              billingInterval: form.billingInterval || undefined,
+              includedServiceSummary: form.includedServiceSummary,
+              approved: true,
+            },
+          },
+        });
+      }
       onCreated?.(createdId);
       router.push(createdId ? `/consultant/programmes/${createdId}` : "/consultant/programmes");
     } catch (err) {
@@ -278,70 +532,414 @@ function ProgrammeSetupForm({
     }
   }
 
+  const isFirstStep = step === 0;
+  const isReviewStep = step === steps.length - 1;
+  const blockedReason = continueBlockedReason();
+  const stepContinueAllowed = !blockedReason;
+  const sortedCalendarPreview = [...form.calendarItems]
+    .filter((item) => item.title.trim() && Number(item.day) > 0)
+    .sort((a, b) => Number(a.day) - Number(b.day));
+  const selectedOrganizationLabel =
+    organizationOptions.find((option) => option.value === form.organizationId)?.label ?? "Not selected";
+  const billingModelLabel =
+    programmeBillingModelOptions.find((option) => option.value === form.billingModel)?.label ?? form.billingModel;
+
+  function goNext() {
+    if (!canContinue()) return;
+    setStep((current) => Math.min(current + 1, steps.length - 1));
+  }
+
+  function goBack() {
+    setStep((current) => Math.max(current - 1, 0));
+  }
+
   return (
     <Panel>
       <PanelHeader>
         <PanelTitle icon={ClipboardList}>{selectedProgramme ? "Programme Settings" : "Create Programme"}</PanelTitle>
       </PanelHeader>
-      <PanelBody>
-        {error ? <p className="mb-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
+      <PanelBody className="space-y-5">
+        {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
+        <OnboardingStepper steps={steps} currentStep={step} />
         <form onSubmit={(event) => void handleSubmit(event)} className="space-y-5">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="programme-name">Name</Label>
-              <Input id="programme-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="programme-code">Code</Label>
-              <Input id="programme-code" value={form.code} onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))} />
-            </div>
-            <SearchableSelector
-              id="programme-org"
-              label="Clinic organization"
-              value={form.organizationId}
-              options={organizationOptions}
-              placeholder="Select clinic organization"
-              emptyLabel="No clinic organizations found in your session"
-              disabled={!canManageProgrammes}
-              onChange={(organizationId) => setForm((current) => ({ ...current, organizationId }))}
-            />
-            <div className="space-y-1.5">
-              <Label htmlFor="programme-duration">Duration days</Label>
-              <Input id="programme-duration" type="number" min={1} value={form.defaultDurationDays} onChange={(event) => setForm((current) => ({ ...current, defaultDurationDays: event.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="programme-cadence">Monitoring cadence days</Label>
-              <Input id="programme-cadence" type="number" min={1} value={form.defaultMonitoringCadenceDays} onChange={(event) => setForm((current) => ({ ...current, defaultMonitoringCadenceDays: event.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="programme-start">Starts at</Label>
-              <Input id="programme-start" type="date" value={form.startsAt} onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="programme-end">Ends at</Label>
-              <Input id="programme-end" type="date" value={form.endsAt} onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))} />
-            </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+              Step {step + 1} of {steps.length}
+            </p>
+            <h3 className="text-lg font-semibold text-text">{steps[step]}</h3>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="programme-description">Description</Label>
-            <Textarea
-              id="programme-description"
-              value={form.description}
-              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-              placeholder="Clinic-facing programme description"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-muted">
-            <input type="checkbox" checked={form.enrolmentOpen} onChange={(event) => setForm((current) => ({ ...current, enrolmentOpen: event.target.checked }))} />
-            Open enrolment
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" size="sm" disabled={!canManageProgrammes || saving || !form.name.trim() || !form.code.trim()}>
-              {saving ? "Saving..." : selectedProgramme?.status === "DRAFT" ? "Update draft" : "Create programme"}
-            </Button>
-            <Button href="/consultant/programmes" type="button" size="sm" variant="secondary">
-              Back to list
-            </Button>
+
+          {step === 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-name">Name</Label>
+                <Input id="programme-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-type">Programme type</Label>
+                <Select
+                  id="programme-type"
+                  value={form.programmeType}
+                  options={PROGRAMME_TYPE_OPTIONS}
+                  disabled={!canManageProgrammes}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, programmeType: event.target.value }))
+                  }
+                />
+              </div>
+              <SearchableSelector
+                id="programme-org"
+                label="Clinic organization"
+                value={form.organizationId}
+                options={organizationOptions}
+                placeholder="Select clinic organization"
+                emptyLabel="No clinic organizations found in your session"
+                disabled={!canManageProgrammes}
+                onChange={(organizationId) => setForm((current) => ({ ...current, organizationId }))}
+              />
+              <label className="flex items-center gap-2 self-end pb-2 text-sm text-muted">
+                <input type="checkbox" checked={form.enrolmentOpen} onChange={(event) => setForm((current) => ({ ...current, enrolmentOpen: event.target.checked }))} />
+                Open enrolment
+              </label>
+              <div className="space-y-1.5 lg:col-span-2">
+                <Label htmlFor="programme-description">Description</Label>
+                <Textarea
+                  id="programme-description"
+                  value={form.description}
+                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                  placeholder="Clinic-facing programme description"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {step === 1 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-duration">Duration days</Label>
+                <Input
+                  id="programme-duration"
+                  type="number"
+                  min={1}
+                  value={form.defaultDurationDays}
+                  required
+                  onChange={(event) => updateTiming({ defaultDurationDays: event.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-cadence">Monitoring cadence days</Label>
+                <Input id="programme-cadence" type="number" min={1} value={form.defaultMonitoringCadenceDays} onChange={(event) => setForm((current) => ({ ...current, defaultMonitoringCadenceDays: event.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-start">Starts at</Label>
+                <Input
+                  id="programme-start"
+                  type="date"
+                  value={form.startsAt}
+                  required
+                  onChange={(event) => updateTiming({ startsAt: event.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-end">Ends at</Label>
+                <Input id="programme-end" type="date" value={form.endsAt} required readOnly />
+                <p className="text-xs text-muted">Calculated automatically from the start date and duration.</p>
+              </div>
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-patient-offer">Public-facing description</Label>
+                <Textarea
+                  id="programme-patient-offer"
+                  value={form.patientOffer}
+                  onChange={(event) => setForm((current) => ({ ...current, patientOffer: event.target.value }))}
+                  placeholder="What this programme is, in patient-friendly language"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-who-for">Who this programme is for</Label>
+                <Textarea
+                  id="programme-who-for"
+                  value={form.whoItIsFor}
+                  onChange={(event) => setForm((current) => ({ ...current, whoItIsFor: event.target.value }))}
+                  placeholder="Describe the patients this programme is designed for"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-what-next">What happens after joining</Label>
+                <Textarea
+                  id="programme-what-next"
+                  value={form.whatHappensNext}
+                  onChange={(event) => setForm((current) => ({ ...current, whatHappensNext: event.target.value }))}
+                  placeholder="Explain what the patient can expect right after enrolling"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {step === 3 ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted">
+                Build the dated care journey patients will see and follow. Add a milestone for each check-in, task, or review.
+                This programme runs {form.defaultDurationDays || "an unset number of"} days.
+              </p>
+              <div className="space-y-3">
+                {form.calendarItems.map((item, index) => {
+                  const durationDays = Number(form.defaultDurationDays);
+                  const lastDay = Number(item.endDay) > 0 ? Number(item.endDay) : Number(item.day);
+                  const beyondDuration = durationDays > 0 && lastDay > durationDays;
+                  return (
+                  <div key={item.id} className="space-y-3 rounded-xl border border-border bg-background p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted">Milestone {index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeCalendarItem(item.id)}
+                        className="text-muted transition hover:text-danger"
+                        aria-label="Remove milestone"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`calendar-title-${item.id}`}>Title</Label>
+                        <Input
+                          id={`calendar-title-${item.id}`}
+                          value={item.title}
+                          onChange={(event) => updateCalendarItem(item.id, { title: event.target.value })}
+                          placeholder="e.g. First glucose trend review"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`calendar-type-${item.id}`}>Type</Label>
+                        <Select
+                          id={`calendar-type-${item.id}`}
+                          value={item.eventType}
+                          options={programmeCalendarEventOptions}
+                          onChange={(event) => updateCalendarItem(item.id, { eventType: event.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`calendar-day-${item.id}`}>Day</Label>
+                        <Input
+                          id={`calendar-day-${item.id}`}
+                          type="number"
+                          min={1}
+                          value={item.day}
+                          onChange={(event) => updateCalendarItem(item.id, { day: event.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`calendar-endday-${item.id}`}>Through day (optional)</Label>
+                        <Input
+                          id={`calendar-endday-${item.id}`}
+                          type="number"
+                          min={1}
+                          value={item.endDay}
+                          onChange={(event) => updateCalendarItem(item.id, { endDay: event.target.value })}
+                          placeholder="Leave blank for a single day"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`calendar-desc-${item.id}`}>Description</Label>
+                      <Textarea
+                        id={`calendar-desc-${item.id}`}
+                        value={item.description}
+                        onChange={(event) => updateCalendarItem(item.id, { description: event.target.value })}
+                        placeholder="What the patient or care team should do on this day"
+                      />
+                    </div>
+                    {beyondDuration ? (
+                      <p className="text-xs text-warning">
+                        This falls after the programme ends on day {durationDays}. Extend the duration or move this milestone
+                        earlier.
+                      </p>
+                    ) : null}
+                  </div>
+                  );
+                })}
+              </div>
+              <Button type="button" size="sm" variant="secondary" onClick={addCalendarItem} className="gap-1.5">
+                <Plus className="size-4" />
+                Add milestone
+              </Button>
+            </div>
+          ) : null}
+
+          {step === 4 ? (
+            <div className="space-y-4">
+              {selectedProgramme ? (
+                <p className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-muted">
+                  Pricing is set when a programme is first created. These fields are shown for reference only and won&apos;t be
+                  saved to this draft. Manage packages for existing programmes from{" "}
+                  <a href="/consultant/billing/prices" className="font-medium text-primary underline underline-offset-2">
+                    Billing &rsaquo; Prices
+                  </a>
+                  .
+                </p>
+              ) : null}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="programme-price-name">Package name</Label>
+                  <Input
+                    id="programme-price-name"
+                    value={form.priceName}
+                    disabled={Boolean(selectedProgramme)}
+                    onChange={(event) => setForm((current) => ({ ...current, priceName: event.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="programme-price-amount">Price</Label>
+                    <Input
+                      id="programme-price-amount"
+                      type="number"
+                      min={0}
+                      value={form.priceAmount}
+                      disabled={Boolean(selectedProgramme)}
+                      onChange={(event) => setForm((current) => ({ ...current, priceAmount: event.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="programme-price-currency">Currency</Label>
+                    <Input
+                      id="programme-price-currency"
+                      value={form.priceCurrency}
+                      disabled={Boolean(selectedProgramme)}
+                      onChange={(event) => setForm((current) => ({ ...current, priceCurrency: event.target.value.toUpperCase() }))}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="programme-billing-model">Billing model</Label>
+                  <Select
+                    id="programme-billing-model"
+                    value={form.billingModel}
+                    options={programmeBillingModelOptions}
+                    disabled={Boolean(selectedProgramme)}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        billingModel: event.target.value,
+                        billingInterval: event.target.value === "monthly" ? "month" : "",
+                      }))
+                    }
+                  />
+                </div>
+                {form.billingModel === "fixed_period" ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="programme-billing-interval">Billing interval</Label>
+                    <Input
+                      id="programme-billing-interval"
+                      value={form.billingInterval}
+                      disabled={Boolean(selectedProgramme)}
+                      placeholder="e.g. programme"
+                      onChange={(event) => setForm((current) => ({ ...current, billingInterval: event.target.value }))}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="programme-included-services">Included services</Label>
+                <Textarea
+                  id="programme-included-services"
+                  value={form.includedServiceSummary}
+                  disabled={Boolean(selectedProgramme)}
+                  onChange={(event) => setForm((current) => ({ ...current, includedServiceSummary: event.target.value }))}
+                  placeholder="What the patient gets for this price"
+                />
+              </div>
+              <p className="text-xs text-muted">
+                Off-platform or cash payment can still be recorded against this package after the programme is created.
+              </p>
+            </div>
+          ) : null}
+
+          {step === 5 ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Programme</p>
+                <p className="mt-1 text-sm font-semibold text-text">{form.name || "Untitled programme"}</p>
+                <p className="text-sm text-muted">
+                  {labelForChoice(PROGRAMME_TYPE_OPTIONS, form.programmeType)} &middot; {selectedOrganizationLabel} &middot;{" "}
+                  {form.enrolmentOpen ? "Enrolment open" : "Enrolment closed"}
+                </p>
+                {form.description ? <p className="mt-2 text-sm text-muted">{form.description}</p> : null}
+              </div>
+
+              <div className="rounded-xl border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Duration and dates</p>
+                <p className="mt-1 text-sm text-text">
+                  {form.defaultDurationDays} days &middot; {formatDateRange(form.startsAt, form.endsAt)} &middot; monitoring every{" "}
+                  {form.defaultMonitoringCadenceDays} day(s)
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background p-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Patient offer</p>
+                <p className="text-sm text-text">{form.patientOffer}</p>
+                <p className="text-sm text-muted"><span className="font-medium text-text">Who it&apos;s for: </span>{form.whoItIsFor}</p>
+                <p className="text-sm text-muted"><span className="font-medium text-text">After joining: </span>{form.whatHappensNext}</p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Care journey calendar</p>
+                <ul className="mt-2 space-y-2">
+                  {sortedCalendarPreview.length ? (
+                    sortedCalendarPreview.map((item) => (
+                      <li key={item.id} className="text-sm text-text">
+                        <span className="font-medium">
+                          Day {item.day}
+                          {item.endDay ? `-${item.endDay}` : ""}:
+                        </span>{" "}
+                        {item.title}{" "}
+                        <span className="text-xs text-muted">({calendarEventLabel(item.eventType)})</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-muted">No milestones added yet.</li>
+                  )}
+                </ul>
+              </div>
+
+              {!selectedProgramme ? (
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Pricing</p>
+                  <p className="mt-1 text-sm text-text">
+                    {form.priceName} &middot; {form.priceCurrency} {form.priceAmount} &middot; {billingModelLabel}
+                  </p>
+                  {form.includedServiceSummary ? <p className="mt-1 text-sm text-muted">{form.includedServiceSummary}</p> : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="space-y-2 border-t border-border pt-4">
+            {!isReviewStep && blockedReason ? <p className="text-xs text-danger">{blockedReason}</p> : null}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant="secondary" onClick={goBack} disabled={isFirstStep}>
+                  Back
+                </Button>
+                <Button href="/consultant/programmes" type="button" size="sm" variant="ghost">
+                  Cancel
+                </Button>
+              </div>
+              {isReviewStep ? (
+                <Button type="submit" size="sm" disabled={!canSubmitProgramme}>
+                  {saving ? "Saving..." : selectedProgramme?.status === "DRAFT" ? "Update draft" : "Create programme"}
+                </Button>
+              ) : (
+                <Button type="button" size="sm" onClick={goNext} disabled={!stepContinueAllowed}>
+                  Next
+                </Button>
+              )}
+            </div>
           </div>
         </form>
       </PanelBody>
@@ -451,6 +1049,58 @@ function EnrolmentForm({
         </Button>
       </form>
     </div>
+  );
+}
+
+function ProgrammePlanSummaryPanel({ programme }: { programme: CareProgramme }) {
+  const settings = parseProgrammeSettings(programme.settingsJson);
+  const calendarItems = calendarItemsFromSettings(settings.careJourneyTemplate)
+    .filter((item) => item.title.trim() && Number(item.day) > 0)
+    .sort((a, b) => Number(a.day) - Number(b.day));
+  const hasPatientOffer = Boolean(settings.patientOffer || settings.whoItIsFor || settings.whatHappensNext);
+  const hasCalendar = calendarItems.length > 0 && Boolean(settings.careJourneyTemplate);
+
+  if (!hasPatientOffer && !hasCalendar) return null;
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={CalendarRange}>Patient Offer &amp; Care Journey</PanelTitle>
+      </PanelHeader>
+      <PanelBody className="space-y-4">
+        {hasPatientOffer ? (
+          <div className="space-y-2 text-sm">
+            {settings.patientOffer ? <p className="text-text">{settings.patientOffer}</p> : null}
+            {settings.whoItIsFor ? (
+              <p className="text-muted">
+                <span className="font-medium text-text">Who it&apos;s for: </span>
+                {settings.whoItIsFor}
+              </p>
+            ) : null}
+            {settings.whatHappensNext ? (
+              <p className="text-muted">
+                <span className="font-medium text-text">After joining: </span>
+                {settings.whatHappensNext}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        {hasCalendar ? (
+          <ul className="space-y-2 border-t border-border pt-3">
+            {calendarItems.map((item) => (
+              <li key={item.id} className="text-sm text-text">
+                <span className="font-medium">
+                  Day {item.day}
+                  {item.endDay ? `-${item.endDay}` : ""}:
+                </span>{" "}
+                {item.title} <span className="text-xs text-muted">({calendarEventLabel(item.eventType)})</span>
+                {item.description ? <span className="block text-xs text-muted">{item.description}</span> : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -988,6 +1638,7 @@ function ProgrammeDetailsView({ programmeId }: { programmeId: string }) {
             <StatTile label="Duration" value={programme.defaultDurationDays ?? "Open"} sublabel="Days" icon={ClipboardList} />
             <StatTile label="Care-plan ready" value={enrolments.filter((enrolment) => enrolment.carePlanReady).length} icon={CheckCircle2} tone="success" />
           </div>
+          <ProgrammePlanSummaryPanel programme={programme} />
           <ProgrammeShareLinkPanel programme={programme} />
           <ProgrammeSchedulePanel items={scheduleItems} />
           <div className="space-y-3">

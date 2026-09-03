@@ -36,7 +36,7 @@ export const patientMainNavigation: PatientNavigationItem[] = [
   },
   {
     label: "Care Plan",
-    href: "/patient/records",
+    href: "/patient/care-plan",
     icon: "records",
   },
   {

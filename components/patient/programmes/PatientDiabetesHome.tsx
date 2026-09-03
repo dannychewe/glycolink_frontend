@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { AlertCircle, CalendarCheck2, CalendarRange, CheckCircle2, Clock, ReceiptText, Stethoscope, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DetailModal } from "@/components/ui/detail-modal";
 import {
@@ -15,7 +14,10 @@ import {
   PanelList,
   PanelTitle,
   StatTile,
+  ViewAllLink,
 } from "@/components/ui/panel";
+import { StatusBadge, toneForLifecycleStatus } from "@/components/design-system";
+import { GlucoseHeroBand } from "@/components/patient/dashboard/GlucoseHeroBand";
 import { GlucoseLogForm } from "@/components/patient/monitoring/GlucoseLogForm";
 import { VitalsLogForm } from "@/components/patient/monitoring/VitalsLogForm";
 import {
@@ -99,20 +101,6 @@ function titleCase(value: string | null | undefined) {
     .replace(/_/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function statusVariant(value: string | null | undefined) {
-  const normalized = (value ?? "").toUpperCase();
-  if (normalized === "ACTIVE" || normalized === "APPROVED" || normalized === "SATISFIED" || normalized === "PAID") {
-    return "success" as const;
-  }
-  if (normalized === "MISSED" || normalized === "OVERDUE" || normalized === "COMMERCIALLY_SUSPENDED") {
-    return "danger" as const;
-  }
-  if (normalized === "DUE" || normalized === "ISSUED" || normalized === "PARTIALLY_PAID" || normalized === "IN_GRACE") {
-    return "warning" as const;
-  }
-  return "secondary" as const;
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -213,7 +201,7 @@ function TodayReadingsPanel({
                   </p>
                   <p className="mt-1 text-xs text-muted">Due {formatDateTime(reading.dueAt)}</p>
                 </div>
-                <Badge variant={statusVariant(reading.status)}>{titleCase(reading.status)}</Badge>
+                <StatusBadge tone={toneForLifecycleStatus(reading.status)} label={titleCase(reading.status)} size="sm" />
               </div>
             ))}
           </div>
@@ -277,12 +265,15 @@ function TodayReadingsPanel({
   );
 }
 
-function CarePlanPanel({ carePlan }: { carePlan: ProgrammeCarePlan | null }) {
+function CarePlanPanel({ carePlan, enrolmentId }: { carePlan: ProgrammeCarePlan | null; enrolmentId: string }) {
   return (
     <Panel>
       <PanelHeader>
         <PanelTitle icon={Icons.records}>Care Plan</PanelTitle>
-        <Badge variant={statusVariant(carePlan?.status)}>{titleCase(carePlan?.status)}</Badge>
+        <div className="flex items-center gap-3">
+          <StatusBadge tone={toneForLifecycleStatus(carePlan?.status)} label={titleCase(carePlan?.status)} />
+          <ViewAllLink href={`/patient/programmes/${enrolmentId}`}>Full plan</ViewAllLink>
+        </div>
       </PanelHeader>
       {!carePlan ? (
         <PanelEmpty>Your clinic has not activated a programme care plan yet.</PanelEmpty>
@@ -340,7 +331,7 @@ function ProgrammeTasksPanel({
     <Panel>
       <PanelHeader>
         <PanelTitle icon={Icons.actionRequired}>Care Tasks</PanelTitle>
-        <Badge variant={statusVariant(enrolment.status)}>{titleCase(enrolment.status)}</Badge>
+        <StatusBadge tone={toneForLifecycleStatus(enrolment.status)} label={titleCase(enrolment.status)} />
       </PanelHeader>
       <PanelList>
         {tasks.map((task) => (
@@ -349,7 +340,7 @@ function ProgrammeTasksPanel({
               {task.done ? <CheckCircle2 className="size-5 shrink-0 text-success" /> : <Clock className="size-5 shrink-0 text-warning" />}
               <p className="break-words text-sm font-medium text-text">{task.label}</p>
             </div>
-            <Badge variant={task.done ? "success" : "warning"}>{task.done ? "Done" : "Due"}</Badge>
+            <StatusBadge tone={task.done ? "success" : "warning"} label={task.done ? "Done" : "Due"} size="sm" />
           </Link>
         ))}
       </PanelList>
@@ -405,7 +396,7 @@ function WhatsNextPanel({
     <Panel>
       <PanelHeader>
         <PanelTitle icon={CalendarCheck2}>What Happens Next</PanelTitle>
-        <Badge variant={statusVariant(enrolment.status)}>{titleCase(enrolment.status)}</Badge>
+        <StatusBadge tone={toneForLifecycleStatus(enrolment.status)} label={titleCase(enrolment.status)} />
       </PanelHeader>
       <PanelList>
         {steps.map((step) => (
@@ -553,9 +544,17 @@ function CareJourneyPanel({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={isDueDate(item.scheduledDate) ? "warning" : statusVariant(item.status)}>
-                        {item.dayNumber && item.scheduledEndDate && item.scheduledEndDate !== item.scheduledDate ? `Day ${item.dayNumber}+` : item.dayNumber ? `Day ${item.dayNumber}` : titleCase(item.status)}
-                      </Badge>
+                      <StatusBadge
+                        tone={isDueDate(item.scheduledDate) ? "warning" : toneForLifecycleStatus(item.status)}
+                        label={
+                          item.dayNumber && item.scheduledEndDate && item.scheduledEndDate !== item.scheduledDate
+                            ? `Day ${item.dayNumber}+`
+                            : item.dayNumber
+                              ? `Day ${item.dayNumber}`
+                              : titleCase(item.status)
+                        }
+                        size="sm"
+                      />
                       <p className="text-xs text-muted">{formatDateRange(item.scheduledDate, item.scheduledEndDate)}</p>
                     </div>
                     <p className="mt-2 break-words text-sm font-semibold text-text">{item.title}</p>
@@ -616,14 +615,12 @@ function BillingPanel({
         <Button href="/patient/payments" size="sm" variant="secondary">Open billing</Button>
       </PanelHeader>
       <PanelBody className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-text">Programme entitlement</p>
-            <p className="mt-1 text-xs text-muted">
-              {activeEntitlement ? "Your programme access is active." : "No active entitlement is currently recorded."}
-            </p>
-          </div>
-          <Badge variant={statusVariant(activeEntitlement?.status)}>{titleCase(activeEntitlement?.status)}</Badge>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3">
+          <p className="text-sm font-semibold text-text">Programme entitlement</p>
+          <StatusBadge
+            tone={toneForLifecycleStatus(activeEntitlement?.status)}
+            label={titleCase(activeEntitlement?.status)}
+          />
         </div>
         {openInvoices.length > 0 ? (
           <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
@@ -733,34 +730,30 @@ export function PatientDiabetesHome() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            {enrolment.programme.name}
-          </p>
-          <h2 className="mt-1 text-xl font-semibold text-text">Your Diabetes Care Today</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">
-            Complete due monitoring, review your care plan, and keep programme billing current.
-          </p>
-        </div>
+      <section className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          {enrolment.programme.name}
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           {enrolment.leadProvider ? (
             <Button href={`/patient/providers/${enrolment.leadProvider.id}/book`} size="sm">
               Book consultant
             </Button>
           ) : null}
-          <Badge variant={statusVariant(enrolment.status)}>{titleCase(enrolment.status)}</Badge>
+          <StatusBadge tone={toneForLifecycleStatus(enrolment.status)} label={titleCase(enrolment.status)} />
         </div>
       </section>
 
-      <div className="grid divide-y divide-border rounded-none border-y border-border sm:divide-y-0 sm:gap-4 sm:border-y-0 md:grid-cols-3">
+      <GlucoseHeroBand />
+
+      <div className="grid gap-4 md:grid-cols-3">
         <StatTile
           label="Due Today"
           value={actionableReadings.length}
           sublabel="monitoring tasks"
           icon={Icons.monitoring}
           tone={actionableReadings.length > 0 ? "warning" : "success"}
-          className="rounded-none border-0 bg-transparent px-0 sm:rounded-lg sm:border sm:bg-surface sm:px-4"
+          tint={actionableReadings.length > 0}
         />
         <StatTile
           label="Open Gaps"
@@ -768,7 +761,7 @@ export function PatientDiabetesHome() {
           sublabel="missed monitoring"
           icon={Icons.warning}
           tone={(adherenceQuery.data?.patientMonitoringAdherenceSummary.openGapCount ?? 0) > 0 ? "danger" : "neutral"}
-          className="rounded-none border-0 bg-transparent px-0 sm:rounded-lg sm:border sm:bg-surface sm:px-4"
+          tint={(adherenceQuery.data?.patientMonitoringAdherenceSummary.openGapCount ?? 0) > 0}
         />
         <StatTile
           label="Invoices"
@@ -776,7 +769,7 @@ export function PatientDiabetesHome() {
           sublabel="with balance due"
           icon={ReceiptText}
           tone={openInvoiceCount > 0 ? "warning" : "success"}
-          className="rounded-none border-0 bg-transparent px-0 sm:rounded-lg sm:border sm:bg-surface sm:px-4"
+          tint={openInvoiceCount > 0}
         />
       </div>
 
@@ -794,7 +787,7 @@ export function PatientDiabetesHome() {
         <div className="space-y-6">
           <CareTeamPanel enrolment={enrolment} />
           <ProgrammeTasksPanel enrolment={enrolment} baseline={baseline} carePlan={carePlan} openInvoiceCount={openInvoiceCount} />
-          <CarePlanPanel carePlan={carePlan} />
+          <CarePlanPanel carePlan={carePlan} enrolmentId={enrolment.id} />
           <SchedulePanel schedule={schedule} />
           <BillingPanel invoices={invoices} entitlements={entitlements} />
         </div>

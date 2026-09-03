@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { AlertCircle, CalendarRange, CheckCircle2, ClipboardCheck, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarRange, CheckCircle2, ClipboardCheck, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DetailModal } from "@/components/ui/detail-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -13,6 +14,7 @@ import {
   PanelBody,
   PanelEmpty,
   PanelHeader,
+  PanelList,
   PanelTitle,
   StatTile,
 } from "@/components/ui/panel";
@@ -28,13 +30,17 @@ import {
   DEACTIVATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION,
   EFFECTIVE_MONITORING_REQUIREMENTS_QUERY,
   EXPECTED_MONITORING_WINDOWS_QUERY,
+  GENERATE_PROGRAMME_SCHEDULE_MUTATION,
+  MARK_PROGRAMME_SCHEDULE_ITEM_DONE_MUTATION,
   MONITORING_GAP_HISTORY_QUERY,
   PATIENT_MONITORING_ADHERENCE_SUMMARY_QUERY,
   PATIENT_PROGRAMME_ENROLMENTS_QUERY,
   PROGRAMME_CURRENT_BASELINE_QUERY,
   PROGRAMME_CURRENT_CARE_PLAN_QUERY,
   PROGRAMME_ENROLMENT_READINESS_QUERY,
+  PROGRAMME_SCHEDULE_QUERY,
   RETURN_PROGRAMME_BASELINE_MUTATION,
+  SKIP_PROGRAMME_SCHEDULE_ITEM_MUTATION,
   SUBMIT_PROGRAMME_CARE_PLAN_MUTATION,
   UPDATE_DRAFT_PROGRAMME_CARE_PLAN_MUTATION,
   UPDATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION,
@@ -45,6 +51,7 @@ import {
   type ProgrammeCarePlan,
   type ProgrammeEnrolment,
   type ProgrammeMonitoringRequirement,
+  type ProgrammeScheduleItem,
 } from "@/lib/programmes/graphql";
 import { Icons } from "@/components/ui/icons";
 
@@ -62,6 +69,10 @@ type BaselineData = {
 
 type CarePlanData = {
   programmeCurrentCarePlan: ProgrammeCarePlan | null;
+};
+
+type ScheduleData = {
+  programmeSchedule: ProgrammeScheduleItem[];
 };
 
 type RequirementsData = {
@@ -205,6 +216,19 @@ function mapError(error: unknown) {
   return "The programme record could not be updated.";
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-ZM", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
+  const startLabel = formatDate(start);
+  if (!end || end === start) return startLabel;
+  return `${startLabel} - ${formatDate(end)}`;
+}
+
 function ReadinessPanel({ readiness }: { readiness: EnrolmentReadiness }) {
   const checks = [
     ["Baseline approved", readiness.baselineApproved],
@@ -341,6 +365,7 @@ function CarePlanPanel({
   const [internalNotes, setInternalNotes] = useState("");
   const [revisionReason, setRevisionReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [createPlan, createState] = useMutation(CREATE_PROGRAMME_CARE_PLAN_MUTATION);
   const [updatePlan, updateState] = useMutation(UPDATE_DRAFT_PROGRAMME_CARE_PLAN_MUTATION);
   const [createRevision, revisionState] = useMutation(CREATE_PROGRAMME_CARE_PLAN_REVISION_MUTATION);
@@ -408,6 +433,7 @@ function CarePlanPanel({
           data: carePlanPayload(),
         },
       });
+      setEditOpen(false);
       onChanged();
     } catch (err) {
       setError(mapError(err));
@@ -434,6 +460,8 @@ function CarePlanPanel({
           },
         });
       }
+      setEditOpen(false);
+      setRevisionReason("");
       onChanged();
     } catch (err) {
       setError(mapError(err));
@@ -450,6 +478,9 @@ function CarePlanPanel({
       setError(mapError(err));
     }
   }
+
+  const editing = Boolean(carePlan);
+  const modalTitle = editing ? (carePlan?.status === "DRAFT" ? "Edit draft care plan" : "Create care plan revision") : "Create care plan";
 
   return (
     <Panel>
@@ -476,6 +507,10 @@ function CarePlanPanel({
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="secondary" disabled={!canManage} onClick={() => setEditOpen(true)}>
+                <Pencil className="size-4" />
+                {carePlan.status === "DRAFT" ? "Edit care plan" : "Create revision"}
+              </Button>
               <Button type="button" size="sm" variant="secondary" disabled={!canManage || saving || carePlan.status !== "DRAFT"} onClick={() => void handleLifecycle("submit")}>
                 Submit for approval
               </Button>
@@ -483,42 +518,27 @@ function CarePlanPanel({
                 Approve and activate
               </Button>
             </div>
-            <form onSubmit={(event) => void handleRevision(event)} className="space-y-3 border-t border-border pt-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                {carePlan.status === "DRAFT" ? "Edit draft care plan" : "Revision draft"}
-              </p>
-              <StructuredCarePlanFields
-                title={title}
-                summary={summary}
-                instructions={instructions}
-                goals={goals}
-                scheduleItems={scheduleItems}
-                labFollowUp={labFollowUp}
-                medicationReview={medicationReview}
-                internalNotes={internalNotes}
-                revisionReason={revisionReason}
-                onTitle={setTitle}
-                onSummary={setSummary}
-                onInstructions={setInstructions}
-                onGoals={setGoals}
-                onScheduleItems={setScheduleItems}
-                onLabFollowUp={setLabFollowUp}
-                onMedicationReview={setMedicationReview}
-                onInternalNotes={setInternalNotes}
-                onRevisionReason={setRevisionReason}
-              />
-              <Button
-                type="submit"
-                size="sm"
-                variant="secondary"
-                disabled={!canManage || saving || !title.trim() || (carePlan.status !== "DRAFT" && !revisionReason.trim())}
-              >
-                {carePlan.status === "DRAFT" ? "Save care plan changes" : "Create revision"}
-              </Button>
-            </form>
           </>
         ) : (
-          <form onSubmit={(event) => void handleCreate(event)} className="space-y-3">
+          <div className="rounded-xl border border-dashed border-border bg-background px-4 py-6 text-center">
+            <p className="text-sm text-muted">No care plan yet for this enrolment.</p>
+            <Button type="button" size="sm" className="mt-3" disabled={!canManage} onClick={() => setEditOpen(true)}>
+              <Plus className="size-4" />
+              Create care plan
+            </Button>
+          </div>
+        )}
+      </PanelBody>
+
+      {editOpen ? (
+        <DetailModal
+          title={modalTitle}
+          subtitle="Goals, care journey calendar, lab follow-up, and instructions."
+          onClose={() => setEditOpen(false)}
+          className="sm:max-w-3xl"
+        >
+          <form onSubmit={(event) => void (editing ? handleRevision(event) : handleCreate(event))} className="space-y-3">
+            {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
             <StructuredCarePlanFields
               title={title}
               summary={summary}
@@ -538,14 +558,23 @@ function CarePlanPanel({
               onMedicationReview={setMedicationReview}
               onInternalNotes={setInternalNotes}
               onRevisionReason={setRevisionReason}
+              showRevisionReason={editing && carePlan?.status !== "DRAFT"}
             />
-            <Button type="submit" size="sm" disabled={!canManage || saving || !title.trim()}>
-              <Plus className="size-4" />
-              Create care plan
-            </Button>
+            <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!canManage || saving || !title.trim() || (editing && carePlan?.status !== "DRAFT" && !revisionReason.trim())}
+              >
+                {saving ? "Saving…" : editing ? (carePlan?.status === "DRAFT" ? "Save care plan changes" : "Create revision") : "Create care plan"}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+            </div>
           </form>
-        )}
-      </PanelBody>
+        </DetailModal>
+      ) : null}
     </Panel>
   );
 }
@@ -569,6 +598,7 @@ function StructuredCarePlanFields({
   onMedicationReview,
   onInternalNotes,
   onRevisionReason,
+  showRevisionReason = true,
 }: {
   title: string;
   summary: string;
@@ -588,6 +618,7 @@ function StructuredCarePlanFields({
   onMedicationReview: (value: string) => void;
   onInternalNotes: (value: string) => void;
   onRevisionReason: (value: string) => void;
+  showRevisionReason?: boolean;
 }) {
   function updateScheduleItem(id: string, updates: Partial<ScheduleTemplateItem>) {
     onScheduleItems(scheduleItems.map((item) => (item.id === id ? { ...item, ...updates } : item)));
@@ -623,7 +654,10 @@ function StructuredCarePlanFields({
           <Input id="programme-care-plan-summary" value={summary} onChange={(event) => onSummary(event.target.value)} />
         </div>
       </div>
-      <Textarea value={goals} onChange={(event) => onGoals(event.target.value)} placeholder="Goals, one per line" className="min-h-20" />
+      <div className="space-y-1.5">
+        <Label htmlFor="programme-care-plan-goals">Goals</Label>
+        <Textarea id="programme-care-plan-goals" value={goals} onChange={(event) => onGoals(event.target.value)} placeholder="Goals, one per line" className="min-h-20" />
+      </div>
       <div className="space-y-3 rounded-lg border border-border bg-background p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -692,12 +726,165 @@ function StructuredCarePlanFields({
           ))}
         </div>
       </div>
-      <Textarea value={labFollowUp} onChange={(event) => onLabFollowUp(event.target.value)} placeholder="Lab follow-up, one item per line" className="min-h-20" />
-      <Textarea value={medicationReview} onChange={(event) => onMedicationReview(event.target.value)} placeholder="Medication review notes" className="min-h-20" />
-      <Textarea value={instructions} onChange={(event) => onInstructions(event.target.value)} placeholder="Patient instructions" className="min-h-20" />
-      <Textarea value={internalNotes} onChange={(event) => onInternalNotes(event.target.value)} placeholder="Provider-only internal notes" className="min-h-20" />
-      <Input value={revisionReason} onChange={(event) => onRevisionReason(event.target.value)} placeholder="Revision reason, required when revising an active plan" />
+      <div className="space-y-1.5">
+        <Label htmlFor="programme-care-plan-lab">Lab follow-up</Label>
+        <Textarea id="programme-care-plan-lab" value={labFollowUp} onChange={(event) => onLabFollowUp(event.target.value)} placeholder="Lab follow-up, one item per line" className="min-h-20" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="programme-care-plan-medication">Medication review</Label>
+        <Textarea id="programme-care-plan-medication" value={medicationReview} onChange={(event) => onMedicationReview(event.target.value)} placeholder="Medication review notes" className="min-h-20" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="programme-care-plan-instructions">Patient instructions</Label>
+        <Textarea id="programme-care-plan-instructions" value={instructions} onChange={(event) => onInstructions(event.target.value)} placeholder="Patient instructions" className="min-h-20" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="programme-care-plan-internal-notes">Internal notes</Label>
+        <Textarea id="programme-care-plan-internal-notes" value={internalNotes} onChange={(event) => onInternalNotes(event.target.value)} placeholder="Provider-only internal notes" className="min-h-20" />
+      </div>
+      {showRevisionReason ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="programme-care-plan-revision-reason">Revision reason</Label>
+          <Input
+            id="programme-care-plan-revision-reason"
+            value={revisionReason}
+            onChange={(event) => onRevisionReason(event.target.value)}
+            placeholder="Required when revising an active plan"
+          />
+        </div>
+      ) : null}
     </>
+  );
+}
+
+const scheduleItemActiveStatuses = ["SCHEDULED", "DUE", "RESCHEDULED"];
+
+function CareJourneyCalendarPanel({
+  carePlan,
+  items,
+  onChanged,
+  canManage,
+}: {
+  carePlan: ProgrammeCarePlan | null;
+  items: ProgrammeScheduleItem[];
+  onChanged: () => void;
+  canManage: boolean;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busyItemId, setBusyItemId] = useState<string | null>(null);
+  const [generateSchedule, generateState] = useMutation(GENERATE_PROGRAMME_SCHEDULE_MUTATION);
+  const [markDone, markDoneState] = useMutation(MARK_PROGRAMME_SCHEDULE_ITEM_DONE_MUTATION);
+  const [skipItem, skipState] = useMutation(SKIP_PROGRAMME_SCHEDULE_ITEM_MUTATION);
+  const busy = generateState.loading || markDoneState.loading || skipState.loading;
+  const sortedItems = [...items].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+
+  async function handleGenerate(replace: boolean) {
+    if (!carePlan) return;
+    setError(null);
+    try {
+      await generateSchedule({ variables: { carePlanId: carePlan.id, replace } });
+      onChanged();
+    } catch (err) {
+      setError(mapError(err));
+    }
+  }
+
+  async function handleMarkDone(itemId: string) {
+    setError(null);
+    setBusyItemId(itemId);
+    try {
+      await markDone({ variables: { itemId } });
+      onChanged();
+    } catch (err) {
+      setError(mapError(err));
+    } finally {
+      setBusyItemId(null);
+    }
+  }
+
+  async function handleSkip(itemId: string) {
+    setError(null);
+    setBusyItemId(itemId);
+    try {
+      await skipItem({ variables: { itemId, reason: "Skipped by care team" } });
+      onChanged();
+    } catch (err) {
+      setError(mapError(err));
+    } finally {
+      setBusyItemId(null);
+    }
+  }
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={CalendarRange} count={items.length}>Care Journey Calendar</PanelTitle>
+        {carePlan ? (
+          <Button type="button" size="sm" variant="secondary" disabled={!canManage || busy} onClick={() => void handleGenerate(items.length > 0)}>
+            {items.length > 0 ? "Regenerate from care plan" : "Generate schedule"}
+          </Button>
+        ) : null}
+      </PanelHeader>
+      <PanelBody className="space-y-3">
+        {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
+        {!carePlan ? (
+          <p className="rounded-lg border border-dashed border-border bg-background px-4 py-6 text-center text-sm text-muted">
+            Create a care plan below, then generate its calendar here.
+          </p>
+        ) : null}
+      </PanelBody>
+      {carePlan && sortedItems.length === 0 ? (
+        <PanelEmpty>No calendar generated yet. Click &ldquo;Generate schedule&rdquo; to build it from the care plan&apos;s follow-up schedule.</PanelEmpty>
+      ) : null}
+      {sortedItems.length > 0 ? (
+        <PanelList>
+          {sortedItems.map((item) => {
+            const canAct = canManage && scheduleItemActiveStatuses.includes(item.status);
+            const itemBusy = busyItemId === item.id;
+            return (
+              <div key={item.id} className="px-5 py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={statusVariant(item.status)}>
+                        {item.dayNumber ? `Day ${item.dayNumber}` : titleCase(item.status)}
+                      </Badge>
+                      <p className="text-xs text-muted">{formatDateRange(item.scheduledDate, item.scheduledEndDate)}</p>
+                    </div>
+                    <p className="mt-2 break-words text-sm font-semibold text-text">{item.title}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {titleCase(item.eventType)}
+                      {item.provider?.displayName ? ` · ${item.provider.displayName}` : ""}
+                    </p>
+                    {item.description ? <p className="mt-1 text-xs text-muted">{item.description}</p> : null}
+                    {item.status === "SKIPPED" && item.skippedReason ? (
+                      <p className="mt-1 text-xs text-muted">Skipped: {item.skippedReason}</p>
+                    ) : null}
+                  </div>
+                  {canAct ? (
+                    <div className="flex shrink-0 gap-2">
+                      <Button type="button" size="sm" disabled={itemBusy} onClick={() => void handleMarkDone(item.id)}>
+                        Mark done
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="text-danger"
+                        disabled={itemBusy}
+                        onClick={() => void handleSkip(item.id)}
+                      >
+                        Skip
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </PanelList>
+      ) : null}
+    </Panel>
   );
 }
 
@@ -715,6 +902,7 @@ function MonitoringSchedulePanel({
   canManage: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [selectedRequirementId, setSelectedRequirementId] = useState<string | null>(null);
   const [observationType, setObservationType] = useState("glucose");
   const [observationContext, setObservationContext] = useState("fasting");
@@ -754,6 +942,19 @@ function MonitoringSchedulePanel({
     };
   }
 
+  function resetRequirementForm() {
+    setSelectedRequirementId(null);
+    setObservationType("glucose");
+    setObservationContext("fasting");
+    setCadenceType("daily");
+    setIntervalDays("1");
+    setFrequencyPerInterval("1");
+    setApplicableDays("monday,tuesday,wednesday,thursday,friday,saturday,sunday");
+    setTimeOfDay("07:00");
+    setReminders("08:00");
+    setGracePeriodDays("1");
+  }
+
   function loadRequirement(requirement: ProgrammeMonitoringRequirement) {
     setSelectedRequirementId(requirement.id);
     setObservationType(requirement.observationType ?? "glucose");
@@ -782,6 +983,7 @@ function MonitoringSchedulePanel({
           },
         });
       }
+      setFormOpen(false);
       onChanged();
     } catch (err) {
       setError(mapError(err));
@@ -805,52 +1007,22 @@ function MonitoringSchedulePanel({
         <PanelTitle icon={Icons.monitoring} count={requirements.length}>
           Monitoring Schedule
         </PanelTitle>
-        <Button type="button" size="sm" variant="secondary" disabled={!canManage} onClick={() => setSelectedRequirementId(null)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={!canManage}
+          onClick={() => {
+            resetRequirementForm();
+            setFormOpen(true);
+          }}
+        >
+          <Plus className="size-4" />
           New requirement
         </Button>
       </PanelHeader>
       <PanelBody className="space-y-4">
         {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
-        <form onSubmit={(event) => void handleSaveRequirement(event)} className="space-y-3 rounded-lg border border-border bg-background p-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-observation">Observation type</Label>
-              <Input id="requirement-observation" value={observationType} onChange={(event) => setObservationType(event.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-context">Context</Label>
-              <Input id="requirement-context" value={observationContext} onChange={(event) => setObservationContext(event.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-cadence">Cadence</Label>
-              <Input id="requirement-cadence" value={cadenceType} onChange={(event) => setCadenceType(event.target.value)} placeholder="daily, weekly, interval" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-interval">Interval days</Label>
-              <Input id="requirement-interval" type="number" min={1} value={intervalDays} onChange={(event) => setIntervalDays(event.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-frequency">Frequency</Label>
-              <Input id="requirement-frequency" type="number" min={1} value={frequencyPerInterval} onChange={(event) => setFrequencyPerInterval(event.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-time">Time of day</Label>
-              <Input id="requirement-time" type="time" value={timeOfDay} onChange={(event) => setTimeOfDay(event.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-grace">Grace days</Label>
-              <Input id="requirement-grace" type="number" min={0} value={gracePeriodDays} onChange={(event) => setGracePeriodDays(event.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-reminders">Reminder times</Label>
-              <Input id="requirement-reminders" value={reminders} onChange={(event) => setReminders(event.target.value)} placeholder="08:00,18:00" />
-            </div>
-          </div>
-          <Textarea value={applicableDays} onChange={(event) => setApplicableDays(event.target.value)} placeholder="Applicable days, comma-separated" className="min-h-16" />
-          <Button type="submit" size="sm" disabled={!canManage || saving || !observationType.trim()}>
-            {selectedRequirementId ? "Update requirement" : "Add requirement"}
-          </Button>
-        </form>
         {requirements.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border bg-background px-4 py-6 text-center text-sm text-muted">
             No active programme monitoring requirements.
@@ -864,10 +1036,20 @@ function MonitoringSchedulePanel({
                   {titleCase(requirement.cadenceType)} · {requirement.timeOfDay ?? "any time"} · grace {requirement.gracePeriodDays ?? 0} days
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="secondary" disabled={!canManage} onClick={() => loadRequirement(requirement)}>
-                    Edit
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={!canManage}
+                    onClick={() => {
+                      loadRequirement(requirement);
+                      setFormOpen(true);
+                    }}
+                  >
+                    <Pencil className="size-4" />
+                    Edit requirement
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" disabled={!canManage || saving} onClick={() => void handleDeactivate(requirement.id)}>
+                  <Button type="button" size="sm" variant="secondary" className="text-danger" disabled={!canManage || saving} onClick={() => void handleDeactivate(requirement.id)}>
                     Deactivate
                   </Button>
                 </div>
@@ -894,6 +1076,64 @@ function MonitoringSchedulePanel({
           )}
         </div>
       </PanelBody>
+
+      {formOpen ? (
+        <DetailModal
+          title={selectedRequirementId ? "Edit monitoring requirement" : "New monitoring requirement"}
+          subtitle="What the patient needs to log or attend, and how often."
+          onClose={() => setFormOpen(false)}
+        >
+          <form onSubmit={(event) => void handleSaveRequirement(event)} className="space-y-3">
+            {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-observation">Observation type</Label>
+                <Input id="requirement-observation" value={observationType} onChange={(event) => setObservationType(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-context">Context</Label>
+                <Input id="requirement-context" value={observationContext} onChange={(event) => setObservationContext(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-cadence">Cadence</Label>
+                <Input id="requirement-cadence" value={cadenceType} onChange={(event) => setCadenceType(event.target.value)} placeholder="daily, weekly, interval" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-interval">Interval days</Label>
+                <Input id="requirement-interval" type="number" min={1} value={intervalDays} onChange={(event) => setIntervalDays(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-frequency">Frequency</Label>
+                <Input id="requirement-frequency" type="number" min={1} value={frequencyPerInterval} onChange={(event) => setFrequencyPerInterval(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-time">Time of day</Label>
+                <Input id="requirement-time" type="time" value={timeOfDay} onChange={(event) => setTimeOfDay(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-grace">Grace days</Label>
+                <Input id="requirement-grace" type="number" min={0} value={gracePeriodDays} onChange={(event) => setGracePeriodDays(event.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="requirement-reminders">Reminder times</Label>
+                <Input id="requirement-reminders" value={reminders} onChange={(event) => setReminders(event.target.value)} placeholder="08:00,18:00" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="requirement-days">Applicable days</Label>
+              <Textarea id="requirement-days" value={applicableDays} onChange={(event) => setApplicableDays(event.target.value)} placeholder="Applicable days, comma-separated" className="min-h-16" />
+            </div>
+            <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+              <Button type="submit" size="sm" disabled={!canManage || saving || !observationType.trim()}>
+                {saving ? "Saving…" : selectedRequirementId ? "Update requirement" : "Add requirement"}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setFormOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DetailModal>
+      ) : null}
     </Panel>
   );
 }
@@ -976,6 +1216,11 @@ export function PatientProgrammeContinuityPanel({ patientId }: { patientId: stri
     skip: !enrolmentId,
     fetchPolicy: "cache-and-network",
   });
+  const scheduleQuery = useQuery<ScheduleData>(PROGRAMME_SCHEDULE_QUERY, {
+    variables: { enrolmentId },
+    skip: !enrolmentId,
+    fetchPolicy: "cache-and-network",
+  });
   const requirementsQuery = useQuery<RequirementsData>(EFFECTIVE_MONITORING_REQUIREMENTS_QUERY, {
     variables: { enrolmentId },
     skip: !enrolmentId,
@@ -1002,6 +1247,7 @@ export function PatientProgrammeContinuityPanel({ patientId }: { patientId: stri
     void readinessQuery.refetch();
     void baselineQuery.refetch();
     void carePlanQuery.refetch();
+    void scheduleQuery.refetch();
     void requirementsQuery.refetch();
     void windowsQuery.refetch();
     void gapsQuery.refetch();
@@ -1026,6 +1272,7 @@ export function PatientProgrammeContinuityPanel({ patientId }: { patientId: stri
   const readiness = readinessQuery.data?.programmeEnrolmentReadiness;
   const baseline = baselineQuery.data?.programmeCurrentBaseline ?? null;
   const carePlan = carePlanQuery.data?.programmeCurrentCarePlan ?? null;
+  const scheduleItems = scheduleQuery.data?.programmeSchedule ?? [];
   const requirements = requirementsQuery.data?.effectiveMonitoringRequirements ?? [];
   const windows = windowsQuery.data?.expectedMonitoringWindows.items ?? [];
   const gaps = gapsQuery.data?.monitoringGapHistory.items ?? [];
@@ -1058,6 +1305,11 @@ export function PatientProgrammeContinuityPanel({ patientId }: { patientId: stri
       <div className="grid gap-6 xl:grid-cols-2">
         <BaselineReviewPanel baseline={baseline} onChanged={refetchProgramme} canManage={canManageCarePlans} />
         <CarePlanPanel enrolmentId={enrolment.id} carePlan={carePlan} onChanged={refetchProgramme} canManage={canManageCarePlans} />
+      </div>
+
+      <CareJourneyCalendarPanel carePlan={carePlan} items={scheduleItems} onChanged={refetchProgramme} canManage={canManageCarePlans} />
+
+      <div className="grid gap-6 xl:grid-cols-2">
         <MonitoringSchedulePanel
           enrolmentId={enrolment.id}
           requirements={requirements}

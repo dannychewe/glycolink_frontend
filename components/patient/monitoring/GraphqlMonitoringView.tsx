@@ -39,7 +39,7 @@ export function GraphqlMonitoringView() {
 
       {/* Overview */}
       {activeTab === "Overview" ? (
-        <MonitoringSnapshotCard />
+        <MonitoringSnapshotCard onLogReading={() => setActiveTab("Log Reading")} />
       ) : null}
 
       {/* Log Reading */}

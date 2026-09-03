@@ -90,6 +90,7 @@ export const MONITORING_SNAPSHOT_QUERY = gql`
         readingType
         value
         unit
+        flag
         recordedAt
       }
       trend {
