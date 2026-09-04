@@ -1,19 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { ArrowLeft, CalendarClock, Video } from "lucide-react";
+import { CalendarClock, Video } from "lucide-react";
 import { AppointmentActionModal } from "@/components/patient/appointments/AppointmentActionModal";
 import { PaymentsComingSoonNotice } from "@/components/patient/payments/PaymentsComingSoonNotice";
-import { Breadcrumbs } from "@/components/ui/page-header";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { StatusBadge, toneForLifecycleStatus } from "@/components/design-system";
 import { useCountdown } from "@/hooks/use-countdown";
 import {
+  APPOINTMENT_QUERY,
   AVAILABLE_SLOTS_QUERY,
   CANCEL_APPOINTMENT_MUTATION,
-  MY_APPOINTMENTS_QUERY,
   PENDING_ACTIONS_QUERY,
   RESCHEDULE_APPOINTMENT_MUTATION,
 } from "@/lib/bookings/graphql";
@@ -25,8 +26,8 @@ type AppointmentDetailViewProps = Readonly<{
   appointmentId: string;
 }>;
 
-type MyAppointmentsData = {
-  myAppointments: AppointmentItem[];
+type AppointmentData = {
+  appointment: AppointmentItem | null;
 };
 
 type AppointmentItem = {
@@ -121,20 +122,6 @@ function formatStatus(status: string) {
   return normalized.charAt(0) + normalized.slice(1).toLowerCase();
 }
 
-function getStatusVariant(status: string) {
-  const normalized = normalizeStatus(status);
-  if (normalized === "CONFIRMED" || normalized === "COMPLETED") return "success" as const;
-  if (normalized === "AWAITING_PAYMENT" || normalized === "PENDING") return "warning" as const;
-  if (normalized === "IN_PROGRESS" || normalized === "CHECKED_IN") return "primary" as const;
-  if (
-    normalized === "CANCELLED" ||
-    normalized === "NO_SHOW" ||
-    normalized === "RESCHEDULED"
-  )
-    return "danger" as const;
-  return "secondary" as const;
-}
-
 function formatDateTime(value: string | null) {
   if (!value) return "Date unavailable";
   const parsed = new Date(value);
@@ -185,18 +172,15 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
   const [actionError, setActionError] = useState<string | null>(null);
 
   const {
-    data: appointmentsData,
-    loading: appointmentsLoading,
-    error: appointmentsError,
-    refetch: refetchAppointments,
-  } = useQuery<MyAppointmentsData>(MY_APPOINTMENTS_QUERY, {
-    variables: { limit: 100 },
+    data: appointmentData,
+    loading: appointmentLoading,
+    error: appointmentError,
+    refetch: refetchAppointment,
+  } = useQuery<AppointmentData>(APPOINTMENT_QUERY, {
+    variables: { id: appointmentId },
     fetchPolicy: "network-only",
   });
-  const appointment = useMemo(
-    () => (appointmentsData?.myAppointments ?? []).find((item) => item.id === appointmentId) ?? null,
-    [appointmentId, appointmentsData?.myAppointments],
-  );
+  const appointment = appointmentData?.appointment ?? null;
 
   const {
     data: providerData,
@@ -207,6 +191,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     fetchPolicy: "network-only",
   });
   const { data: pendingActionsData } = useQuery<PendingActionsData>(PENDING_ACTIONS_QUERY, {
+    variables: { appointmentId },
     fetchPolicy: "network-only",
   });
   const {
@@ -236,13 +221,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     status === "CANCELLED" ||
     status === "NO_SHOW" ||
     status === "RESCHEDULED";
-  const canCancel =
-    !isTerminal &&
-    status !== "PENDING" &&
-    status !== "REQUESTED" &&
-    status !== "AWAITING_PAYMENT"
-      ? true
-      : !isTerminal;
+  const canCancel = !isTerminal;
   const canReschedule =
     status === "REQUESTED" ||
     status === "AWAITING_PAYMENT" ||
@@ -258,10 +237,9 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     { warnSeconds: 900, criticalSeconds: 300 },
   );
 
-  const pendingActionsForAppointment = (pendingActionsData?.pendingActions ?? []).filter(
-    (action) => action.appointment?.id === appointment?.id,
-  );
-  const prioritizedPendingActions = [...pendingActionsForAppointment].sort((a, b) => {
+  // The query is now scoped server-side to this appointment (pendingActions(appointmentId:)),
+  // not just "whatever's next" — no client-side filtering needed to match it up.
+  const prioritizedPendingActions = [...(pendingActionsData?.pendingActions ?? [])].sort((a, b) => {
     const priority = (action: string) => {
       if (action === "PCQ_NOT_COMPLETED") return 0;
       if (action === "PAYMENT_PENDING") return 1;
@@ -285,7 +263,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           reason: "Cancelled by patient",
         },
       });
-      await refetchAppointments();
+      await refetchAppointment();
       setIsCancelModalOpen(false);
     } catch (error) {
       setActionError(mapAppointmentError(error));
@@ -311,7 +289,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           newEndTime: selectedSlot.endTime,
         },
       });
-      await refetchAppointments();
+      await refetchAppointment();
       setIsRescheduleModalOpen(false);
       setSelectedRescheduleDate("");
       setSelectedRescheduleStartTime("");
@@ -320,7 +298,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     }
   }
 
-  if (appointmentsLoading) {
+  if (appointmentLoading) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -330,14 +308,14 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     );
   }
 
-  if (appointmentsError || !appointment) {
+  if (appointmentError || !appointment) {
     return (
       <Card>
         <CardHeader className="pb-4">
           <h1 className="text-2xl font-semibold text-text">Appointment not found</h1>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p>{appointmentsError ? "Unable to load appointment details." : "Appointment not found."}</p>
+          <p>{appointmentError ? "Unable to load appointment details." : "Appointment not found."}</p>
           <Button href="/patient/bookings" variant="secondary">
             Back to appointments
           </Button>
@@ -348,18 +326,15 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
 
   return (
     <div className="space-y-5">
-      <div>
-        <Breadcrumbs
-          items={[
-            { label: "Appointments", href: "/patient/bookings" },
-            { label: provider?.displayName ?? "Appointment" },
-          ]}
-        />
-        <Button href="/patient/bookings" variant="ghost" size="sm" className="-ml-2">
-          <ArrowLeft className="size-4" />
-          Back to appointments
-        </Button>
-      </div>
+      <PageHeader
+        breadcrumbs={[
+          { label: "Appointments", href: "/patient/bookings" },
+          { label: provider?.displayName ?? "Appointment" },
+        ]}
+        title={providerLoading ? "Loading provider…" : provider?.displayName ?? "Appointment"}
+        description={formatDateTime(appointment.startsAt)}
+        actions={<StatusBadge tone={toneForLifecycleStatus(status)} label={formatStatus(status)} />}
+      />
 
       <Card>
         <CardHeader className="pb-4">
@@ -368,13 +343,13 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
         <CardContent className="space-y-4">
           {primaryPendingAction ? (
             <div className="rounded-lg border border-l-4 border-l-warning bg-surface px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warning">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-warning">
                 {formatPendingActionType(primaryPendingAction.action)}
               </p>
               <p className="mt-1 text-base font-semibold text-text">{primaryPendingAction.title}</p>
-              <p className="mt-1 text-sm text-muted">{primaryPendingAction.description}</p>
+              <p className="mt-1 text-base text-muted">{primaryPendingAction.description}</p>
               {primaryPendingAction.dueAt ? (
-                <p className="mt-2 text-xs text-muted">Due {formatDateTime(primaryPendingAction.dueAt)}</p>
+                <p className="mt-2 text-sm text-muted">Due {formatDateTime(primaryPendingAction.dueAt)}</p>
               ) : null}
 
               <div className="mt-4">
@@ -404,19 +379,19 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
                   <Video className="size-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-sm font-semibold text-text">Video consultation</p>
-                  <p className="text-sm text-muted">
+                  <p className="text-base font-semibold text-text">Video consultation</p>
+                  <p className="text-base text-muted">
                     Joining opens when your consultant starts the session.
                   </p>
                   {startCountdown && !startCountdown.isExpired ? (
-                    <p className="text-sm text-muted">
+                    <p className="text-base text-muted">
                       Scheduled to start in{" "}
                       <span className="font-semibold tabular-nums text-text">
                         {startCountdown.label}
                       </span>
                     </p>
                   ) : (
-                    <p className="text-sm text-muted">
+                    <p className="text-base text-muted">
                       Scheduled for {formatDateTime(appointment.startsAt)}
                     </p>
                   )}
@@ -435,21 +410,18 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
               <Button href="/patient/messages" variant="secondary" fullWidth>
                 Message consultant
               </Button>
-              <Button href={`/providers/${appointment.providerId}`} variant="secondary" fullWidth>
-                Leave review
-              </Button>
             </div>
           ) : (
-            <p className="text-sm text-muted">No action is needed right now.</p>
+            <p className="text-base text-muted">No action is needed right now.</p>
           )}
 
           {prioritizedPendingActions.length > 1 ? (
             <div className="space-y-2 border-t border-border pt-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">
                 Other pending actions
               </p>
               {prioritizedPendingActions.slice(1).map((action) => (
-                <div key={`${action.action}-${action.dueAt ?? "none"}`} className="text-sm text-muted">
+                <div key={`${action.action}-${action.dueAt ?? "none"}`} className="text-base text-muted">
                   <span className="font-medium text-text">{action.title}</span>
                   {action.dueAt ? ` · Due ${formatDateTime(action.dueAt)}` : ""}
                 </div>
@@ -458,7 +430,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           ) : null}
 
           {actionError ? (
-            <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+            <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-base text-warning">
               {actionError}
             </p>
           ) : null}
@@ -466,29 +438,8 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-              Appointment overview
-            </p>
-            <h1 className="text-2xl font-semibold text-text sm:text-3xl">
-              {providerLoading ? "Loading provider..." : provider?.displayName ?? "Provider"}
-            </h1>
-            <p className="text-sm text-muted">{formatDateTime(appointment.startsAt)}</p>
-          </div>
-          <div className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-            getStatusVariant(status) === "success"
-              ? "bg-success/10 text-success"
-              : getStatusVariant(status) === "warning"
-                ? "bg-warning/10 text-warning"
-                : getStatusVariant(status) === "danger"
-                  ? "bg-danger/10 text-danger"
-                  : getStatusVariant(status) === "primary"
-                    ? "bg-primary/10 text-primary"
-                    : "bg-slate-100 text-muted"
-          }`}>
-            {formatStatus(status)}
-          </div>
+        <CardHeader className="pb-4">
+          <CardTitle>Appointment overview</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2">
           <div>
@@ -565,7 +516,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           ) : null}
 
           {hasBlockingPendingActions ? (
-            <p className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted">
+            <p className="rounded-lg border border-border bg-background px-3 py-2 text-base text-muted">
               Complete the next step above before appointment actions unlock.
             </p>
           ) : null}
@@ -631,7 +582,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
             {slotsLoading ? <p className="text-sm text-muted">Loading available slots...</p> : null}
 
             {slotsError ? (
-              <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+              <p className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-base text-warning">
                 {mapAppointmentError(slotsError)}
               </p>
             ) : null}
@@ -648,7 +599,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
                         key={slot.startTime}
                         type="button"
                         onClick={() => setSelectedRescheduleStartTime(slot.startTime)}
-                        className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
+                        className={`rounded-xl border px-4 py-3 text-left text-base transition ${
                           isSelected
                             ? "border-primary bg-primary/10 text-primary"
                             : "border-border bg-background hover:border-primary/40 hover:bg-primary/5"

@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { usePathname } from "next/navigation";
 import { MY_PATIENT_PROFILE_QUERY } from "@/lib/patient/clinical-profile-graphql";
 import { PATIENT_UNREAD_MESSAGES_PREVIEW_QUERY } from "@/lib/patient/messages-graphql";
+import { PATIENT_NOTIFICATIONS_PREVIEW_QUERY } from "@/lib/patient/notifications-graphql";
 import { getPatientPageTitle } from "@/lib/navigation/patient-navigation";
 
 type PatientHeaderProps = Readonly<{
@@ -44,8 +45,14 @@ export function PatientHeader({ onMenuClick }: PatientHeaderProps) {
     fetchPolicy: "cache-and-network",
   });
 
+  const { data: notificationsData } = useQuery(PATIENT_NOTIFICATIONS_PREVIEW_QUERY, {
+    variables: { limit: 1 },
+    fetchPolicy: "cache-and-network",
+  });
+
   const profile = data?.myPatientProfile;
   const unreadMessages: number = msgData?.unreadMessagesPreview?.unreadCount ?? 0;
+  const unreadNotifications: number = notificationsData?.notificationsPreview?.unreadCount ?? 0;
   const initials = getInitials(profile?.fullName);
   const shortName = profile?.fullName
     ? profile.fullName.split(" ").slice(0, 2).join(" ")
@@ -98,12 +105,17 @@ export function PatientHeader({ onMenuClick }: PatientHeaderProps) {
         {/* Notifications shortcut */}
         <Link
           href="/patient/notifications"
-          aria-label="Notifications"
-          className="inline-flex size-11 items-center justify-center rounded-2xl text-muted transition hover:bg-surface hover:text-text active:scale-95 md:size-10 md:rounded-xl"
+          aria-label={unreadNotifications > 0 ? `${unreadNotifications} unread notifications` : "Notifications"}
+          className="relative inline-flex size-11 items-center justify-center rounded-2xl text-muted transition hover:bg-surface hover:text-text active:scale-95 md:size-10 md:rounded-xl"
         >
           <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
+          {unreadNotifications > 0 ? (
+            <span className="absolute right-1.5 top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-4 text-white">
+              {unreadNotifications > 99 ? "99+" : unreadNotifications}
+            </span>
+          ) : null}
         </Link>
 
         {/* Divider */}

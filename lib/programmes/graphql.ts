@@ -129,6 +129,9 @@ export type CareProgramme = {
     type?: string | null;
     status?: string | null;
   } | null;
+  patientOffer?: string | null;
+  whoItIsFor?: string | null;
+  myEnrolmentStatus?: string | null;
 };
 
 export type ProgrammeShareLink = {
@@ -1315,6 +1318,42 @@ export const MY_CURRENT_PROGRAMME_ENROLMENT_QUERY = gql`
   query MyCurrentProgrammeEnrolment {
     myCurrentProgrammeEnrolment {
       ...ProgrammeEnrolmentFields
+    }
+  }
+`;
+
+export const BROWSABLE_PROGRAMMES_QUERY = gql`
+  query BrowsableProgrammes {
+    browsableProgrammes {
+      id
+      name
+      code
+      description
+      programmeType
+      enrolmentOpen
+      defaultDurationDays
+      patientOffer
+      whoItIsFor
+      myEnrolmentStatus
+      organization {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const JOIN_PROGRAMME_MUTATION = gql`
+  mutation JoinProgramme($programmeId: UUID!) {
+    joinProgramme(programmeId: $programmeId) {
+      enrolment {
+        id
+        status
+        programme {
+          id
+          name
+        }
+      }
     }
   }
 `;

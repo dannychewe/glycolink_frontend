@@ -38,6 +38,26 @@ export const UPCOMING_APPOINTMENT_QUERY = gql`
   }
 `;
 
+export const APPOINTMENT_QUERY = gql`
+  query PatientAppointment($id: UUID!) {
+    appointment(id: $id) {
+      id
+      patientId
+      providerId
+      organizationId
+      consultationType
+      source
+      startsAt
+      endsAt
+      status
+      cancelReason
+      cancelledAt
+      completedAt
+      rescheduledFromAppointmentId
+    }
+  }
+`;
+
 export const MY_APPOINTMENTS_QUERY = gql`
   query PatientAppointments($limit: Int, $status: String) {
     myAppointments(limit: $limit, status: $status) {
@@ -59,8 +79,8 @@ export const MY_APPOINTMENTS_QUERY = gql`
 `;
 
 export const PENDING_ACTIONS_QUERY = gql`
-  query PatientPendingActions {
-    pendingActions {
+  query PatientPendingActions($appointmentId: UUID) {
+    pendingActions(appointmentId: $appointmentId) {
       action
       title
       description

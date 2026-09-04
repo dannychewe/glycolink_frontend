@@ -95,8 +95,10 @@ export function ProgrammeBaselineWorkflow() {
   });
   const baseline = baselineQuery.data?.programmeCurrentBaseline ?? null;
 
+  // Enrolment-independent: the backend auto-provisions this from the clinic's
+  // (or canonical) baseline template even for a patient with no programme
+  // enrolment yet, so this never gates on `enrolment` existing.
   const pcqQuery = useQuery<BaselinePCQData>(PATIENT_BASELINE_PCQ_QUERY, {
-    skip: !enrolment?.id,
     fetchPolicy: "cache-and-network",
   });
   const pcq = pcqQuery.data?.baselinePcq ?? null;
@@ -110,9 +112,19 @@ export function ProgrammeBaselineWorkflow() {
   const submitting = initializeState.loading || submitBaselineState.loading || submitPcqState.loading;
   const submitError = initializeState.error || submitBaselineState.error || submitPcqState.error;
 
+  // Never route an already-submitted response back into the fill-in form — the
+  // rule is purely status-driven, regardless of *why* it's submitted (filled in
+  // here, or carried forward from a baseline done under a different consultant
+  // or programme). A formal baseline review record (RETURNED specifically)
+  // takes precedence when it exists, since a return-for-correction never resets
+  // the underlying PCQ's own status back off SUBMITTED. Without a baseline
+  // record yet — e.g. a carried-forward SUBMITTED response for an enrolment
+  // whose baseline hasn't been initialized — the PCQ's own status is all there
+  // is to go on.
+  const pcqStatus = pcq?.status.toUpperCase();
   const isReadOnly =
-    (baseline ? READONLY_BASELINE_STATUSES.includes(baseline.status) : false) ||
-    pcq?.status.toUpperCase() === "LOCKED";
+    pcqStatus === "LOCKED" ||
+    (baseline ? READONLY_BASELINE_STATUSES.includes(baseline.status) : pcqStatus === "SUBMITTED");
   const questions = pcq ? [...pcq.questions].sort((a, b) => a.order - b.order) : [];
 
   async function refetchAll() {
@@ -120,23 +132,28 @@ export function ProgrammeBaselineWorkflow() {
   }
 
   async function handleSubmit() {
-    if (!pcq || !enrolment) return;
+    if (!pcq) return;
     const saved = await explicitSave.saveAll();
     if (!saved) return;
     try {
       await submitPcq({ variables: { responseId: pcq.id } });
-      let baselineId = baseline?.id;
-      if (!baselineId) {
-        const result = await initializeBaseline({
-          variables: { enrolmentId: enrolment.id, pcqResponseId: pcq.id },
-        });
-        baselineId = result.data?.initializeProgrammeBaseline?.baseline?.id;
-      }
-      if (baselineId) {
-        // Always pass the current PCQ response id, not just on first creation — a
-        // baseline can already exist without one linked (e.g. a clinic-initiated
-        // re-baseline), and submit is the one guaranteed place to reattach it.
-        await submitBaseline({ variables: { baselineId, pcqResponseId: pcq.id } });
+      // The formal programme baseline review is additive — only relevant once
+      // the patient actually has an enrolment. Without one, submitting the PCQ
+      // itself is the whole job (it's what clears the dashboard's setup gate).
+      if (enrolment) {
+        let baselineId = baseline?.id;
+        if (!baselineId) {
+          const result = await initializeBaseline({
+            variables: { enrolmentId: enrolment.id, pcqResponseId: pcq.id },
+          });
+          baselineId = result.data?.initializeProgrammeBaseline?.baseline?.id;
+        }
+        if (baselineId) {
+          // Always pass the current PCQ response id, not just on first creation — a
+          // baseline can already exist without one linked (e.g. a clinic-initiated
+          // re-baseline), and submit is the one guaranteed place to reattach it.
+          await submitBaseline({ variables: { baselineId, pcqResponseId: pcq.id } });
+        }
       }
       await refetchAll();
     } catch {
@@ -144,18 +161,8 @@ export function ProgrammeBaselineWorkflow() {
     }
   }
 
-  if (loading && !enrolment) {
+  if (loading && !pcq) {
     return <div className="h-48 animate-pulse rounded-lg bg-border/40" />;
-  }
-
-  if (!enrolment) {
-    return (
-      <div className="rounded-lg border border-border bg-surface px-5 py-8 text-center">
-        <AlertCircle className="mx-auto size-8 text-warning" />
-        <p className="mt-3 font-semibold text-text">No active diabetes programme enrolment</p>
-        <p className="mt-1 text-sm text-muted">Your clinic will invite or enrol you before baseline assessment starts.</p>
-      </div>
-    );
   }
 
   if (pcqQuery.error || !pcq) {
@@ -171,17 +178,23 @@ export function ProgrammeBaselineWorkflow() {
       <div className="rounded-lg border border-border bg-surface p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              {enrolment.programme.name}
-            </p>
+            {enrolment ? (
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                {enrolment.programme.name}
+              </p>
+            ) : null}
             <h2 className="mt-1 text-xl font-semibold text-text">
-              {pcq.template?.name ?? "Programme Baseline"}
+              {pcq.template?.name ?? "Diabetes Baseline"}
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted">
-              This assessment gives your clinic the context needed to activate your diabetes care plan.
+              {enrolment
+                ? "This assessment gives your clinic the context needed to activate your diabetes care plan."
+                : "This gives any consultant you book with the context they need before your first consultation."}
             </p>
           </div>
-          <Badge variant={statusVariant(baseline?.status)}>{titleCase(baseline?.status)}</Badge>
+          <Badge variant={statusVariant(baseline?.status ?? pcq.status)}>
+            {titleCase(baseline?.status ?? pcq.status)}
+          </Badge>
         </div>
 
         {baseline?.status === "RETURNED" ? (
@@ -199,6 +212,13 @@ export function ProgrammeBaselineWorkflow() {
           <div className="mt-4 flex gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
             <p>Submitted — your clinic is reviewing your answers.</p>
+          </div>
+        ) : null}
+
+        {!baseline && pcqStatus === "SUBMITTED" ? (
+          <div className="mt-4 flex gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+            <p>Submitted — you&apos;re ready to book a consultation.</p>
           </div>
         ) : null}
 

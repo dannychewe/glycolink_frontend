@@ -58,7 +58,12 @@ export type DashboardNotification = {
   timestamp: string;
 };
 
-export type NotificationType = "APPOINTMENT" | "PAYMENT" | "LAB" | "SYSTEM" | "CARE_JOURNEY_STAGE_REACHED";
+// The backend's actual notification `type` vocabulary is much larger than this
+// (PROGRAMME_BASELINE_APPROVED, PROVIDER_UNAVAILABLE, MONITORING_ALERT, the
+// lowercase "message", ...) and grows as new notification sources are added,
+// so this stays a plain string rather than a literal union that would silently
+// go stale — see NotificationTypeBadge.tsx for the label/tone mapping.
+export type NotificationType = string;
 
 export type PatientNotification = {
   id: string;

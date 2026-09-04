@@ -87,7 +87,9 @@ export function glucoseStatusKey(status: string | null | undefined): StatusKey {
  */
 export function toneForLifecycleStatus(status: string | null | undefined): StatusTone {
   const normalized = (status ?? "").trim().toUpperCase();
-  if (["ACTIVE", "APPROVED", "SATISFIED", "PAID", "VERIFIED"].includes(normalized)) return "success";
+  if (["ACTIVE", "APPROVED", "SATISFIED", "PAID", "VERIFIED", "CONFIRMED", "COMPLETED"].includes(normalized)) {
+    return "success";
+  }
   if (
     [
       "MISSED",
@@ -98,6 +100,9 @@ export function toneForLifecycleStatus(status: string | null | undefined): Statu
       "COMMERCIALLY_SUSPENDED",
       "WITHDRAWN",
       "CANCELLED",
+      "FAILED",
+      "EXPIRED",
+      "NO_SHOW",
     ].includes(normalized)
   ) {
     return "danger";
@@ -115,9 +120,13 @@ export function toneForLifecycleStatus(status: string | null | undefined): Statu
       "PENDING_BASELINE",
       "PAUSED",
       "INVITED",
+      "INITIATED",
+      "AWAITING_PAYMENT",
+      "REQUESTED",
     ].includes(normalized)
   ) {
     return "warning";
   }
+  if (["IN_PROGRESS", "CHECKED_IN"].includes(normalized)) return "info";
   return "neutral";
 }

@@ -4,7 +4,8 @@ import type { BookableProvider } from "@/types";
 type BookingSummaryProps = Readonly<{
   provider: BookableProvider;
   selectedDate?: string;
-  selectedTime?: string;
+  /** Already formatted for display (e.g. "2:00 PM") — never the raw ISO value. */
+  selectedTimeLabel?: string;
 }>;
 
 function formatDate(date?: string) {
@@ -23,7 +24,7 @@ function formatDate(date?: string) {
 export function BookingSummary({
   provider,
   selectedDate,
-  selectedTime,
+  selectedTimeLabel,
 }: BookingSummaryProps) {
   return (
     <Card>
@@ -41,7 +42,7 @@ export function BookingSummary({
         </div>
         <div>
           <p className="text-sm text-muted">Time</p>
-          <p className="text-base font-medium text-text">{selectedTime ?? "Select a time slot"}</p>
+          <p className="text-base font-medium text-text">{selectedTimeLabel ?? "Select a time slot"}</p>
         </div>
         <div>
           <p className="text-sm text-muted">Consultation fee</p>

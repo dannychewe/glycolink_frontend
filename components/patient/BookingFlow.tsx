@@ -105,11 +105,6 @@ export function BookingFlow({ provider }: BookingFlowProps) {
     BOOK_APPOINTMENT_MUTATION,
   );
 
-  const availableDates = useMemo(
-    () => dateWindow.map((date) => ({ date, hasSlots: true })),
-    [dateWindow],
-  );
-
   const currentSlots = useMemo(
     () =>
       (slotsData?.availableSlots ?? []).map((slot) => ({
@@ -181,7 +176,7 @@ export function BookingFlow({ provider }: BookingFlowProps) {
           </CardHeader>
           <CardContent>
             <BookingCalendar
-              dates={availableDates}
+              dates={dateWindow}
               selectedDate={selectedDate}
               onSelectDate={handleSelectDate}
             />
@@ -214,7 +209,7 @@ export function BookingFlow({ provider }: BookingFlowProps) {
         <BookingSummary
           provider={provider}
           selectedDate={selectedDate}
-          selectedTime={selectedTime}
+          selectedTimeLabel={selectedSlot ? formatSlotLabel(selectedSlot.startTime) : undefined}
         />
 
         <Button

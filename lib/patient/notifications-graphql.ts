@@ -26,6 +26,8 @@ export const PATIENT_NOTIFICATIONS_FEED_QUERY = gql`
         type
         isRead
         createdAt
+        sourceType
+        sourceId
       }
       page
       limit

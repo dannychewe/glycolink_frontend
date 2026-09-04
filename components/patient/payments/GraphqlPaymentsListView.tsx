@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useQuery } from "@apollo/client";
 import { CreditCard, ReceiptText } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Panel,
@@ -15,6 +14,9 @@ import {
   StatTile,
 } from "@/components/ui/panel";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge, toneForLifecycleStatus } from "@/components/design-system";
+import { AppointmentPaymentsPanel } from "@/components/patient/payments/AppointmentPaymentsPanel";
+import { titleCase } from "@/lib/utils/format";
 import {
   MY_PROGRAMME_ENTITLEMENTS_QUERY,
   MY_PROGRAMME_INVOICES_QUERY,
@@ -38,22 +40,6 @@ function money(amount: string, currency: string) {
   } catch {
     return `${currency} ${value.toFixed(2)}`;
   }
-}
-
-function titleCase(value: string | null | undefined) {
-  if (!value) return "Unknown";
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function statusVariant(status: string | null | undefined) {
-  const normalized = (status ?? "").toUpperCase();
-  if (normalized === "PAID" || normalized === "ACTIVE") return "success" as const;
-  if (normalized === "OVERDUE" || normalized === "COMMERCIALLY_SUSPENDED") return "danger" as const;
-  if (normalized === "ISSUED" || normalized === "PARTIALLY_PAID" || normalized === "IN_GRACE") return "warning" as const;
-  return "secondary" as const;
 }
 
 function formatDate(value: string | null | undefined) {
@@ -82,9 +68,9 @@ export function GraphqlPaymentsListView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Diabetes programme"
-        title="Programme billing"
-        description="Review diabetes care invoices, payment status, and programme entitlement."
+        eyebrow="Billing"
+        title="Payments"
+        description="Programme invoices, entitlement status, and appointment payments in one place."
       />
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -120,12 +106,12 @@ export function GraphqlPaymentsListView() {
             {entitlements.map((entitlement) => (
               <div key={entitlement.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-text">Programme access</p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="text-base font-semibold text-text">Programme access</p>
+                  <p className="mt-1 text-sm text-muted">
                     {formatDate(entitlement.entitledPeriodStart)} to {formatDate(entitlement.entitledPeriodEnd)}
                   </p>
                 </div>
-                <Badge variant={statusVariant(entitlement.status)}>{titleCase(entitlement.status)}</Badge>
+                <StatusBadge tone={toneForLifecycleStatus(entitlement.status)} label={titleCase(entitlement.status)} />
               </div>
             ))}
           </PanelList>
@@ -157,16 +143,14 @@ export function GraphqlPaymentsListView() {
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-text">{invoice.invoiceNumber}</p>
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="text-base font-semibold text-text">{invoice.invoiceNumber}</p>
+                    <p className="mt-1 text-sm text-muted">
                       {formatDate(invoice.billingPeriodStart)} to {formatDate(invoice.billingPeriodEnd)}
                     </p>
                   </div>
                   <div className="text-left sm:text-right">
-                    <p className="text-sm font-semibold text-text">{money(invoice.balance, invoice.currency)}</p>
-                    <Badge className="mt-2" variant={statusVariant(invoice.status)}>
-                      {titleCase(invoice.status)}
-                    </Badge>
+                    <p className="text-base font-semibold text-text">{money(invoice.balance, invoice.currency)}</p>
+                    <StatusBadge className="mt-2" tone={toneForLifecycleStatus(invoice.status)} label={titleCase(invoice.status)} />
                   </div>
                 </div>
               </Link>
@@ -174,6 +158,8 @@ export function GraphqlPaymentsListView() {
           </PanelList>
         )}
       </Panel>
+
+      <AppointmentPaymentsPanel />
     </div>
   );
 }

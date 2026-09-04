@@ -84,6 +84,7 @@ export const PATIENT_SEND_MESSAGE_MUTATION = gql`
   mutation PatientSendMessage(
     $conversationId: UUID
     $appointmentId: UUID
+    $providerId: UUID
     $body: String
     $attachments: [Upload]
     $priority: String
@@ -91,6 +92,7 @@ export const PATIENT_SEND_MESSAGE_MUTATION = gql`
     sendMessage(
       conversationId: $conversationId
       appointmentId: $appointmentId
+      providerId: $providerId
       body: $body
       attachments: $attachments
       priority: $priority

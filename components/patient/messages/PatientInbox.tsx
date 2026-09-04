@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { MessageSquare, Send, ChevronLeft, Paperclip, AlertCircle, CheckCheck, Check, Archive, RotateCcw, X } from "lucide-react";
+import { MessageSquare, Send, ChevronLeft, Paperclip, AlertCircle, CheckCheck, Check, Archive, RotateCcw, X, Plus, UserRound } from "lucide-react";
 import {
   MESSAGE_PRIORITY_OPTIONS,
   PATIENT_ARCHIVE_CONVERSATION_MUTATION,
@@ -12,9 +12,10 @@ import {
   PATIENT_REOPEN_CONVERSATION_MUTATION,
   PATIENT_SEND_MESSAGE_MUTATION,
 } from "@/lib/patient/messages-graphql";
-import { Badge } from "@/components/ui/badge";
+import { MY_PATIENT_CONSULTANTS_QUERY, type PatientConsultantInvite } from "@/lib/patient/consultant-invites-graphql";
+import { StatusBadge, toneForLifecycleStatus } from "@/components/design-system";
 import { cn } from "@/lib/utils/cn";
-import { useAuth } from "@/features/auth/auth-context";
+import { useAuth, getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -91,11 +92,15 @@ function threadLabel(thread: Thread): string {
   return thread.providerName ?? "Care Team";
 }
 
-function statusVariant(status: string): "success" | "secondary" | "warning" {
-  const s = status.toUpperCase();
-  if (s === "OPEN" || s === "ACTIVE") return "success";
-  if (s === "CLOSED") return "secondary";
-  return "warning";
+function mapMessageError(error: unknown) {
+  const code = getGraphQLErrorCode(error);
+  if (code === "DIRECT_CONVERSATION_ACCESS_DENIED") {
+    return "You can only message consultants you have an accepted relationship with.";
+  }
+  if (code === "CONVERSATION_CLOSED") return "This conversation is closed.";
+  if (code === "MESSAGE_REQUIRED") return "Write a message before sending.";
+  if (code === "CONVERSATION_NOT_FOUND") return "This conversation could not be found.";
+  return getGraphQLErrorMessage(error, "Unable to send your message right now. Please try again.");
 }
 
 // ─── Thread Row ───────────────────────────────────────────
@@ -127,15 +132,15 @@ function ThreadRow({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-center gap-2">
-            <p className={cn("truncate text-sm", hasUnread ? "font-bold text-text" : "font-medium text-text")}>
+            <p className={cn("truncate text-base", hasUnread ? "font-bold text-text" : "font-medium text-text")}>
               {label}
             </p>
             {thread.lastMessage?.priority === "URGENT" ? (
-              <Badge variant="danger">Urgent</Badge>
+              <StatusBadge tone="danger" label="Urgent" size="sm" />
             ) : null}
           </div>
           {thread.lastMessage?.body ? (
-            <p className={cn("truncate text-xs", hasUnread ? "text-text" : "text-muted")}>
+            <p className={cn("truncate text-sm", hasUnread ? "text-text" : "text-muted")}>
               {thread.lastMessage.senderUserId === currentUserId ? "You: " : ""}
               {thread.lastMessage.body}
             </p>
@@ -143,7 +148,7 @@ function ThreadRow({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {thread.lastMessageAt ? (
-            <p className="text-xs text-muted">{formatTime(thread.lastMessageAt)}</p>
+            <p className="text-sm text-muted">{formatTime(thread.lastMessageAt)}</p>
           ) : null}
           {thread.unreadMessageCount > 0 ? (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-white">
@@ -170,7 +175,7 @@ function MessageBubble({ message, currentUserId }: { message: Message; currentUs
           : "rounded-tl-sm bg-surface border border-border",
       )}>
         {message.body ? (
-          <p className={cn("text-sm leading-5 whitespace-pre-wrap", fromMe ? "text-white" : "text-text")}>
+          <p className={cn("text-base leading-6 whitespace-pre-wrap", fromMe ? "text-white" : "text-text")}>
             {message.body}
           </p>
         ) : null}
@@ -192,7 +197,7 @@ function MessageBubble({ message, currentUserId }: { message: Message; currentUs
                   target="_blank"
                   rel="noreferrer"
                   className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition",
+                    "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm transition",
                     fromMe
                       ? "bg-white/20 text-white hover:bg-white/30"
                       : "bg-background text-primary hover:underline",
@@ -207,7 +212,7 @@ function MessageBubble({ message, currentUserId }: { message: Message; currentUs
         ) : null}
 
         <div className={cn("flex items-center gap-1.5", fromMe ? "justify-end" : "justify-start")}>
-          <p className={cn("text-xs", fromMe ? "text-white/70" : "text-muted")}>
+          <p className={cn("text-sm", fromMe ? "text-white/70" : "text-muted")}>
             {formatFullTime(message.sentAt)}
             {message.priority === "URGENT" ? " · Urgent" : ""}
           </p>
@@ -238,6 +243,7 @@ function ConversationView({
   const [body, setBody] = useState("");
   const [priority, setPriority] = useState("NORMAL");
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -292,6 +298,7 @@ function ConversationView({
   async function handleSend(e: FormEvent) {
     e.preventDefault();
     if (!body.trim() && attachments.length === 0) return;
+    setSendError(null);
     try {
       await sendMessage({
         variables: {
@@ -306,8 +313,8 @@ function ConversationView({
       setAttachments([]);
       await refetch();
       onThreadUpdated();
-    } catch {
-      /* handled silently */
+    } catch (error) {
+      setSendError(mapMessageError(error));
     }
   }
 
@@ -342,9 +349,9 @@ function ConversationView({
         </button>
 
         <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-semibold text-text">{label}</p>
+          <p className="truncate text-base font-semibold text-text">{label}</p>
           <div className="flex items-center gap-2">
-            <Badge variant={statusVariant(thread.status)}>{thread.status}</Badge>
+            <StatusBadge tone={toneForLifecycleStatus(thread.status)} label={thread.status} size="sm" />
           </div>
         </div>
 
@@ -440,6 +447,10 @@ function ConversationView({
             </div>
           ) : null}
 
+          {sendError ? (
+            <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{sendError}</p>
+          ) : null}
+
           <textarea
             placeholder="Type a message…"
             rows={2}
@@ -448,7 +459,7 @@ function ConversationView({
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void handleSend(e as unknown as FormEvent);
             }}
-            className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text outline-none placeholder:text-muted transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-base text-text outline-none placeholder:text-muted transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
@@ -495,13 +506,224 @@ function ConversationView({
   );
 }
 
+// ─── New Conversation Picker ────────────────────────────────
+// Sourced from accepted consultant relationships — that's exactly what the
+// backend requires before a direct message can be sent (DIRECT_CONVERSATION_
+// ACCESS_DENIED otherwise), so this never offers someone unmessageable.
+
+type Consultant = PatientConsultantInvite["provider"];
+
+function NewConversationPicker({
+  onPickExisting,
+  onPickNew,
+  onClose,
+}: {
+  onPickExisting: (conversationId: string) => void;
+  onPickNew: (provider: Consultant) => void;
+  onClose: () => void;
+}) {
+  const { data, loading, error } = useQuery<{ myPatientConsultants: PatientConsultantInvite[] }>(
+    MY_PATIENT_CONSULTANTS_QUERY,
+    { variables: { status: "ACCEPTED" }, fetchPolicy: "cache-and-network" },
+  );
+
+  const consultants = data?.myPatientConsultants ?? [];
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <p className="text-base font-semibold text-text">New message</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1 text-muted transition hover:text-text"
+          aria-label="Cancel"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="space-y-px p-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-14 animate-pulse rounded-xl bg-border/40" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="px-4 py-6 text-center">
+            <AlertCircle className="mx-auto size-6 text-warning" />
+            <p className="mt-2 text-sm text-muted">Unable to load your care team.</p>
+          </div>
+        ) : consultants.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+            <UserRound className="size-8 text-muted/40" />
+            <p className="text-base font-medium text-text">No consultant to message yet</p>
+            <p className="text-sm text-muted">
+              You&apos;ll be able to message a consultant once you have an accepted relationship with one.
+            </p>
+          </div>
+        ) : (
+          consultants.map((consultant) => (
+            <button
+              key={consultant.inviteId}
+              type="button"
+              onClick={() =>
+                consultant.activeConversationId
+                  ? onPickExisting(consultant.activeConversationId)
+                  : onPickNew(consultant.provider)
+              }
+              className="flex w-full items-center gap-3 border-b border-border px-4 py-3.5 text-left transition hover:bg-background"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted">
+                <UserRound className="size-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-medium text-text">{consultant.provider.displayName}</p>
+                {consultant.provider.specialties.length > 0 ? (
+                  <p className="truncate text-sm text-muted">{consultant.provider.specialties.join(", ")}</p>
+                ) : null}
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── New Conversation Compose ───────────────────────────────
+// No conversation exists yet — the first send is what creates it (sendMessage
+// accepts providerId directly), so this is a plain compose box, not a thread.
+
+function NewConversationCompose({
+  provider,
+  onBack,
+  onCreated,
+}: {
+  provider: Consultant;
+  onBack: () => void;
+  onCreated: (conversationId: string) => void;
+}) {
+  const [body, setBody] = useState("");
+  const [priority, setPriority] = useState("NORMAL");
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendMessage, { loading: sending }] = useMutation(PATIENT_SEND_MESSAGE_MUTATION);
+
+  async function handleSend(e: FormEvent) {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setSendError(null);
+    try {
+      const result = await sendMessage({
+        variables: { providerId: provider.id, body: body.trim(), priority },
+      });
+      const conversationId = result.data?.sendMessage?.conversationId;
+      if (conversationId) onCreated(conversationId);
+    } catch (error) {
+      setSendError(mapMessageError(error));
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="shrink-0 rounded-lg p-1 text-muted hover:text-text transition sm:hidden"
+          aria-label="Back"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-semibold text-text">{provider.displayName}</p>
+          <p className="text-sm text-muted">New conversation</p>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <p className="text-center text-sm text-muted">
+          Send a message to start your conversation with {provider.displayName}.
+        </p>
+      </div>
+
+      <form onSubmit={(e) => void handleSend(e)} className="border-t border-border bg-surface px-4 py-3 space-y-2">
+        {sendError ? (
+          <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{sendError}</p>
+        ) : null}
+        <textarea
+          placeholder="Type a message…"
+          rows={2}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void handleSend(e as unknown as FormEvent);
+          }}
+          className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-base text-text outline-none placeholder:text-muted transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+        />
+        <div className="flex items-center justify-between gap-2">
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            aria-label="Message priority"
+            className="h-9 rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary"
+          >
+            {MESSAGE_PRIORITY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={sending || !body.trim()}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-medium text-white transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+          >
+            <Send className="size-3.5" />
+            {sending ? "Sending…" : "Send"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ─── Main Inbox ───────────────────────────────────────────
 
-export function PatientInbox({ initialConversationId }: { initialConversationId?: string }) {
+export function PatientInbox({
+  initialConversationId,
+  initialProviderId,
+}: {
+  initialConversationId?: string;
+  /** Jump straight to messaging this provider — an existing thread if there is
+   * one, otherwise straight into compose. Used by the consultant workspace's
+   * "Message" action, which may not have a conversation yet. */
+  initialProviderId?: string;
+}) {
   const { user } = useAuth();
   const currentUserId = user?.id;
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selectedId, setSelectedId] = useState<string | null>(initialConversationId ?? null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [composingProvider, setComposingProvider] = useState<Consultant | null>(null);
+  const [resolvedInitialProviderId, setResolvedInitialProviderId] = useState<string | null>(null);
+
+  const { data: initialProviderData } = useQuery<{ myPatientConsultants: PatientConsultantInvite[] }>(
+    MY_PATIENT_CONSULTANTS_QUERY,
+    { variables: { status: "ACCEPTED" }, skip: !initialProviderId || Boolean(initialConversationId) },
+  );
+
+  useEffect(() => {
+    if (!initialProviderId || resolvedInitialProviderId === initialProviderId) return;
+    const consultant = initialProviderData?.myPatientConsultants.find(
+      (c) => c.provider.id === initialProviderId,
+    );
+    if (!consultant) return;
+    setResolvedInitialProviderId(initialProviderId);
+    if (consultant.activeConversationId) {
+      setSelectedId(consultant.activeConversationId);
+    } else {
+      setComposingProvider(consultant.provider);
+    }
+  }, [initialProviderId, initialProviderData, resolvedInitialProviderId]);
 
   const { data, loading, error, refetch } = useQuery<{ messageThreads: Thread[] }>(
     PATIENT_MESSAGE_THREADS_QUERY,
@@ -537,75 +759,129 @@ export function PatientInbox({ initialConversationId }: { initialConversationId?
         }
       : null;
   const selectedThread = foundThread ?? stubThread;
+  const showingRightPanel = Boolean(selectedThread || composingProvider);
+
+  function selectThread(id: string) {
+    setSelectedId(id);
+    setComposingProvider(null);
+    setPickerOpen(false);
+  }
+
+  function startNewConversation() {
+    setPickerOpen(true);
+    setSelectedId(null);
+    setComposingProvider(null);
+  }
+
+  function handleConversationCreated(conversationId: string) {
+    void refetch();
+    selectThread(conversationId);
+  }
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden rounded-lg border border-border bg-surface">
-      {/* Thread list */}
+      {/* Thread list / picker */}
       <div className={cn(
         "flex w-full flex-col border-r border-border sm:w-80 sm:flex-shrink-0",
-        selectedThread ? "hidden sm:flex" : "flex",
+        showingRightPanel ? "hidden sm:flex" : "flex",
       )}>
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex gap-1">
-            {(["all", "unread"] as FilterTab[]).map((tab) => (
+        {pickerOpen ? (
+          <NewConversationPicker
+            onPickExisting={selectThread}
+            onPickNew={(provider) => setComposingProvider(provider)}
+            onClose={() => setPickerOpen(false)}
+          />
+        ) : (
+          <>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="flex gap-1">
+                {(["all", "unread"] as FilterTab[]).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => { setActiveTab(tab); }}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 text-sm font-medium transition capitalize",
+                      activeTab === tab
+                        ? "bg-primary text-white"
+                        : "text-muted hover:text-text hover:bg-background",
+                    )}
+                  >
+                    {tab}
+                    {tab === "unread" && totalUnread > 0 ? ` (${totalUnread})` : ""}
+                  </button>
+                ))}
+              </div>
               <button
-                key={tab}
                 type="button"
-                onClick={() => { setActiveTab(tab); }}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-medium transition capitalize",
-                  activeTab === tab
-                    ? "bg-primary text-white"
-                    : "text-muted hover:text-text hover:bg-background",
-                )}
+                onClick={startNewConversation}
+                aria-label="New message"
+                title="New message"
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition hover:bg-primary/90"
               >
-                {tab}
-                {tab === "unread" && totalUnread > 0 ? ` (${totalUnread})` : ""}
+                <Plus className="size-4" />
               </button>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="space-y-px p-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-16 animate-pulse rounded-xl bg-border/40" />
-              ))}
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="space-y-px p-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="h-16 animate-pulse rounded-xl bg-border/40" />
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="px-4 py-6 text-center">
+                  <AlertCircle className="mx-auto size-6 text-warning" />
+                  <p className="mt-2 text-sm text-muted">Unable to load messages.</p>
+                </div>
+              ) : threads.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+                  <MessageSquare className="size-8 text-muted/40" />
+                  <p className="text-base font-medium text-text">No conversations</p>
+                  <p className="text-sm text-muted">
+                    {activeTab === "unread" ? "No unread messages." : "Messages from your care team will appear here."}
+                  </p>
+                  {activeTab === "all" ? (
+                    <button
+                      type="button"
+                      onClick={startNewConversation}
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary/90"
+                    >
+                      <Plus className="size-3.5" />
+                      Start a conversation
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                threads.map((thread) => (
+                  <ThreadRow
+                    key={thread.id}
+                    thread={thread}
+                    isSelected={selectedId === thread.id}
+                    currentUserId={currentUserId}
+                    onClick={() => selectThread(thread.id)}
+                  />
+                ))
+              )}
             </div>
-          ) : error ? (
-            <div className="px-4 py-6 text-center">
-              <AlertCircle className="mx-auto size-6 text-warning" />
-              <p className="mt-2 text-xs text-muted">Unable to load messages.</p>
-            </div>
-          ) : threads.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-              <MessageSquare className="size-8 text-muted/40" />
-              <p className="text-sm font-medium text-text">No conversations</p>
-              <p className="text-xs text-muted">
-                {activeTab === "unread" ? "No unread messages." : "Messages from your care team will appear here."}
-              </p>
-            </div>
-          ) : (
-            threads.map((thread) => (
-              <ThreadRow
-                key={thread.id}
-                thread={thread}
-                isSelected={selectedId === thread.id}
-                currentUserId={currentUserId}
-                onClick={() => setSelectedId(thread.id)}
-              />
-            ))
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Conversation panel */}
       <div className={cn(
         "flex-1 overflow-hidden",
-        !selectedThread ? "hidden sm:flex sm:items-center sm:justify-center" : "flex flex-col",
+        !showingRightPanel ? "hidden sm:flex sm:items-center sm:justify-center" : "flex flex-col",
       )}>
-        {selectedThread ? (
+        {composingProvider ? (
+          <NewConversationCompose
+            key={composingProvider.id}
+            provider={composingProvider}
+            onBack={() => setComposingProvider(null)}
+            onCreated={handleConversationCreated}
+          />
+        ) : selectedThread ? (
           <ConversationView
             key={selectedThread.id}
             thread={selectedThread}

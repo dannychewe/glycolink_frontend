@@ -222,7 +222,6 @@ export function ProviderWorkspaceView({ inviteId }: { inviteId: string }) {
     provider,
     relationship,
     conversation,
-    canMessage,
     canBookAppointment,
     appointments,
     assignedPcqs,
@@ -240,6 +239,7 @@ export function ProviderWorkspaceView({ inviteId }: { inviteId: string }) {
     .join("")
     .toUpperCase();
   const conversationId = conversation?.id ?? relationship.activeConversationId;
+  const messageButtonShown = Boolean(conversationId) || relationship.status === "ACCEPTED";
 
   return (
     <Container className="space-y-6 py-2">
@@ -276,7 +276,7 @@ export function ProviderWorkspaceView({ inviteId }: { inviteId: string }) {
         </div>
 
         <div className="flex flex-wrap gap-2 sm:flex-col">
-          {canMessage && conversationId ? (
+          {conversationId ? (
             <Button href={`/patient/messages/${conversationId}`} size="sm">
               <MessageSquare className="size-4" />
               Message
@@ -284,12 +284,20 @@ export function ProviderWorkspaceView({ inviteId }: { inviteId: string }) {
                 ? ` (${conversation.unreadMessageCount})`
                 : ""}
             </Button>
+          ) : relationship.status === "ACCEPTED" ? (
+            // No conversation yet — the inbox itself creates one on first send
+            // (sendMessage accepts a providerId directly), so this doesn't need
+            // `canMessage` to be true first.
+            <Button href={`/patient/messages?provider=${provider.id}`} size="sm">
+              <MessageSquare className="size-4" />
+              Message
+            </Button>
           ) : null}
           {canBookAppointment ? (
             <Button
               href={`/patient/providers/${provider.id}/book`}
               size="sm"
-              variant={canMessage && conversationId ? "secondary" : "primary"}
+              variant={messageButtonShown ? "secondary" : "primary"}
             >
               <CalendarPlus className="size-4" />
               Book appointment

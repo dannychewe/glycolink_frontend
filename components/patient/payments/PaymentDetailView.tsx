@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { Loader2, Smartphone } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge, toneForLifecycleStatus } from "@/components/design-system";
+import { titleCase } from "@/lib/utils/format";
 import {
   INITIATE_PROGRAMME_PAYMENT_MUTATION,
   PROGRAMME_INVOICE_QUERY,
@@ -39,22 +41,6 @@ function money(amount: string, currency: string) {
   } catch {
     return `${currency} ${value}`;
   }
-}
-
-function titleCase(value: string | null | undefined) {
-  if (!value) return "Unknown";
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function statusVariant(status: string | null | undefined) {
-  const normalized = (status ?? "").toUpperCase();
-  if (normalized === "PAID") return "success" as const;
-  if (normalized === "OVERDUE") return "danger" as const;
-  if (normalized === "ISSUED" || normalized === "PARTIALLY_PAID") return "warning" as const;
-  return "secondary" as const;
 }
 
 function formatDate(value: string | null | undefined) {
@@ -141,30 +127,27 @@ export function PaymentDetailView({ paymentId }: PaymentDetailViewProps) {
 
   if (invoiceQuery.error || !invoice) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Programme invoice unavailable</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-warning">This invoice could not be loaded or you do not have access to it.</p>
-          <Button href="/patient/payments" variant="secondary">Back to payments</Button>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <PageHeader eyebrow="Billing" title="Programme invoice" />
+        <Card>
+          <CardContent className="space-y-4">
+            <p className="text-base text-warning">This invoice could not be loaded or you do not have access to it.</p>
+            <Button href="/patient/payments" variant="secondary">Back to payments</Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        eyebrow="Billing"
+        title={invoice.invoiceNumber}
+        description="Programme invoice"
+        actions={<StatusBadge tone={toneForLifecycleStatus(invoice.status)} label={titleCase(invoice.status)} />}
+      />
       <Card>
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-text sm:text-3xl">Programme Invoice</h1>
-              <p className="mt-1 text-sm text-muted">{invoice.invoiceNumber}</p>
-            </div>
-            <Badge variant={statusVariant(invoice.status)}>{titleCase(invoice.status)}</Badge>
-          </div>
-        </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-lg border border-border bg-background px-4 py-3">
@@ -181,7 +164,7 @@ export function PaymentDetailView({ paymentId }: PaymentDetailViewProps) {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm text-muted">
+          <div className="rounded-lg border border-border bg-background px-4 py-3 text-base text-muted">
             Billing period: {formatDate(invoice.billingPeriodStart)} to {formatDate(invoice.billingPeriodEnd)}
             <br />
             Due date: {formatDate(invoice.dueDate)}
@@ -192,10 +175,10 @@ export function PaymentDetailView({ paymentId }: PaymentDetailViewProps) {
               {invoice.lineItems.map((item) => (
                 <div key={item.id} className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 last:border-b-0">
                   <div>
-                    <p className="text-sm font-medium text-text">{item.description}</p>
-                    <p className="mt-1 text-xs text-muted">Qty {item.quantity}</p>
+                    <p className="text-base font-medium text-text">{item.description}</p>
+                    <p className="mt-1 text-sm text-muted">Qty {item.quantity}</p>
                   </div>
-                  <p className="text-sm font-semibold text-text">{money(item.lineTotal, invoice.currency)}</p>
+                  <p className="text-base font-semibold text-text">{money(item.lineTotal, invoice.currency)}</p>
                 </div>
               ))}
             </div>
@@ -203,7 +186,7 @@ export function PaymentDetailView({ paymentId }: PaymentDetailViewProps) {
 
           {message ? (
             <p
-              className={`rounded-lg border px-3 py-2 text-sm ${
+              className={`rounded-lg border px-3 py-2 text-base ${
                 message.tone === "success"
                   ? "border-success/30 bg-success/5 text-success"
                   : message.tone === "error"

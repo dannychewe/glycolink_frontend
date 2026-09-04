@@ -50,11 +50,11 @@ export function PanelTitle({
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       {Icon ? <Icon className="size-4 shrink-0 text-muted" /> : null}
-      <h2 className="truncate text-sm font-semibold text-ink">{children}</h2>
+      <h2 className="truncate text-lg font-semibold text-ink">{children}</h2>
       {count != null && count > 0 ? (
         <span
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+            "rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums",
             countToneClass[countTone],
           )}
         >
@@ -75,7 +75,7 @@ export function ViewAllLink({
   return (
     <Link
       href={href}
-      className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+      className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80"
     >
       {children}
       <ArrowRight className="size-3.5" />
@@ -98,7 +98,7 @@ export function PanelEmpty({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("px-5 py-10 text-center text-sm text-muted", className)} {...props}>
+    <div className={cn("px-5 py-10 text-center text-base text-muted", className)} {...props}>
       {children}
     </div>
   );
@@ -161,7 +161,7 @@ export function StatTile({
       <div className="flex items-center justify-between gap-2">
         <p
           className={cn(
-            "truncate text-xs font-medium uppercase tracking-wider",
+            "truncate text-[13px] font-medium uppercase tracking-wider",
             tint ? tintLabelClass[tone] : "text-muted",
           )}
         >
@@ -174,7 +174,7 @@ export function StatTile({
       <p className={cn("mt-2 text-3xl font-semibold leading-none tabular-nums", valueToneClass[tone])}>
         {value}
       </p>
-      {sublabel ? <p className="mt-1.5 text-xs text-muted">{sublabel}</p> : null}
+      {sublabel ? <p className="mt-1.5 text-sm text-muted">{sublabel}</p> : null}
     </div>
   );
 }

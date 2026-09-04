@@ -5,6 +5,26 @@ import { gql } from "@apollo/client";
 // Confirmation is asynchronous (PawaPay webhook). There is no payment-status query — callers
 // detect success by polling the appointment status for AWAITING_PAYMENT -> CONFIRMED.
 
+export const MY_APPOINTMENT_PAYMENTS_QUERY = gql`
+  query MyAppointmentPayments($limit: Int, $status: String) {
+    myAppointmentPayments(limit: $limit, status: $status) {
+      id
+      amount
+      currency
+      method
+      status
+      confirmedAt
+      expiresAt
+      appointment {
+        id
+        startsAt
+        consultationType
+        providerName
+      }
+    }
+  }
+`;
+
 export const CREATE_PAYMENT_INTENT_MUTATION = gql`
   mutation PatientCreatePaymentIntent($appointmentId: UUID!) {
     createPaymentIntent(appointmentId: $appointmentId) {

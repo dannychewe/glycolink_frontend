@@ -37,7 +37,7 @@
   }
 
   p {
-    @apply text-pretty text-sm leading-7 text-muted sm:text-base;
+    @apply text-pretty text-base leading-7 text-muted;
   }
 }
 

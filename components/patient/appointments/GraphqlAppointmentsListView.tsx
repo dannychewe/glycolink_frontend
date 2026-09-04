@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
-import { CalendarDays, CircleDot, Clock3, Stethoscope, Video } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { CalendarDays, CalendarPlus, CircleDot, Clock3, Stethoscope, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge, toneForLifecycleStatus } from "@/components/design-system";
 import { MY_APPOINTMENTS_QUERY } from "@/lib/bookings/graphql";
 import { cn } from "@/lib/utils/cn";
 import { canJoinVideoConsultation } from "@/lib/video-consultation-graphql";
@@ -47,17 +47,6 @@ function formatDateTime(value: string | null) {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-function getBadgeVariant(status: string) {
-  const normalized = normalizeStatus(status);
-  if (normalized === "CONFIRMED") return "success";
-  if (normalized === "IN_PROGRESS") return "primary";
-  if (normalized === "CHECKED_IN") return "primary";
-  if (normalized === "PENDING") return "warning";
-  if (normalized === "AWAITING_PAYMENT") return "warning";
-  if (normalized === "CANCELLED" || normalized === "NO_SHOW") return "danger";
-  return "secondary";
 }
 
 function formatConsultationType(value: string | null) {
@@ -135,6 +124,12 @@ export function GraphqlAppointmentsListView() {
         eyebrow="My bookings"
         title="Appointments"
         description="Track your consultations, follow pending payment steps, and access completed visits."
+        actions={
+          <Button href="/patient/providers">
+            <CalendarPlus className="size-4" />
+            Book a consultation
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
@@ -159,7 +154,7 @@ export function GraphqlAppointmentsListView() {
               )}
             >
               {tab}
-              <span className="ml-1.5 text-xs text-muted">{tabCounts[tab]}</span>
+              <span className="ml-1.5 text-sm text-muted">{tabCounts[tab]}</span>
             </button>
           );
         })}
@@ -185,7 +180,7 @@ export function GraphqlAppointmentsListView() {
             <Card key={appointment.id} className="transition-colors hover:bg-background">
               <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted">
                     {activeTab === "Past"
                       ? "Past appointment"
                       : activeTab === "Cancelled"
@@ -195,7 +190,7 @@ export function GraphqlAppointmentsListView() {
                   <p className="text-lg font-semibold text-text">
                     {formatConsultationType(appointment.consultationType)} consultation
                   </p>
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+                  <div className="flex flex-wrap items-center gap-3 text-base text-muted">
                     <span className="inline-flex items-center gap-1.5">
                       <CalendarDays className="size-3.5" />
                       {formatDateTime(appointment.startsAt)}
@@ -207,9 +202,7 @@ export function GraphqlAppointmentsListView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={getBadgeVariant(appointment.status)}>
-                    {normalizeStatus(appointment.status)}
-                  </Badge>
+                  <StatusBadge tone={toneForLifecycleStatus(appointment.status)} label={normalizeStatus(appointment.status)} />
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-2 pt-0 sm:flex-row">
@@ -229,8 +222,16 @@ export function GraphqlAppointmentsListView() {
       ) : null}
 
       {!loading && filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
-          <p className="text-base font-medium text-text">No appointments found</p>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
+          <p className="text-base font-medium text-text">
+            {activeTab === "Upcoming" ? "No upcoming appointments" : "No appointments found"}
+          </p>
+          {activeTab === "Upcoming" ? (
+            <Button href="/patient/providers" size="sm">
+              <CalendarPlus className="size-4" />
+              Book a consultation
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -249,7 +250,7 @@ function StatCell({
   return (
     <div className="flex items-center justify-between gap-2 bg-surface px-4 py-4">
       <div className="min-w-0">
-        <p className="truncate text-xs font-medium uppercase tracking-wider text-muted">{label}</p>
+        <p className="truncate text-[13px] font-medium uppercase tracking-wider text-muted">{label}</p>
         <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</p>
       </div>
       <Icon className="size-5 shrink-0 text-muted" />

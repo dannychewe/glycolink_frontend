@@ -1,20 +1,16 @@
 import { Container } from "@/components/ui/container";
-import { PageHeader } from "@/components/ui/page-header";
 import { PatientInbox } from "@/components/patient/messages/PatientInbox";
 
-export default function PatientMessagesPage() {
-  return (
-    <Container className="flex h-[calc(100dvh-7.5rem)] flex-col gap-4 py-2 md:h-[calc(100dvh-9rem)]">
-      <PageHeader
-        eyebrow="My Health"
-        title="Messages"
-        description="Communicate securely with your care team."
-        className="shrink-0"
-      />
+type PatientMessagesPageProps = Readonly<{
+  searchParams: Promise<{ provider?: string }>;
+}>;
 
-      <div className="min-h-0 flex-1">
-        <PatientInbox />
-      </div>
+export default async function PatientMessagesPage({ searchParams }: PatientMessagesPageProps) {
+  const { provider } = await searchParams;
+
+  return (
+    <Container className="flex h-[calc(100dvh-12rem)] flex-col py-0 md:h-[calc(100dvh-8rem)]">
+      <PatientInbox initialProviderId={provider} />
     </Container>
   );
 }

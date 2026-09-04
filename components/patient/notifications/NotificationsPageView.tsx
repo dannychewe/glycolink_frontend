@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@apollo/client";
 import { NotificationTypeBadge } from "@/components/patient/notifications/NotificationTypeBadge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,35 @@ type NotificationItem = {
   type: string;
   isRead: boolean;
   createdAt: string;
+  sourceType: string | null;
+  sourceId: string | null;
 };
+
+// Maps a notification's (sourceType, sourceId) to where tapping it should go.
+// Some source types don't have a single-item detail route yet — those land on
+// the closest overview page rather than going nowhere.
+function routeForNotification(sourceType: string | null, sourceId: string | null): string | null {
+  if (!sourceType) return null;
+  switch (sourceType) {
+    case "conversation":
+      return sourceId ? `/patient/messages/${sourceId}` : "/patient/messages";
+    case "appointment":
+      return sourceId ? `/patient/bookings/${sourceId}` : "/patient/bookings";
+    case "programme_enrolment":
+      return sourceId ? `/patient/programmes/${sourceId}` : "/patient/care-plan";
+    case "programme_invoice":
+      return sourceId ? `/patient/payments/${sourceId}` : "/patient/payments";
+    case "programme_baseline":
+      return "/patient/pcq/baseline";
+    case "patient_care_plan":
+    case "programme_schedule_item":
+      return "/patient/care-plan";
+    case "alert":
+      return "/patient/monitoring";
+    default:
+      return null;
+  }
+}
 
 type NotificationsFeedData = {
   myNotifications: {
@@ -40,6 +69,7 @@ function formatTimestamp(value: string) {
 }
 
 export function NotificationsPageView() {
+  const router = useRouter();
   const { data, loading } = useQuery<NotificationsFeedData>(PATIENT_NOTIFICATIONS_FEED_QUERY, {
     variables: { limit: 50 },
     fetchPolicy: "network-only",
@@ -59,10 +89,12 @@ export function NotificationsPageView() {
   const notifications = data?.myNotifications?.items ?? [];
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  function handleNotificationClick(notificationId: string, isRead: boolean) {
-    if (!isRead) {
-      markRead({ variables: { notificationId } });
+  function handleNotificationClick(notification: NotificationItem) {
+    if (!notification.isRead) {
+      markRead({ variables: { notificationId: notification.id } });
     }
+    const target = routeForNotification(notification.sourceType, notification.sourceId);
+    if (target) router.push(target);
   }
 
   return (
@@ -100,14 +132,16 @@ export function NotificationsPageView() {
         <Card>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
-              {notifications.map((notification) => (
+              {notifications.map((notification) => {
+                const hasTarget = Boolean(routeForNotification(notification.sourceType, notification.sourceId));
+                return (
                 <button
                   key={notification.id}
                   type="button"
-                  onClick={() => handleNotificationClick(notification.id, notification.isRead)}
-                  className={`flex w-full flex-col gap-3 px-5 py-5 text-left transition hover:bg-slate-50 sm:flex-row sm:items-start sm:justify-between ${
-                    notification.isRead ? "bg-surface" : "bg-primary/5"
-                  }`}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`flex w-full flex-col gap-3 px-5 py-5 text-left transition sm:flex-row sm:items-start sm:justify-between ${
+                    hasTarget ? "hover:bg-slate-50" : "cursor-default"
+                  } ${notification.isRead ? "bg-surface" : "bg-primary/5"}`}
                 >
                   <div className="flex min-w-0 items-start gap-3">
                     <span
@@ -140,7 +174,8 @@ export function NotificationsPageView() {
                     ) : null}
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
