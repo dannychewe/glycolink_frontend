@@ -44,9 +44,8 @@ function formatDateTime(value: string | null | undefined) {
 }
 
 /**
- * Read-only for now — payments can't be initiated from here yet since the ad
- * hoc payment flow is still dormant pending PAYMENTS_ENABLED. Once that's live,
- * this becomes the natural place to add a "Pay now" action per row.
+ * Read-only history — appointment payments are started from the appointment
+ * detail page (AppointmentPaymentModal), not from this list.
  */
 export function AppointmentPaymentsPanel() {
   const { data, loading, error } = useQuery<Data>(MY_APPOINTMENT_PAYMENTS_QUERY, {

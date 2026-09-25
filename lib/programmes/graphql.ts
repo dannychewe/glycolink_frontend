@@ -728,6 +728,7 @@ export type ProgrammePaymentIntent = {
 
 export type PaymentAttempt = {
   id: UUID;
+  paymentId?: UUID | null;
   gateway: string;
   gatewayReference: string;
   msisdn?: string | null;
@@ -2053,6 +2054,7 @@ export const PROGRAMME_PAYMENT_INTENT_QUERY = gql`
       currency
       method
       status
+      failureReason
       expiresAt
       confirmedAt
     }
@@ -2910,6 +2912,7 @@ export const INITIATE_PROGRAMME_PAYMENT_MUTATION = gql`
     initiateProgrammePayment(invoiceId: $invoiceId, phone: $phone) {
       attempt {
         id
+        paymentId
         gateway
         gatewayReference
         msisdn

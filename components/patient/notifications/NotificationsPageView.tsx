@@ -22,12 +22,17 @@ type NotificationItem = {
   createdAt: string;
   sourceType: string | null;
   sourceId: string | null;
+  appointmentId: string | null;
 };
 
 // Maps a notification's (sourceType, sourceId) to where tapping it should go.
 // Some source types don't have a single-item detail route yet — those land on
 // the closest overview page rather than going nowhere.
-function routeForNotification(sourceType: string | null, sourceId: string | null): string | null {
+function routeForNotification(
+  sourceType: string | null,
+  sourceId: string | null,
+  appointmentId: string | null,
+): string | null {
   if (!sourceType) return null;
   switch (sourceType) {
     case "conversation":
@@ -38,6 +43,8 @@ function routeForNotification(sourceType: string | null, sourceId: string | null
       return sourceId ? `/patient/programmes/${sourceId}` : "/patient/care-plan";
     case "programme_invoice":
       return sourceId ? `/patient/payments/${sourceId}` : "/patient/payments";
+    case "payment":
+      return appointmentId ? `/patient/bookings/${appointmentId}` : "/patient/payments";
     case "programme_baseline":
       return "/patient/pcq/baseline";
     case "patient_care_plan":
@@ -93,7 +100,11 @@ export function NotificationsPageView() {
     if (!notification.isRead) {
       markRead({ variables: { notificationId: notification.id } });
     }
-    const target = routeForNotification(notification.sourceType, notification.sourceId);
+    const target = routeForNotification(
+      notification.sourceType,
+      notification.sourceId,
+      notification.appointmentId,
+    );
     if (target) router.push(target);
   }
 
@@ -133,7 +144,9 @@ export function NotificationsPageView() {
           <CardContent className="p-0">
             <div className="divide-y divide-border">
               {notifications.map((notification) => {
-                const hasTarget = Boolean(routeForNotification(notification.sourceType, notification.sourceId));
+                const hasTarget = Boolean(
+                  routeForNotification(notification.sourceType, notification.sourceId, notification.appointmentId),
+                );
                 return (
                 <button
                   key={notification.id}

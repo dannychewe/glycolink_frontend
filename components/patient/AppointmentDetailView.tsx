@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { CalendarClock, Video } from "lucide-react";
 import { AppointmentActionModal } from "@/components/patient/appointments/AppointmentActionModal";
-import { PaymentsComingSoonNotice } from "@/components/patient/payments/PaymentsComingSoonNotice";
+import { AppointmentPaymentModal } from "@/components/patient/appointments/AppointmentPaymentModal";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -190,7 +190,7 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     skip: !appointment,
     fetchPolicy: "network-only",
   });
-  const { data: pendingActionsData } = useQuery<PendingActionsData>(PENDING_ACTIONS_QUERY, {
+  const { data: pendingActionsData, refetch: refetchPendingActions } = useQuery<PendingActionsData>(PENDING_ACTIONS_QUERY, {
     variables: { appointmentId },
     fetchPolicy: "network-only",
   });
@@ -237,21 +237,30 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
     { warnSeconds: 900, criticalSeconds: 300 },
   );
 
-  // The query is now scoped server-side to this appointment (pendingActions(appointmentId:)),
-  // not just "whatever's next" — no client-side filtering needed to match it up.
+  // The query is scoped server-side to this appointment (pendingActions(appointmentId:)).
+  // Nothing here blocks anything: payment leads (it is the only step that changes the appointment),
+  // the questionnaire is a reminder, and joining a live consultation always takes precedence.
   const prioritizedPendingActions = [...(pendingActionsData?.pendingActions ?? [])].sort((a, b) => {
     const priority = (action: string) => {
-      if (action === "PCQ_NOT_COMPLETED") return 0;
-      if (action === "PAYMENT_PENDING") return 1;
+      if (action === "PAYMENT_PENDING") return 0;
+      if (action === "PCQ_NOT_COMPLETED") return 1;
       return 2;
     };
     return priority(a.action) - priority(b.action);
   });
-  const primaryPendingAction = prioritizedPendingActions[0] ?? null;
-  const hasBlockingPendingActions = prioritizedPendingActions.some((action) =>
-    action.action === "PCQ_NOT_COMPLETED" || action.action === "PAYMENT_PENDING",
-  );
+  const primaryPendingAction = canJoin ? null : (prioritizedPendingActions[0] ?? null);
+  const otherPendingActions = canJoin ? prioritizedPendingActions : prioritizedPendingActions.slice(1);
   const rescheduleSlots = slotsData?.availableSlots ?? [];
+
+  function openPaymentModal() {
+    setActionError(null);
+    setIsPaymentModalOpen(true);
+  }
+
+  async function handleClosePaymentModal() {
+    setIsPaymentModalOpen(false);
+    await Promise.all([refetchAppointment(), refetchPendingActions()]);
+  }
 
   async function handleConfirmCancel() {
     if (!appointment) return;
@@ -358,8 +367,8 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
                     Complete questionnaire
                   </Button>
                 ) : primaryPendingAction.action === "PAYMENT_PENDING" ? (
-                  <Button type="button" disabled>
-                    Payment handled off-platform
+                  <Button type="button" onClick={openPaymentModal} disabled={!canPay}>
+                    Pay now
                   </Button>
                 ) : (
                   <Button href={`/patient/bookings/${appointment.id}`} variant="secondary">
@@ -415,15 +424,25 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
             <p className="text-base text-muted">No action is needed right now.</p>
           )}
 
-          {prioritizedPendingActions.length > 1 ? (
+          {otherPendingActions.length > 0 ? (
             <div className="space-y-2 border-t border-border pt-4">
               <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">
                 Other pending actions
               </p>
-              {prioritizedPendingActions.slice(1).map((action) => (
-                <div key={`${action.action}-${action.dueAt ?? "none"}`} className="text-base text-muted">
-                  <span className="font-medium text-text">{action.title}</span>
-                  {action.dueAt ? ` · Due ${formatDateTime(action.dueAt)}` : ""}
+              {otherPendingActions.map((action) => (
+                <div
+                  key={`${action.action}-${action.dueAt ?? "none"}`}
+                  className="flex flex-wrap items-center justify-between gap-2 text-base text-muted"
+                >
+                  <span>
+                    <span className="font-medium text-text">{action.title}</span>
+                    {action.dueAt ? ` · Due ${formatDateTime(action.dueAt)}` : ""}
+                  </span>
+                  {action.action === "PCQ_NOT_COMPLETED" ? (
+                    <Button href={`/patient/pcq/${appointment.id}`} variant="secondary" size="sm">
+                      Complete questionnaire
+                    </Button>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -468,20 +487,13 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
           <CardTitle>Appointment management</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {canPay && !hasBlockingPendingActions ? (
-            <Button
-              type="button"
-              fullWidth
-              onClick={() => {
-                setActionError(null);
-                setIsPaymentModalOpen(true);
-              }}
-            >
-              Payment guidance
+          {canPay ? (
+            <Button type="button" fullWidth onClick={openPaymentModal}>
+              Pay now
             </Button>
           ) : null}
 
-          {canJoin && !hasBlockingPendingActions ? (
+          {canJoin ? (
             <Button href={`/patient/bookings/${appointment.id}/video`} fullWidth>
               Join video consultation
             </Button>
@@ -515,28 +527,16 @@ export function AppointmentDetailView({ appointmentId }: AppointmentDetailViewPr
             </Button>
           ) : null}
 
-          {hasBlockingPendingActions ? (
-            <p className="rounded-lg border border-border bg-background px-3 py-2 text-base text-muted">
-              Complete the next step above before appointment actions unlock.
-            </p>
-          ) : null}
         </CardContent>
       </Card>
 
       {isPaymentModalOpen ? (
-        <AppointmentActionModal
-          title="Payment"
-          onClose={() => setIsPaymentModalOpen(false)}
-          cancelLabel="Close"
-          showFooterActions={false}
-        >
-          <PaymentsComingSoonNotice />
-          <div className="mt-4 flex justify-end">
-            <Button type="button" variant="secondary" onClick={() => setIsPaymentModalOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </AppointmentActionModal>
+        <AppointmentPaymentModal
+          appointmentId={appointment.id}
+          appointmentStatus={appointment.status}
+          onRefetch={refetchAppointment}
+          onClose={() => void handleClosePaymentModal()}
+        />
       ) : null}
 
       {isCancelModalOpen ? (

@@ -13,6 +13,7 @@ export const MY_APPOINTMENT_PAYMENTS_QUERY = gql`
       currency
       method
       status
+      failureReason
       confirmedAt
       expiresAt
       appointment {

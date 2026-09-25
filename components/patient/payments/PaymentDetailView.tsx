@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@apollo/client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useApolloClient, useMutation, useQuery } from "@apollo/client";
 import { Loader2, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,8 +11,18 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge, toneForLifecycleStatus } from "@/components/design-system";
 import { titleCase } from "@/lib/utils/format";
 import {
+  INVALID_PHONE_MESSAGE,
+  PAYMENT_POLL_INTERVAL_MS,
+  PAYMENT_POLL_TIMEOUT_MS,
+  describePaymentFailure,
+  isValidPhone,
+  mapPaymentError,
+  normalizePhone,
+} from "@/lib/payments/mobile-money";
+import {
   INITIATE_PROGRAMME_PAYMENT_MUTATION,
   PROGRAMME_INVOICE_QUERY,
+  PROGRAMME_PAYMENT_INTENT_QUERY,
   type PaymentAttempt,
   type ProgrammeInvoice,
 } from "@/lib/programmes/graphql";
@@ -25,13 +35,15 @@ type InvoiceData = {
   programmeInvoice: ProgrammeInvoice;
 };
 
+type PaymentIntentData = {
+  programmePaymentIntent: { id: string; status: string; failureReason: string | null };
+};
+
 type InitiateData = {
   initiateProgrammePayment: {
     attempt: PaymentAttempt;
   };
 };
-
-const POLL_INTERVAL_MS = 4000;
 
 function money(amount: string, currency: string) {
   const value = Number(amount);
@@ -50,59 +62,85 @@ function formatDate(value: string | null | undefined) {
   return date.toLocaleDateString("en-ZM", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function normalizePhone(raw: string) {
-  const digits = raw.replace(/[^\d]/g, "");
-  if (digits.startsWith("260")) return digits;
-  if (digits.startsWith("0")) return `260${digits.slice(1)}`;
-  if (digits.length === 9) return `260${digits}`;
-  return digits;
-}
-
-function isValidPhone(raw: string) {
-  return /^260\d{9}$/.test(normalizePhone(raw));
-}
-
-function mapError(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "Unable to process the programme payment.";
-}
-
 export function PaymentDetailView({ paymentId }: PaymentDetailViewProps) {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const paymentIdRef = useRef<string | null>(null);
+  const apolloClient = useApolloClient();
   const invoiceQuery = useQuery<InvoiceData>(PROGRAMME_INVOICE_QUERY, {
     variables: { invoiceId: paymentId },
     fetchPolicy: "cache-and-network",
   });
   const [initiatePayment, initiateState] = useMutation<InitiateData>(INITIATE_PROGRAMME_PAYMENT_MUTATION);
 
+  const refetchInvoice = invoiceQuery.refetch;
   const invoice = invoiceQuery.data?.programmeInvoice;
   const payable = invoice ? Number(invoice.balance) > 0 && ["ISSUED", "PARTIALLY_PAID", "OVERDUE"].includes(invoice.status) : false;
 
+  // A declined payment doesn't change the invoice (it stays payable), so also watch the payment itself.
+  const checkPaymentOutcome = useCallback(async () => {
+    const id = paymentIdRef.current;
+    if (!id) return;
+    try {
+      const { data } = await apolloClient.query<PaymentIntentData>({
+        query: PROGRAMME_PAYMENT_INTENT_QUERY,
+        variables: { paymentId: id },
+        fetchPolicy: "network-only",
+      });
+      const status = data.programmePaymentIntent.status.trim().toUpperCase();
+      if (paymentIdRef.current !== id) return;
+      if (status === "FAILED") {
+        setIsPolling(false);
+        setMessage({ tone: "error", text: describePaymentFailure(data.programmePaymentIntent.failureReason) });
+      } else if (status === "EXPIRED" || status === "CANCELLED") {
+        setIsPolling(false);
+        setMessage({ tone: "error", text: "This payment request expired. Send a new prompt to try again." });
+      }
+    } catch {
+      // Best effort — the invoice poll and the timeout still end the wait.
+    }
+  }, [apolloClient]);
+
   useEffect(() => {
     if (!isPolling) return;
+    const startedAt = Date.now();
     pollRef.current = setInterval(() => {
-      void invoiceQuery.refetch();
-    }, POLL_INTERVAL_MS);
+      if (Date.now() - startedAt >= PAYMENT_POLL_TIMEOUT_MS) {
+        setIsPolling(false);
+        setMessage({
+          tone: "info",
+          text: "We haven't received confirmation yet. If you approved the prompt, this invoice will update shortly — otherwise you can send a new prompt.",
+        });
+        return;
+      }
+      void refetchInvoice();
+      void checkPaymentOutcome();
+    }, PAYMENT_POLL_INTERVAL_MS);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = null;
     };
-  }, [invoiceQuery, isPolling]);
+  }, [refetchInvoice, checkPaymentOutcome, isPolling]);
 
   useEffect(() => {
     if (!isPolling || !invoice) return;
     if (invoice.status === "PAID" || Number(invoice.balance) <= 0) {
       setIsPolling(false);
       setMessage({ tone: "success", text: "Programme payment confirmed." });
+    } else if (!["ISSUED", "PARTIALLY_PAID", "OVERDUE"].includes(invoice.status)) {
+      setIsPolling(false);
+      setMessage({
+        tone: "error",
+        text: `This invoice is now ${titleCase(invoice.status).toLowerCase()} and can no longer be paid.`,
+      });
     }
   }, [invoice, isPolling]);
 
   async function handlePay() {
     if (!invoice || !isValidPhone(phone)) {
-      setMessage({ tone: "error", text: "Enter a valid Zambian mobile money number." });
+      setMessage({ tone: "error", text: INVALID_PHONE_MESSAGE });
       return;
     }
     setMessage(null);
@@ -113,11 +151,12 @@ export function PaymentDetailView({ paymentId }: PaymentDetailViewProps) {
           phone: normalizePhone(phone),
         },
       });
+      paymentIdRef.current = result.data?.initiateProgrammePayment.attempt.paymentId ?? null;
       const status = result.data?.initiateProgrammePayment.attempt.status ?? "PENDING";
       setMessage({ tone: "info", text: `Mobile money prompt sent. Attempt status: ${titleCase(status)}.` });
       setIsPolling(true);
     } catch (error) {
-      setMessage({ tone: "error", text: mapError(error) });
+      setMessage({ tone: "error", text: mapPaymentError(error) });
     }
   }
 

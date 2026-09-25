@@ -28,6 +28,7 @@ export const PATIENT_NOTIFICATIONS_FEED_QUERY = gql`
         createdAt
         sourceType
         sourceId
+        appointmentId
       }
       page
       limit

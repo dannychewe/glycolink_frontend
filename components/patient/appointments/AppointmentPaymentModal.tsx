@@ -1,24 +1,28 @@
 "use client";
 
-// DORMANT: ready-to-activate mobile-money payment flow.
-// Online payments are currently handled off-system (see PaymentsComingSoonNotice).
-// The backend mutations this uses (createPaymentIntent / initiatePayment / retryPayment)
-// already exist; re-wire this modal into AppointmentDetailView once PAYMENTS_ENABLED is live
-// and the PawaPay gateway/webhook are configured.
-
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useMutation } from "@apollo/client";
+import { useApolloClient, useMutation } from "@apollo/client";
 import { CheckCircle2, Loader2, Smartphone } from "lucide-react";
 import { AppointmentActionModal } from "@/components/patient/appointments/AppointmentActionModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
 import {
   CREATE_PAYMENT_INTENT_MUTATION,
   INITIATE_PAYMENT_MUTATION,
+  MY_APPOINTMENT_PAYMENTS_QUERY,
   RETRY_PAYMENT_MUTATION,
 } from "@/lib/payments/graphql";
+import {
+  INVALID_PHONE_MESSAGE,
+  PAYMENT_POLL_INTERVAL_MS,
+  PAYMENT_POLL_TIMEOUT_MS,
+  PAYMENT_RESEND_COOLDOWN_MS,
+  describePaymentFailure,
+  isValidPhone,
+  mapPaymentError,
+  normalizePhone,
+} from "@/lib/payments/mobile-money";
 
 type PaymentIntent = {
   id: string;
@@ -43,6 +47,10 @@ type RetryPaymentData = {
   retryPayment: { attempt: { id: string; status: string } };
 };
 
+type MyPaymentsData = {
+  myAppointmentPayments: Array<{ id: string; status: string; failureReason: string | null }>;
+};
+
 type AppointmentPaymentModalProps = Readonly<{
   appointmentId: string;
   /** Live appointment status from the parent, used to detect confirmation. */
@@ -52,7 +60,7 @@ type AppointmentPaymentModalProps = Readonly<{
   onClose: () => void;
 }>;
 
-const POLL_INTERVAL_MS = 4000;
+type Phase = "loadingIntent" | "enterPhone" | "processing" | "timedOut" | "confirmed" | "unavailable" | "error";
 
 function normalizeStatus(status: string) {
   return status.trim().toUpperCase();
@@ -70,35 +78,6 @@ function formatAmount(amount: string | number | null, currency: string | null) {
   }
 }
 
-function mapPaymentError(error: unknown) {
-  const code = getGraphQLErrorCode(error);
-  if (code === "PAYMENT_INVALID_STATE") {
-    return "This appointment can no longer be paid. Refresh and try again.";
-  }
-  if (code === "PAYMENT_ACCESS_DENIED" || code === "TENANT_ACCESS_DENIED") {
-    return "You do not have access to this payment.";
-  }
-  if (code === "PAYMENT_NOT_FOUND") return "Payment could not be found.";
-  if (code === "PAYMENT_GATEWAY_ERROR") {
-    return "The mobile money provider could not be reached. Please retry.";
-  }
-  return getGraphQLErrorMessage(error, "Unable to process the payment right now. Please try again.");
-}
-
-/** Accepts common Zambian formats and normalizes to digits (e.g. 26097xxxxxxx). */
-function normalizePhone(raw: string) {
-  const digits = raw.replace(/[^\d]/g, "");
-  if (digits.startsWith("260")) return digits;
-  if (digits.startsWith("0")) return `260${digits.slice(1)}`;
-  if (digits.length === 9) return `260${digits}`;
-  return digits;
-}
-
-function isValidPhone(raw: string) {
-  const normalized = normalizePhone(raw);
-  return /^260\d{9}$/.test(normalized);
-}
-
 export function AppointmentPaymentModal({
   appointmentId,
   appointmentStatus,
@@ -107,11 +86,15 @@ export function AppointmentPaymentModal({
 }: AppointmentPaymentModalProps) {
   const [intent, setIntent] = useState<PaymentIntent | null>(null);
   const [phone, setPhone] = useState("");
-  const [phase, setPhase] = useState<"loadingIntent" | "enterPhone" | "processing" | "confirmed" | "error">(
-    "loadingIntent",
-  );
+  const [phase, setPhase] = useState<Phase>("loadingIntent");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [canResend, setCanResend] = useState(false);
+  // Bumped on every (re)initiation so the wait/poll window restarts even if already processing.
+  const [attempt, setAttempt] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intentIdRef = useRef<string | null>(null);
+  const intentRequestRef = useRef<ReturnType<typeof createIntent> | null>(null);
+  const apolloClient = useApolloClient();
 
   const [createIntent] = useMutation<CreatePaymentIntentData>(CREATE_PAYMENT_INTENT_MUTATION);
   const [initiatePayment, { loading: isInitiating }] =
@@ -125,15 +108,19 @@ export function AppointmentPaymentModal({
     }
   }, []);
 
-  // Create (or reuse) the payment intent when the modal opens.
+  // Create (or reuse) the payment intent when the modal opens. The request is shared through a ref so a
+  // re-run of this effect (StrictMode, dependency churn) never sends a second create — the backend does not
+  // lock here, so two concurrent creates would leave an orphan INITIATED payment behind.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await createIntent({ variables: { appointmentId } });
+        intentRequestRef.current ??= createIntent({ variables: { appointmentId } });
+        const { data } = await intentRequestRef.current;
         if (cancelled) return;
         const created = data?.createPaymentIntent.paymentIntent ?? null;
         setIntent(created);
+        intentIdRef.current = created?.id ?? null;
         if (created && normalizeStatus(created.status) === "CONFIRMED") {
           setPhase("confirmed");
         } else {
@@ -150,29 +137,78 @@ export function AppointmentPaymentModal({
     };
   }, [appointmentId, createIntent]);
 
-  // While processing, poll the appointment until it leaves AWAITING_PAYMENT.
-  useEffect(() => {
-    if (phase !== "processing") return;
-    pollRef.current = setInterval(() => {
-      void onRefetch();
-    }, POLL_INTERVAL_MS);
-    return stopPolling;
-  }, [phase, onRefetch, stopPolling]);
+  // A declined/failed mobile-money payment never changes the appointment (it stays AWAITING_PAYMENT),
+  // so the payment's own status has to be checked too. A FAILED intent can't be re-initiated, so
+  // start a fresh one and send the patient back to the phone step.
+  const checkPaymentFailed = useCallback(async () => {
+    const intentId = intentIdRef.current;
+    if (!intentId) return;
+    try {
+      const { data } = await apolloClient.query<MyPaymentsData>({
+        query: MY_APPOINTMENT_PAYMENTS_QUERY,
+        variables: { limit: 10 },
+        fetchPolicy: "network-only",
+      });
+      const current = data.myAppointmentPayments.find((payment) => payment.id === intentId);
+      if (!current || normalizeStatus(current.status) !== "FAILED") return;
+      if (intentIdRef.current !== intentId) return;
+      const { data: created } = await createIntent({ variables: { appointmentId } });
+      const fresh = created?.createPaymentIntent.paymentIntent ?? null;
+      if (!fresh) return;
+      intentIdRef.current = fresh.id;
+      setIntent(fresh);
+      setErrorMessage(describePaymentFailure(current.failureReason));
+      setPhase("enterPhone");
+    } catch {
+      // Best effort — the timeout still ends the wait if this check keeps failing.
+    }
+  }, [apolloClient, appointmentId, createIntent]);
 
-  // React to confirmation arriving via the polled appointment status.
+  // While processing, poll the appointment; give up waiting after the timeout.
   useEffect(() => {
     if (phase !== "processing") return;
-    if (normalizeStatus(appointmentStatus) !== "AWAITING_PAYMENT") {
+    const startedAt = Date.now();
+    setCanResend(false);
+    const resendTimer = setTimeout(() => setCanResend(true), PAYMENT_RESEND_COOLDOWN_MS);
+    pollRef.current = setInterval(() => {
+      if (Date.now() - startedAt >= PAYMENT_POLL_TIMEOUT_MS) {
+        stopPolling();
+        setPhase("timedOut");
+        return;
+      }
+      void onRefetch();
+      void checkPaymentFailed();
+    }, PAYMENT_POLL_INTERVAL_MS);
+    return () => {
+      clearTimeout(resendTimer);
       stopPolling();
+    };
+  }, [phase, attempt, onRefetch, checkPaymentFailed, stopPolling]);
+
+  // React to the polled appointment status. Only CONFIRMED means the payment went through;
+  // any other status that is no longer AWAITING_PAYMENT (cancelled, rescheduled, ...) is not a success.
+  useEffect(() => {
+    if (phase !== "processing" && phase !== "timedOut") return;
+    const status = normalizeStatus(appointmentStatus);
+    if (status === "AWAITING_PAYMENT") return;
+    stopPolling();
+    if (status === "CONFIRMED") {
+      setErrorMessage(null);
       setPhase("confirmed");
+    } else {
+      setErrorMessage(
+        `This appointment is now ${status.toLowerCase().replace(/_/g, " ")} and can no longer be paid.`,
+      );
+      setPhase("unavailable");
     }
   }, [appointmentStatus, phase, stopPolling]);
 
   useEffect(() => stopPolling, [stopPolling]);
 
   async function handleSubmit() {
-    if (!intent || !isValidPhone(phone)) {
-      setErrorMessage("Enter a valid mobile money number.");
+    if (isInitiating || !intent) return;
+    if (!isValidPhone(phone)) {
+      setErrorMessage(INVALID_PHONE_MESSAGE);
       return;
     }
     setErrorMessage(null);
@@ -187,16 +223,20 @@ export function AppointmentPaymentModal({
   }
 
   async function handleRetry() {
-    if (!intent || !isValidPhone(phone)) {
-      setErrorMessage("Enter a valid mobile money number to retry.");
+    if (isInitiating || isRetrying || !intent) return;
+    if (!isValidPhone(phone)) {
+      setErrorMessage(INVALID_PHONE_MESSAGE);
       return;
     }
     setErrorMessage(null);
     try {
       await retryPayment({ variables: { intentId: intent.id, phone: normalizePhone(phone) } });
+      setAttempt((value) => value + 1);
       setPhase("processing");
     } catch (error) {
       setErrorMessage(mapPaymentError(error));
+      // The earlier attempt may have failed after we stopped polling; if so this swaps in a fresh intent.
+      await checkPaymentFailed();
     }
   }
 
@@ -272,11 +312,40 @@ export function AppointmentPaymentModal({
                 type="button"
                 variant="secondary"
                 onClick={() => void handleRetry()}
-                disabled={isRetrying}
+                disabled={isRetrying || isInitiating || !canResend}
               >
                 {isRetrying ? "Retrying..." : "Resend prompt"}
               </Button>
             </div>
+          </div>
+        ) : null}
+
+        {phase === "timedOut" ? (
+          <div className="space-y-4">
+            <p className="text-sm text-text">
+              We haven&apos;t received confirmation yet. If you approved the prompt, your appointment will
+              update shortly — otherwise you can send a new prompt.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Close
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleRetry()}
+                disabled={isRetrying || isInitiating}
+              >
+                {isRetrying ? "Retrying..." : "Send new prompt"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {(phase === "unavailable" || (phase === "error" && !intent)) ? (
+          <div className="flex justify-end">
+            <Button type="button" onClick={onClose}>
+              Close
+            </Button>
           </div>
         ) : null}
 
