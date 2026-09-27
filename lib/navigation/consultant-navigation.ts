@@ -47,6 +47,11 @@ export const consultantMainNavigation: ConsultantNavigationItem[] = [
     icon: "clinical-rules",
   },
   {
+    label: "Consultation Payments",
+    href: "/consultant/payments",
+    icon: "billing",
+  },
+  {
     label: "Programme Billing",
     href: "/consultant/billing",
     icon: "billing",

@@ -53,6 +53,15 @@ export const INVITE_PATIENT_MUTATION = gql`
   }
 `;
 
+export const RESEND_PATIENT_INVITE_MUTATION = gql`
+  mutation ConsultantResendPatientInvite($inviteId: UUID!) {
+    resendPatientInvite(inviteId: $inviteId) {
+      inviteId
+      inviteStatus
+    }
+  }
+`;
+
 export function mapInviteError(error: unknown): string {
   const msg = error instanceof Error ? error.message : String(error);
   if (msg.includes("PATIENT_INVITE_EMAIL_REQUIRED")) return "An email address is required to invite a patient.";

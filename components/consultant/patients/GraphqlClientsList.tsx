@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   Users, Search, UserPlus, CheckCircle, AlertCircle,
-  MessageSquare, FlaskConical, ClipboardList, Bell, Activity,
+  MessageSquare, FlaskConical, ClipboardList, Bell, Activity, Send,
 } from "lucide-react";
 import {
   CONSULTANT_CLIENTS_QUERY,
   INVITE_PATIENT_MUTATION,
+  RESEND_PATIENT_INVITE_MUTATION,
   mapInviteError,
 } from "@/lib/consultant/clients-graphql";
 import { Badge } from "@/components/ui/badge";
@@ -240,7 +241,24 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
 
 // ─── Client Row ───────────────────────────────────────────
 
-function ClientRow({ client }: { client: ConsultantClient }) {
+function ClientRow({ client, onResendSuccess }: { client: ConsultantClient; onResendSuccess: (msg: string) => void }) {
+  const [resendInvite, { loading: resending }] = useMutation(RESEND_PATIENT_INVITE_MUTATION);
+  const [resendError, setResendError] = useState<string | null>(null);
+
+  async function handleResend() {
+    if (!client.inviteId || resending) return;
+    setResendError(null);
+    try {
+      await resendInvite({
+        variables: { inviteId: client.inviteId },
+        refetchQueries: [{ query: CONSULTANT_CLIENTS_QUERY, variables: { limit: 50 } }],
+      });
+      onResendSuccess(`Invitation resent to ${client.patientName ?? client.email ?? "patient"}.`);
+    } catch (error) {
+      setResendError(mapInviteError(error));
+    }
+  }
+
   const invite = inviteBadge(client.inviteStatus);
   const hasActivity =
     client.unreadMessageCount > 0 ||
@@ -356,7 +374,23 @@ function ClientRow({ client }: { client: ConsultantClient }) {
               View Appointment
             </Button>
           ) : null}
+          {client.inviteId && (client.inviteStatus === "INVITED" || client.inviteStatus === "REJECTED") ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleResend()}
+              disabled={resending}
+            >
+              <Send className="size-4" />
+              {resending ? "Sending..." : "Resend Invite"}
+            </Button>
+          ) : null}
         </div>
+        {resendError ? (
+          <p className="mt-2 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+            {resendError}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -368,6 +402,7 @@ export function GraphqlClientsList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showInvite, setShowInvite] = useState(false);
+  const [resendAlert, setResendAlert] = useState<AlertState>(null);
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchChange = useCallback((value: string) => {
@@ -424,6 +459,11 @@ export function GraphqlClientsList() {
         </div>
       ) : null}
 
+      {/* Resend success alert */}
+      {resendAlert ? (
+        <InlineAlert alert={resendAlert} onDismiss={() => setResendAlert(null)} />
+      ) : null}
+
       {/* Invite panel */}
       {showInvite ? (
         <InvitePanel onClose={() => setShowInvite(false)} />
@@ -464,7 +504,11 @@ export function GraphqlClientsList() {
       {!loading && clients.length > 0 ? (
         <div className="space-y-3">
           {clients.map((client) => (
-            <ClientRow key={client.patientId} client={client} />
+            <ClientRow
+              key={client.patientId}
+              client={client}
+              onResendSuccess={(msg) => setResendAlert({ type: "success", message: msg })}
+            />
           ))}
         </div>
       ) : null}

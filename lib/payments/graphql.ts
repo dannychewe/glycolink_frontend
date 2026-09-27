@@ -26,6 +26,29 @@ export const MY_APPOINTMENT_PAYMENTS_QUERY = gql`
   }
 `;
 
+export const PROVIDER_APPOINTMENT_PAYMENTS_QUERY = gql`
+  query ProviderAppointmentPayments($limit: Int, $status: String) {
+    providerAppointmentPayments(limit: $limit, status: $status) {
+      id
+      amount
+      currency
+      method
+      status
+      confirmedAt
+      expiresAt
+      commissionAmount
+      gatewayFeeAmount
+      netPayoutAmount
+      appointment {
+        id
+        startsAt
+        consultationType
+        patientName
+      }
+    }
+  }
+`;
+
 export const CREATE_PAYMENT_INTENT_MUTATION = gql`
   mutation PatientCreatePaymentIntent($appointmentId: UUID!) {
     createPaymentIntent(appointmentId: $appointmentId) {
