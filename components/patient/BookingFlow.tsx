@@ -133,7 +133,7 @@ export function BookingFlow({ provider }: BookingFlowProps) {
 
     setBookingAlert(null);
     try {
-      await bookAppointment({
+      const { data } = await bookAppointment({
         variables: {
           providerId: provider.id,
           startTime: selectedSlot.startTime,
@@ -141,7 +141,8 @@ export function BookingFlow({ provider }: BookingFlowProps) {
           consultationType: "telemedicine",
         },
       });
-      router.push("/patient/bookings");
+      const appointmentId = data?.bookAppointment?.appointment?.id;
+      router.push(appointmentId ? `/patient/bookings/${appointmentId}` : "/patient/bookings");
     } catch (error) {
       setBookingAlert(mapBookingError(error));
     }
