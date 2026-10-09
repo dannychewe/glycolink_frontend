@@ -16,7 +16,7 @@ const mockConsultantPatients: ConsultantPatientContext[] = [
     pcq: [
       {
         question: "How have your glucose readings been this week?",
-        answer: "Mostly between 150 and 190 mg/dL, with two readings above 220 after dinner.",
+        answer: "Mostly between 8.3 and 10.6 mmol/L, with two readings above 12.2 after dinner.",
       },
       {
         question: "Any symptoms or concerns before today’s consultation?",
@@ -58,26 +58,26 @@ const mockConsultantPatients: ConsultantPatientContext[] = [
     monitoring: [
       {
         id: "glucose-thandiwe-1",
-        value: 182,
-        unit: "mg/dL",
+        value: 10.1,
+        unit: "mmol/L",
         timestamp: "2026-04-13T06:15:00.000Z",
       },
       {
         id: "glucose-thandiwe-2",
-        value: 169,
-        unit: "mg/dL",
+        value: 9.4,
+        unit: "mmol/L",
         timestamp: "2026-04-12T20:10:00.000Z",
       },
       {
         id: "glucose-thandiwe-3",
-        value: 224,
-        unit: "mg/dL",
+        value: 12.4,
+        unit: "mmol/L",
         timestamp: "2026-04-12T13:40:00.000Z",
       },
       {
         id: "glucose-thandiwe-4",
-        value: 157,
-        unit: "mg/dL",
+        value: 8.7,
+        unit: "mmol/L",
         timestamp: "2026-04-11T07:05:00.000Z",
       },
     ],
@@ -122,20 +122,20 @@ const mockConsultantPatients: ConsultantPatientContext[] = [
     monitoring: [
       {
         id: "glucose-brian-1",
-        value: 96,
-        unit: "mg/dL",
+        value: 5.3,
+        unit: "mmol/L",
         timestamp: "2026-04-13T05:50:00.000Z",
       },
       {
         id: "glucose-brian-2",
-        value: 121,
-        unit: "mg/dL",
+        value: 6.7,
+        unit: "mmol/L",
         timestamp: "2026-04-12T21:05:00.000Z",
       },
       {
         id: "glucose-brian-3",
-        value: 68,
-        unit: "mg/dL",
+        value: 3.8,
+        unit: "mmol/L",
         timestamp: "2026-04-12T11:10:00.000Z",
       },
     ],
@@ -170,8 +170,8 @@ const mockConsultantPatients: ConsultantPatientContext[] = [
     monitoring: [
       {
         id: "glucose-ruth-1",
-        value: 141,
-        unit: "mg/dL",
+        value: 7.8,
+        unit: "mmol/L",
         timestamp: "2026-04-12T07:10:00.000Z",
       },
     ],
@@ -208,8 +208,8 @@ const mockConsultantPatients: ConsultantPatientContext[] = [
     monitoring: [
       {
         id: "glucose-faith-1",
-        value: 173,
-        unit: "mg/dL",
+        value: 9.6,
+        unit: "mmol/L",
         timestamp: "2026-04-12T18:20:00.000Z",
       },
     ],
@@ -246,8 +246,8 @@ const mockConsultantPatients: ConsultantPatientContext[] = [
     monitoring: [
       {
         id: "glucose-agnes-1",
-        value: 145,
-        unit: "mg/dL",
+        value: 8.1,
+        unit: "mmol/L",
         timestamp: "2026-04-09T06:35:00.000Z",
       },
     ],
@@ -284,8 +284,8 @@ const mockConsultantPatients: ConsultantPatientContext[] = [
     monitoring: [
       {
         id: "glucose-moses-1",
-        value: 201,
-        unit: "mg/dL",
+        value: 11.2,
+        unit: "mmol/L",
         timestamp: "2026-04-08T20:15:00.000Z",
       },
     ],

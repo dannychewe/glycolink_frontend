@@ -135,6 +135,20 @@ export const MY_PCQ_QUESTION_CONTRIBUTIONS_QUERY = gql`
   }
 `;
 
+export const SEND_PCQ_REMINDER_MUTATION = gql`
+  mutation ConsultantSendPcqReminder($responseId: UUID!) {
+    sendPcqReminder(responseId: $responseId) {
+      notification {
+        id
+        type
+        title
+        message
+        createdAt
+      }
+    }
+  }
+`;
+
 export const PCQ_QUESTION_TYPE_OPTIONS = [
   { value: "text", label: "Short text" },
   { value: "long_text", label: "Long text" },

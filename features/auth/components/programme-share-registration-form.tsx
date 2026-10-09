@@ -102,18 +102,18 @@ export function ProgrammeShareRegistrationForm({ token }: { token: string }) {
       const registeredEmail = response.data?.registerForProgrammeShareLink.user.email || email.trim();
       router.push(`/verify-email?email=${encodeURIComponent(registeredEmail)}`);
     } catch (err) {
-      setError(getGraphQLErrorMessage(err, "Unable to join this care plan right now."));
+      setError(getGraphQLErrorMessage(err, "Unable to join this care programme right now."));
     }
   }
 
   if (shareQuery.loading) {
-    return <p className="text-sm text-muted">Loading care plan...</p>;
+    return <p className="text-sm text-muted">Loading care programme...</p>;
   }
 
   if (shareQuery.error || !share) {
     return (
       <div className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
-        This care plan link is not available.
+        This care programme link is not available.
       </div>
     );
   }
@@ -182,7 +182,6 @@ export function ProgrammeShareRegistrationForm({ token }: { token: string }) {
                     </p>
                     <p className="mt-1 text-sm font-medium text-text">{item.title}</p>
                     <p className="text-xs text-muted">{careJourneyEventLabel(item.eventType)}</p>
-                    {item.description ? <p className="mt-1 text-xs leading-5 text-muted">{item.description}</p> : null}
                   </li>
                 ))}
               </ol>
@@ -239,7 +238,7 @@ export function ProgrammeShareRegistrationForm({ token }: { token: string }) {
           </PanelHeader>
           <PanelBody className="space-y-4">
             <p className="-mt-1 text-xs leading-5 text-muted">
-              Your enrolment is created as soon as this account is submitted.
+              Create your account to begin enrolment and baseline assessment. Full programme care, meal, and exercise plans become available after payment is confirmed. Your clinic approves your individual care plan separately.
             </p>
 
             {error ? (

@@ -23,7 +23,7 @@ export default async function ProgrammeJoinPage({ params }: ProgrammeJoinPagePro
           </p>
         </div>
 
-        <Suspense fallback={<p className="text-sm text-muted">Loading care plan...</p>}>
+        <Suspense fallback={<p className="text-sm text-muted">Loading care programme...</p>}>
           <ProgrammeShareRegistrationForm token={token} />
         </Suspense>
       </Container>

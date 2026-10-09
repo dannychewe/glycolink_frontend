@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-context";
+import { safeCareDestination, pendingCareDestination } from "@/lib/auth/care-destination";
 
 export function PublicOnly({ children }: Readonly<{ children: React.ReactNode }>) {
   const router = useRouter();
@@ -13,7 +14,8 @@ export function PublicOnly({ children }: Readonly<{ children: React.ReactNode }>
       return;
     }
 
-    router.replace(getDefaultAuthenticatedRoute());
+    const next = safeCareDestination(new URLSearchParams(window.location.search).get("next")) ?? pendingCareDestination();
+    router.replace(next || getDefaultAuthenticatedRoute());
   }, [getDefaultAuthenticatedRoute, router, status, user]);
 
   if (status === "loading") {

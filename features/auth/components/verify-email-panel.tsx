@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { safeCareDestination, pendingCareDestination } from "@/lib/auth/care-destination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth, getGraphQLErrorCode, getGraphQLErrorMessage } from "@/features/auth/auth-context";
@@ -36,7 +37,8 @@ export function VerifyEmailPanel() {
         if (!active) return;
         if (verifiedUser?.isVerified) {
           setVerificationState("success");
-          window.setTimeout(() => router.replace("/auth/redirect"), 1500);
+          const next = safeCareDestination(searchParams?.get("next")) ?? pendingCareDestination();
+          window.setTimeout(() => router.replace(next ? `/auth/redirect?next=${encodeURIComponent(next)}` : "/auth/redirect"), 1500);
         } else {
           setVerificationState("error");
         }
@@ -54,7 +56,7 @@ export function VerifyEmailPanel() {
     })();
 
     return () => { active = false; };
-  }, [router, token, verifyEmail]);
+  }, [router, searchParams, token, verifyEmail]);
 
   async function handleResend() {
     if (!email) {

@@ -2,7 +2,16 @@ import { gql } from "@apollo/client";
 
 export type VideoConsultationParticipantRole = "PATIENT" | "PROVIDER";
 
+export type VideoConsultationInfo = {
+  id: string;
+  appointmentId: string;
+  patientId: string;
+  providerId: string;
+  status: string;
+};
+
 export type JoinVideoConsultationSession = {
+  consultation: VideoConsultationInfo;
   roomUrl: string;
   token: string;
   expiresAt: string;
@@ -25,6 +34,13 @@ export const JOIN_VIDEO_CONSULTATION_MUTATION = gql`
   mutation JoinVideoConsultation($appointmentId: UUID!) {
     joinVideoConsultation(appointmentId: $appointmentId) {
       session {
+        consultation {
+          id
+          appointmentId
+          patientId
+          providerId
+          status
+        }
         roomUrl
         token
         expiresAt

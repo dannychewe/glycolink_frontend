@@ -49,7 +49,7 @@ export const mockConsultantDashboardData: ConsultantDashboardData = {
     {
       patientId: "moses-banda",
       patientName: "Moses Banda",
-      message: "Repeated glucose readings above 240 mg/dL in the last 12 hours.",
+      message: "Repeated glucose readings above 13.3 mmol/L in the last 12 hours.",
       severity: "HIGH",
     },
     {

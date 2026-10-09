@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ProviderCareOptions } from "@/components/patient/providers/ProviderCareOptions";
 
 type ProviderDetailData = {
   provider: {
@@ -27,6 +28,8 @@ type ProviderDetailData = {
     status: string;
     verificationStatus: string;
     eligible: boolean;
+    bookingAvailable: boolean;
+    bookingUnavailableReason: string | null;
     averageRating: number | null;
     reviewCount: number;
     specialties: string[];
@@ -491,28 +494,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
           </Card>
 
           {/* CTAs */}
-          <div className="space-y-3">
-            {provider.eligible ? (
-              isAuthenticated ? (
-                <Button href={`/patient/providers/${provider.id}/book`} size="lg" fullWidth>
-                  Request Clinical Support
-                </Button>
-              ) : (
-                <>
-                  <Button href={`/login?next=/patient/providers/${provider.id}/book`} size="lg" fullWidth>
-                    Sign in to Continue
-                  </Button>
-                  <Button href="/register" variant="secondary" size="lg" fullWidth>
-                    Create an Account
-                  </Button>
-                </>
-              )
-            ) : (
-              <div className="rounded-xl border border-border bg-surface px-4 py-4 text-center text-sm text-muted">
-                This clinician is not currently available for new patient care.
-              </div>
-            )}
-          </div>
+          <ProviderCareOptions providerId={provider.id} bookingAvailable={provider.bookingAvailable} bookingUnavailableReason={provider.bookingUnavailableReason} consultationFee={provider.consultationFeeInitial} />
         </div>
       </div>
 

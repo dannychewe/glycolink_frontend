@@ -78,6 +78,35 @@ export const REVOKE_PRESCRIPTION_MUTATION = gql`
   }
 `;
 
+export const RENEW_PRESCRIPTION_MUTATION = gql`
+  mutation ConsultantRenewPrescription(
+    $prescriptionId: UUID!
+    $modifications: [PrescriptionItemModificationInput]
+  ) {
+    renewPrescription(
+      prescriptionId: $prescriptionId
+      modifications: $modifications
+    ) {
+      prescription {
+        id
+        status
+        issuedAt
+        renewedFromId
+        items {
+          id
+          drugName
+          dosage
+          frequency
+          duration
+          route
+          instructions
+          status
+        }
+      }
+    }
+  }
+`;
+
 export const DRUG_SUGGESTIONS = [
   "Metformin",
   "Glimepiride",

@@ -23,9 +23,17 @@ type VideoConsultationCallProps = Readonly<{
   backLabel: string;
   pcqHref?: string;
   companion?: ReactNode;
+  /** Receives session data once the call is ready, so the parent can render context panels. */
+  onSessionReady?: (session: JoinVideoConsultationSession) => void;
+  /** Called with the current call state whenever it changes. */
+  onCallStateChange?: (state: CallState) => void;
+  /** Other participant's display name shown in the header instead of the logged-in user's name. */
+  otherParticipantName?: string;
+  /** Role-specific actions to show after leaving the call. */
+  postCallActions?: ReactNode;
 }>;
 
-type CallState = "idle" | "preparing" | "ready" | "joined" | "left" | "error";
+export type CallState = "idle" | "preparing" | "ready" | "joined" | "left" | "error";
 
 function mapVideoConsultationError(error: unknown) {
   const code = getGraphQLErrorCode(error);
@@ -60,6 +68,10 @@ export function VideoConsultationCall({
   backLabel,
   pcqHref,
   companion,
+  onSessionReady,
+  onCallStateChange,
+  otherParticipantName,
+  postCallActions,
 }: VideoConsultationCallProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const callRef = useRef<DailyCall | null>(null);
@@ -122,17 +134,22 @@ export function VideoConsultationCall({
       callRef.current = call;
       setSession(nextSession);
       setStatus("ready");
+      onSessionReady?.(nextSession);
+      onCallStateChange?.("ready");
 
       call.on("joined-meeting", () => {
         setStatus("joined");
+        onCallStateChange?.("joined");
       });
       call.on("left-meeting", () => {
         destroyCall();
         setStatus("left");
+        onCallStateChange?.("left");
       });
       call.on("error", () => {
         destroyCall();
         setStatus("error");
+        onCallStateChange?.("error");
         setError("The video call ended unexpectedly. Try rejoining.");
       });
 
@@ -152,7 +169,7 @@ export function VideoConsultationCall({
       );
       setError(mapVideoConsultationError(joinError));
     }
-  }, [appointmentId, destroyCall, isDailyEnabled, joinVideoConsultation, pcqHref]);
+  }, [appointmentId, destroyCall, isDailyEnabled, joinVideoConsultation, pcqHref, onSessionReady, onCallStateChange]);
 
   useEffect(() => {
     void startCall();
@@ -163,7 +180,7 @@ export function VideoConsultationCall({
   const showEndingSoon = isLive && countdown?.isWarning;
 
   return (
-    <div className="flex h-[calc(100dvh-7.5rem)] min-h-0 flex-col gap-3 md:h-[calc(100dvh-9rem)] lg:flex-row lg:gap-4">
+    <div className="flex h-[calc(100dvh-7.5rem)] min-h-0 flex-col gap-3 overflow-hidden md:h-[calc(100dvh-9rem)] lg:flex-row lg:gap-4">
       <section className="flex min-h-0 flex-1 flex-col gap-3">
         <div className="flex shrink-0 flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3">
           <div className="flex min-w-0 items-start gap-3">
@@ -175,7 +192,9 @@ export function VideoConsultationCall({
                 Video consultation
               </p>
               <h1 className="truncate text-lg font-semibold text-text sm:text-xl">
-                {session?.participantName ?? "Joining consultation"}
+                {otherParticipantName
+                  ? `${session?.participantRole === "PROVIDER" ? "Consulting with" : "Consultation with"} ${otherParticipantName}`
+                  : (session?.participantName ?? "Joining consultation")}
               </h1>
               {session ? (
                 <p className="text-xs text-muted sm:text-sm">
@@ -252,6 +271,7 @@ export function VideoConsultationCall({
                         <RefreshCcw className="size-4" />
                         Rejoin
                       </Button>
+                      {postCallActions}
                       <Button href={backHref} variant="ghost" className="text-white hover:bg-white/10">
                         {backLabel}
                       </Button>
@@ -283,7 +303,7 @@ export function VideoConsultationCall({
       </section>
 
       {companion ? (
-        <aside className="hidden shrink-0 space-y-4 overflow-y-auto lg:block lg:w-[320px] xl:w-[360px]">
+        <aside className="hidden min-h-0 shrink-0 lg:block lg:w-[320px] xl:w-[360px]">
           {companion}
         </aside>
       ) : null}

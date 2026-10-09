@@ -3,7 +3,7 @@
 import { useQuery } from "@apollo/client";
 import { Activity } from "lucide-react";
 import { GlucoseHeroCard, glucoseStatusKey } from "@/components/design-system";
-import { PATIENT_GLUCOSE_SUMMARY_QUERY } from "@/lib/monitoring/graphql";
+import { GLUCOSE_UNIT, PATIENT_GLUCOSE_SUMMARY_QUERY } from "@/lib/monitoring/graphql";
 
 type GlucoseSummaryData = {
   glucoseSummary: {
@@ -53,7 +53,8 @@ export function GlucoseHeroBand() {
     return <div className="h-40 animate-pulse rounded-lg border border-border bg-border/30" />;
   }
 
-  const { stats, buckets, unit, overallStatus } = summary;
+  const { stats, buckets, unit: rawUnit, overallStatus } = summary;
+  const unit = rawUnit || GLUCOSE_UNIT;
 
   return (
     <GlucoseHeroCard

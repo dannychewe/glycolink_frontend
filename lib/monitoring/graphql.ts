@@ -1,5 +1,7 @@
 import { gql } from "@apollo/client";
 
+export const GLUCOSE_UNIT = "mmol/L";
+
 export const LOG_GLUCOSE_MUTATION = gql`
   mutation LogGlucose($data: GlucoseReadingInput!) {
     logGlucose(data: $data) {
@@ -11,6 +13,23 @@ export const LOG_GLUCOSE_MUTATION = gql`
         context
         source
         unit
+      }
+    }
+  }
+`;
+
+export const LOG_GLUCOSE_FOR_PATIENT_MUTATION = gql`
+  mutation LogGlucoseForPatient($patientId: UUID!, $data: GlucoseReadingInput!) {
+    logGlucose(data: $data, patientId: $patientId) {
+      reading {
+        id
+        readingType
+        recordedAt
+        value
+        context
+        source
+        unit
+        flag
       }
     }
   }
@@ -174,6 +193,15 @@ export const ACKNOWLEDGE_ALERT_MUTATION = gql`
   }
 `;
 
+export type SetThresholdVariables = {
+  patientId: string;
+  data: {
+    type?: "glucose";
+    minValue?: number | null;
+    maxValue?: number | null;
+  };
+};
+
 export const SET_THRESHOLD_MUTATION = gql`
   mutation SetThreshold($patientId: UUID!, $data: ThresholdInput!) {
     setThreshold(patientId: $patientId, data: $data) {
@@ -219,11 +247,14 @@ export const CONSULTANT_PATIENT_MONITORING_QUERY = gql`
       }
       glucoseSummary {
         range
+        unit
         overallStatus
         stats {
           average
           highest
           lowest
+          totalCount
+          inRangeCount
           inRangePercent
         }
         buckets {
@@ -279,6 +310,8 @@ export type ConsultantMonitoringTrend = {
 } | null;
 
 export type ConsultantMonitoringSummaryStats = {
+  totalCount: number;
+  inRangeCount: number;
   average: number | string | null;
   highest: number | string | null;
   lowest: number | string | null;
@@ -293,6 +326,7 @@ export type ConsultantMonitoringBucket = {
 };
 
 export type ConsultantMonitoringSummary = {
+  unit: string;
   range: string | null;
   overallStatus: string | null;
   stats: ConsultantMonitoringSummaryStats;

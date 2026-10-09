@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { AlertCircle, CheckCircle, ClipboardList, Send, X } from "lucide-react";
 import {
@@ -30,14 +30,27 @@ type TemplateItem = {
   }[];
 };
 
-const selectClass = "flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+const selectClass =
+  "flex h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
-export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string }>) {
+export function PatientPcqAssignment({
+  patientId,
+  embedded = false,
+  onSavingChange,
+  onAssigned,
+}: Readonly<{
+  patientId: string;
+  embedded?: boolean;
+  onSavingChange?: (saving: boolean) => void;
+  onAssigned?: () => void;
+}>) {
   const [alert, setAlert] = useState<AlertState>(null);
   const [templateId, setTemplateId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [reason, setReason] = useState("");
-  const [assignedResponseId, setAssignedResponseId] = useState<string | null>(null);
+  const [assignedResponseId, setAssignedResponseId] = useState<string | null>(
+    null,
+  );
 
   const { data, loading } = useQuery<{ pcqTemplates: TemplateItem[] }>(
     PCQ_TEMPLATES_QUERY,
@@ -51,12 +64,20 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
         (t) =>
           !t.isGlobal &&
           t.status.toLowerCase() === "active" &&
-          t.versions.some((version) => version.isCurrent && version.publishedAt),
+          t.versions.some(
+            (version) => version.isCurrent && version.publishedAt,
+          ),
       ),
     [data],
   );
 
-  const [assign, { loading: assigning }] = useMutation(ASSIGN_PCQ_TO_PATIENT_MUTATION);
+  const [assign, { loading: assigning }] = useMutation(
+    ASSIGN_PCQ_TO_PATIENT_MUTATION,
+  );
+  useEffect(() => {
+    onSavingChange?.(assigning);
+    return () => onSavingChange?.(false);
+  }, [assigning, onSavingChange]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -78,32 +99,58 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
       });
       const response = result.data?.assignPcqToPatient?.response;
       setAssignedResponseId(response?.id ?? null);
-      setAlert({ type: "success", message: "Questionnaire assigned. The patient will see it in their PCQ list." });
+      setAlert({
+        type: "success",
+        message:
+          "Questionnaire assigned. The patient will see it in their PCQ list.",
+      });
       setTemplateId("");
       setDueAt("");
       setReason("");
+      onAssigned?.();
     } catch (error) {
-      setAlert({ type: "error", message: getGraphQLErrorMessage(error, "Unable to assign questionnaire.") });
+      setAlert({
+        type: "error",
+        message: getGraphQLErrorMessage(
+          error,
+          "Unable to assign questionnaire.",
+        ),
+      });
     }
   }
 
+  const Surface = embedded ? "div" : Card;
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <ClipboardList className="size-5 text-primary" />
-          Assign Supplemental PCQ
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Surface>
+      {!embedded ? (
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList className="size-5 text-primary" />
+            Assign Supplemental PCQ
+          </CardTitle>
+        </CardHeader>
+      ) : null}
+      <CardContent className={embedded ? "space-y-4 p-0 sm:p-0" : "space-y-4"}>
         {alert ? (
-          <div className={cn(
-            "flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm",
-            alert.type === "error" ? "border-danger/30 bg-danger/5 text-danger" : "border-success/30 bg-success/5 text-success",
-          )}>
-            {alert.type === "error" ? <AlertCircle className="mt-0.5 size-4 shrink-0" /> : <CheckCircle className="mt-0.5 size-4 shrink-0" />}
+          <div
+            className={cn(
+              "flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm",
+              alert.type === "error"
+                ? "border-danger/30 bg-danger/5 text-danger"
+                : "border-success/30 bg-success/5 text-success",
+            )}
+          >
+            {alert.type === "error" ? (
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            ) : (
+              <CheckCircle className="mt-0.5 size-4 shrink-0" />
+            )}
             <p className="flex-1">{alert.message}</p>
-            <button type="button" onClick={() => setAlert(null)} className="shrink-0 opacity-60 hover:opacity-100">
+            <button
+              type="button"
+              onClick={() => setAlert(null)}
+              className="shrink-0 opacity-60 hover:opacity-100"
+            >
               <X className="size-4" />
             </button>
           </div>
@@ -111,7 +158,9 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="assign-template">Template <span className="text-danger">*</span></Label>
+            <Label htmlFor="assign-template">
+              Template <span className="text-danger">*</span>
+            </Label>
             <select
               id="assign-template"
               className={selectClass}
@@ -128,8 +177,9 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
             </select>
             {!loading && assignable.length === 0 ? (
               <p className="text-xs text-muted">
-                No active supplemental templates with a published version yet. Create a template,
-                add at least one question, and publish it under PCQ Templates first.
+                No active supplemental templates with a published version yet.
+                Create a template, add at least one question, and publish it
+                under PCQ Templates first.
               </p>
             ) : null}
           </div>
@@ -156,7 +206,11 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
             />
           </div>
 
-          <Button type="submit" variant="primary" disabled={assigning || !templateId}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={assigning || !templateId}
+          >
             <Send className="size-4" />
             {assigning ? "Assigning…" : "Assign Questionnaire"}
           </Button>
@@ -164,11 +218,13 @@ export function PatientPcqAssignment({ patientId }: Readonly<{ patientId: string
 
         {assignedResponseId ? (
           <div className="space-y-2 border-t border-border pt-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Assigned response</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              Assigned response
+            </p>
             <PCQResponseDetail responseId={assignedResponseId} />
           </div>
         ) : null}
       </CardContent>
-    </Card>
+    </Surface>
   );
 }

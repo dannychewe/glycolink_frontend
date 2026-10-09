@@ -16,11 +16,11 @@ function formatTimestamp(timestamp: string) {
 }
 
 function getReadingState(value: number) {
-  if (value < 70) {
+  if (value < 3.9) {
     return { label: "Low", variant: "danger" as const };
   }
 
-  if (value > 180) {
+  if (value > 10.0) {
     return { label: "High", variant: "warning" as const };
   }
 

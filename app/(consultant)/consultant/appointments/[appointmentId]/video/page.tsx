@@ -1,18 +1,28 @@
-import { VideoConsultationCall } from "@/components/VideoConsultationCall";
+"use client";
+
+import { useCallback, useState } from "react";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
+import { VideoConsultationCall } from "@/components/VideoConsultationCall";
+import { VideoEncounterPanel } from "@/components/consultant/consultations/VideoEncounterPanel";
+import type { JoinVideoConsultationSession } from "@/lib/video-consultation-graphql";
 
-type ConsultantVideoConsultationPageProps = Readonly<{
-  params: Promise<{
-    appointmentId: string;
-  }>;
-}>;
+export default function ConsultantVideoConsultationPage() {
+  const params = useParams<{ appointmentId: string }>();
+  const appointmentId = params?.appointmentId ?? "";
 
-export default async function ConsultantVideoConsultationPage({
-  params,
-}: ConsultantVideoConsultationPageProps) {
-  const { appointmentId } = await params;
+  const [session, setSession] = useState<JoinVideoConsultationSession | null>(null);
+  const [patientName, setPatientName] = useState<string | null>(null);
+
+  const handleSessionReady = useCallback((s: JoinVideoConsultationSession) => {
+    setSession(s);
+    if (s.participantRole === "PROVIDER") {
+      setPatientName(null);
+    }
+  }, []);
+
+  const patientId = session?.consultation.patientId ?? null;
 
   return (
     <Container className="max-w-none py-2">
@@ -21,20 +31,20 @@ export default async function ConsultantVideoConsultationPage({
         backHref="/consultant/appointments"
         backLabel="Back to appointments"
         pcqHref="/consultant/consultations"
+        onSessionReady={handleSessionReady}
+        postCallActions={
+          <Button href={`/consultant/consultations/${appointmentId}`} className="bg-white/10 text-white hover:bg-white/20">
+            Open full workspace
+          </Button>
+        }
         companion={
-          <Card>
-            <CardHeader>
-              <CardTitle>Clinical workflow</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm leading-6 text-muted">
-                Keep prescriptions, labs, SOAP notes, and PCQ review in the consultation workspace.
-              </p>
-              <Button href="/consultant/consultations" variant="secondary" fullWidth>
-                Open consultations
-              </Button>
-            </CardContent>
-          </Card>
+          patientId ? (
+            <VideoEncounterPanel appointmentId={appointmentId} patientId={patientId} />
+          ) : (
+            <div className="rounded-xl border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+              Connecting to consultation...
+            </div>
+          )
         }
       />
     </Container>

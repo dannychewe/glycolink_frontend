@@ -1,26 +1,33 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@apollo/client";
 import {
-  Users, Search, UserPlus, CheckCircle, AlertCircle,
-  MessageSquare, FlaskConical, ClipboardList, Bell, Activity, Send,
+  AlertCircle,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Search,
+  Send,
+  UserPlus,
+  X,
 } from "lucide-react";
 import {
   CONSULTANT_CLIENTS_QUERY,
   INVITE_PATIENT_MUTATION,
-  RESEND_PATIENT_INVITE_MUTATION,
   mapInviteError,
 } from "@/lib/consultant/clients-graphql";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DetailModal } from "@/components/ui/detail-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import { cn } from "@/lib/utils/cn";
-
-// ─── Types ───────────────────────────────────────────────
 
 type ConsultantClient = {
   patientId: string;
@@ -40,97 +47,115 @@ type ConsultantClient = {
   inviteId: string | null;
   inviteStatus: "INVITED" | "ACCEPTED" | "REJECTED" | null;
 };
-
 type AlertState = { type: "success" | "error"; message: string } | null;
-
-// ─── Helpers ─────────────────────────────────────────────
+type PatientFilter = "all" | "attention" | "setup" | "invites";
 
 function formatDate(value: string | null) {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("en-ZM", { month: "short", day: "numeric", year: "numeric" });
+  if (!value) return "None";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-ZM", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
 }
 
-function alertBorderClass(severity: string | null) {
-  if (!severity) return "border-l-border";
-  const s = severity.toUpperCase();
-  if (s === "CRITICAL" || s === "HIGH") return "border-l-danger/60";
-  if (s === "MEDIUM") return "border-l-warning/60";
-  return "border-l-border";
+function needsAttention(client: ConsultantClient) {
+  return Boolean(
+    client.latestAlertSeverity ||
+    client.unreadMessageCount ||
+    client.pendingPcqCount ||
+    client.pendingLabReviewCount,
+  );
 }
 
-function onboardingVariant(status: string | null): "success" | "warning" | "secondary" {
-  if (!status) return "secondary";
-  const s = status.toUpperCase();
-  if (s === "COMPLETE" || s === "COMPLETED") return "success";
-  if (s === "PENDING" || s === "IN_PROGRESS") return "warning";
-  return "secondary";
-}
-
-/** Pending/declined invites get a badge; accepted invites read as normal clients. */
-function inviteBadge(status: ConsultantClient["inviteStatus"]): { variant: "warning" | "secondary"; label: string } | null {
-  if (status === "INVITED") return { variant: "warning", label: "Invite pending" };
-  if (status === "REJECTED") return { variant: "secondary", label: "Invite declined" };
-  return null;
+function pendingInvite(client: ConsultantClient) {
+  return (
+    client.inviteStatus === "INVITED" || client.inviteStatus === "REJECTED"
+  );
 }
 
 function formatDiabetesType(value: string | null) {
-  if (!value) return null;
-  if (value === "type_1") return "Type 1";
-  if (value === "type_2") return "Type 2";
-  if (value === "prediabetes") return "Prediabetes";
-  if (value === "gestational") return "Gestational";
-  return value.replace(/_/g, " ");
+  const labels: Record<string, string> = {
+    type_1: "Type 1",
+    type_2: "Type 2",
+    prediabetes: "Prediabetes",
+    gestational: "Gestational",
+  };
+  return value ? (labels[value] ?? value.replace(/_/g, " ")) : "Not recorded";
 }
 
-// ─── Inline Alert ─────────────────────────────────────────
-
-function InlineAlert({ alert, onDismiss }: { alert: AlertState; onDismiss: () => void }) {
+function InlineAlert({
+  alert,
+  onDismiss,
+}: {
+  alert: AlertState;
+  onDismiss: () => void;
+}) {
   if (!alert) return null;
-  const isError = alert.type === "error";
   return (
-    <div className={cn(
-      "flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm",
-      isError ? "border-danger/30 bg-danger/5 text-danger" : "border-success/30 bg-success/5 text-success",
-    )}>
-      {isError ? <AlertCircle className="mt-0.5 size-4 shrink-0" /> : <CheckCircle className="mt-0.5 size-4 shrink-0" />}
-      <p className="flex-1">{alert.message}</p>
-      <button type="button" onClick={onDismiss} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+    <div
+      role={alert.type === "error" ? "alert" : "status"}
+      className={cn(
+        "flex items-start gap-2 rounded-lg border px-3 py-3 text-sm",
+        alert.type === "error"
+          ? "border-danger/30 bg-danger/5 text-danger"
+          : "border-success/30 bg-success/5 text-success",
+      )}
+    >
+      {alert.type === "error" ? (
+        <AlertCircle className="mt-0.5 size-4 shrink-0" />
+      ) : (
+        <CheckCircle className="mt-0.5 size-4 shrink-0" />
+      )}
+      <p className="min-w-0 flex-1 break-words">{alert.message}</p>
+      <button
+        type="button"
+        title="Dismiss notification"
+        aria-label="Dismiss notification"
+        onClick={onDismiss}
+      >
+        <X className="size-4" />
+      </button>
     </div>
   );
 }
 
-// ─── Invite Panel ─────────────────────────────────────────
-
-type InviteResult = {
-  fullName: string;
-  email: string;
-  debugSetupToken: string | null;
-};
-
-function InvitePanel({ onClose }: { onClose: () => void }) {
+function InviteModal({ onClose }: { onClose: () => void }) {
   const [alert, setAlert] = useState<AlertState>(null);
-  const [invited, setInvited] = useState<InviteResult | null>(null);
-  const [form, setForm] = useState({ email: "", fullName: "", phone: "", note: "" });
+  const [invited, setInvited] = useState<{
+    fullName: string;
+    email: string;
+    debugSetupToken: string | null;
+  } | null>(null);
+  const [form, setForm] = useState({
+    email: "",
+    fullName: "",
+    phone: "",
+    note: "",
+  });
   const [invitePatient, { loading }] = useMutation(INVITE_PATIENT_MUTATION);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (loading) return;
     setAlert(null);
     try {
-      const res = await invitePatient({
+      const result = await invitePatient({
         variables: {
-          email: form.email,
-          fullName: form.fullName || undefined,
-          phone: form.phone || undefined,
-          note: form.note || undefined,
+          email: form.email.trim(),
+          fullName: form.fullName.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          note: form.note.trim() || undefined,
         },
-        refetchQueries: [{ query: CONSULTANT_CLIENTS_QUERY, variables: { limit: 50 } }],
+        refetchQueries: [CONSULTANT_CLIENTS_QUERY],
       });
-      const payload = res.data?.invitePatient;
+      const payload = result.data?.invitePatient;
       setInvited({
-        fullName: payload?.patientProfile?.fullName ?? (form.fullName || form.email),
+        fullName:
+          payload?.patientProfile?.fullName ?? (form.fullName || form.email),
         email: payload?.patientProfile?.email ?? form.email,
         debugSetupToken: payload?.setupToken ?? null,
       });
@@ -140,401 +165,487 @@ function InvitePanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  if (invited) {
-    return (
-      <div className="rounded-lg border border-success/25 bg-success/5 px-5 py-5 space-y-3">
-        <div className="flex items-center gap-2 text-success">
-          <CheckCircle className="size-5" />
-          <p className="text-sm font-semibold">Invite sent</p>
-        </div>
-        <p className="text-sm text-text">
-          <span className="font-medium">{invited.fullName}</span> ({invited.email}) —
-          the patient will receive setup instructions by email.
-        </p>
-        {invited.debugSetupToken ? (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-text">
-            Debug setup token:
-            <div className="mt-1 break-all font-mono text-xs">{invited.debugSetupToken}</div>
-            <a
-              href={`/accept-patient-invite?token=${encodeURIComponent(invited.debugSetupToken)}`}
-              className="mt-2 inline-block text-xs font-medium text-primary underline underline-offset-4"
-            >
-              Open debug invite link
-            </a>
-          </div>
-        ) : null}
-        <div className="flex gap-2 pt-1">
-          <Button variant="secondary" size="sm" onClick={() => setInvited(null)}>
-            Invite another
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onClose}>Done</Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-lg border border-border bg-surface p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-text">Invite Patient</p>
-        <button type="button" onClick={onClose} className="text-xs text-muted hover:text-text transition">✕</button>
-      </div>
-      <p className="text-xs text-muted">
-        The patient will receive a setup email with a link to create their account and complete their profile.
-      </p>
-      <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="inviteEmail">
-              Email address <span className="text-danger">*</span>
-            </Label>
-            <Input
-              id="inviteEmail"
-              type="email"
-              placeholder="patient@example.com"
-              value={form.email}
-              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="inviteFullName">Full name</Label>
-            <Input
-              id="inviteFullName"
-              placeholder="e.g. Thandiwe Mwape"
-              value={form.fullName}
-              onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="invitePhone">Phone number</Label>
-            <Input
-              id="invitePhone"
-              type="tel"
-              placeholder="+260 97 000 0000"
-              value={form.phone}
-              onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="inviteNote">Personal note (optional)</Label>
-            <Textarea
-              id="inviteNote"
-              rows={2}
-              placeholder="Any context to include in the invitation email..."
-              value={form.note}
-              onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))}
-            />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button type="submit" variant="primary" size="sm" disabled={loading}>
-            {loading ? "Sending..." : "Send Invitation"}
+    <DetailModal
+      title="Invite patient"
+      className="sm:max-w-xl"
+      onClose={() => {
+        if (!loading) onClose();
+      }}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={loading}
+            onClick={onClose}
+          >
+            {invited ? "Done" : "Cancel"}
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ─── Client Row ───────────────────────────────────────────
-
-function ClientRow({ client, onResendSuccess }: { client: ConsultantClient; onResendSuccess: (msg: string) => void }) {
-  const [resendInvite, { loading: resending }] = useMutation(RESEND_PATIENT_INVITE_MUTATION);
-  const [resendError, setResendError] = useState<string | null>(null);
-
-  async function handleResend() {
-    if (!client.inviteId || resending) return;
-    setResendError(null);
-    try {
-      await resendInvite({
-        variables: { inviteId: client.inviteId },
-        refetchQueries: [{ query: CONSULTANT_CLIENTS_QUERY, variables: { limit: 50 } }],
-      });
-      onResendSuccess(`Invitation resent to ${client.patientName ?? client.email ?? "patient"}.`);
-    } catch (error) {
-      setResendError(mapInviteError(error));
-    }
-  }
-
-  const invite = inviteBadge(client.inviteStatus);
-  const hasActivity =
-    client.unreadMessageCount > 0 ||
-    client.pendingPcqCount > 0 ||
-    client.pendingLabReviewCount > 0 ||
-    !!client.latestAlertSeverity;
-
-  return (
-    <div className={cn(
-      "rounded-lg border-l-4 bg-surface",
-      alertBorderClass(client.latestAlertSeverity),
-    )}>
-      <div className="px-5 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          {/* Left: identity */}
-          <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-base font-semibold text-text truncate">
-                {client.patientName ?? client.email ?? `Patient ${client.patientId.slice(0, 8)}…`}
-              </p>
-              {client.latestAlertSeverity ? (
-                <Badge variant={["CRITICAL", "HIGH"].includes(client.latestAlertSeverity.toUpperCase()) ? "danger" : "warning"}>
-                  {client.latestAlertSeverity} alert
-                </Badge>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-              {client.email ? <span>{client.email}</span> : null}
-              {client.phone ? <span>{client.phone}</span> : null}
-              {client.diabetesType ? (
-                <span className="rounded-full bg-primary/8 px-2 py-0.5 text-primary font-medium">
-                  {formatDiabetesType(client.diabetesType)}
-                </span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted pt-0.5">
-              {client.lastAppointmentAt ? (
-                <span>Last seen {formatDate(client.lastAppointmentAt)}</span>
-              ) : null}
-              {client.nextAppointmentAt ? (
-                <span className="text-primary font-medium">Next {formatDate(client.nextAppointmentAt)}</span>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Right: status + activity */}
-          <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-            {invite ? <Badge variant={invite.variant}>{invite.label}</Badge> : null}
-            <Badge variant={onboardingVariant(client.onboardingStatus)}>
-              {client.profileComplete ? "Profile complete" : (client.onboardingStatus?.replace(/_/g, " ") ?? "Pending setup")}
-            </Badge>
-
-            {hasActivity ? (
-              <div className="flex flex-wrap items-center gap-2">
-                {client.unreadMessageCount > 0 ? (
-                  <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    <MessageSquare className="size-3" />
-                    {client.unreadMessageCount}
-                  </span>
-                ) : null}
-                {client.pendingPcqCount > 0 ? (
-                  <span className="flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                    <ClipboardList className="size-3" />
-                    {client.pendingPcqCount} PCQ
-                  </span>
-                ) : null}
-                {client.pendingLabReviewCount > 0 ? (
-                  <span className="flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                    <FlaskConical className="size-3" />
-                    {client.pendingLabReviewCount} labs
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-          {/* View Profile opens the consultantPatientWorkspace detail screen.
-              Only meaningful once the invite is accepted (workspace requires it). */}
-          {client.inviteStatus !== "INVITED" && client.inviteStatus !== "REJECTED" ? (
-            <Button
-              href={`/consultant/patients/${client.patientId}`}
-              variant="primary"
-              size="sm"
-            >
-              View Profile
+          {invited ? (
+            <Button type="button" size="sm" onClick={() => setInvited(null)}>
+              <UserPlus className="size-4" />
+              Invite another
             </Button>
-          ) : null}
-          {client.inviteStatus !== "INVITED" && client.inviteStatus !== "REJECTED" ? (
+          ) : (
             <Button
-              href={`/consultant/patients/${client.patientId}/monitoring`}
-              variant="secondary"
+              type="submit"
+              form="invite-patient-form"
               size="sm"
-            >
-              <Activity className="size-4" />
-              Monitoring
-            </Button>
-          ) : null}
-          {client.activeConversationId ? (
-            <Button
-              href={`/consultant/messages/${client.activeConversationId}`}
-              variant="secondary"
-              size="sm"
-            >
-              <MessageSquare className="size-4" />
-              Message
-            </Button>
-          ) : null}
-          {client.nextAppointmentAt ? (
-            <Button href="/consultant/appointments" variant="ghost" size="sm">
-              View Appointment
-            </Button>
-          ) : null}
-          {client.inviteId && (client.inviteStatus === "INVITED" || client.inviteStatus === "REJECTED") ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void handleResend()}
-              disabled={resending}
+              disabled={loading}
             >
               <Send className="size-4" />
-              {resending ? "Sending..." : "Resend Invite"}
+              {loading ? "Sending..." : "Send invitation"}
             </Button>
+          )}
+        </div>
+      }
+    >
+      {invited ? (
+        <div className="space-y-4">
+          <p
+            role="status"
+            className="flex items-center gap-2 text-sm font-semibold text-success"
+          >
+            <CheckCircle className="size-4" />
+            Invite sent
+          </p>
+          <p className="break-words text-sm text-text">
+            {invited.fullName} ({invited.email}) will receive setup instructions
+            by email.
+          </p>
+          {invited.debugSetupToken ? (
+            <div className="space-y-2 border-t border-border pt-4 text-xs">
+              <p className="text-muted">Debug setup token</p>
+              <p className="break-all font-mono">{invited.debugSetupToken}</p>
+              <Link
+                className="text-primary underline"
+                href={`/accept-patient-invite?token=${encodeURIComponent(invited.debugSetupToken)}`}
+              >
+                Open debug invite link
+              </Link>
+            </div>
           ) : null}
         </div>
-        {resendError ? (
-          <p className="mt-2 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-            {resendError}
-          </p>
-        ) : null}
-      </div>
-    </div>
+      ) : (
+        <form
+          id="invite-patient-form"
+          onSubmit={(event) => void handleSubmit(event)}
+          className="space-y-4"
+        >
+          <InlineAlert alert={alert} onDismiss={() => setAlert(null)} />
+          <fieldset disabled={loading} className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="inviteEmail">Email address</Label>
+              <Input
+                id="inviteEmail"
+                type="email"
+                autoComplete="email"
+                required
+                value={form.email}
+                onChange={(event) =>
+                  setForm({ ...form, email: event.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="inviteFullName">Full name</Label>
+              <Input
+                id="inviteFullName"
+                autoComplete="name"
+                value={form.fullName}
+                onChange={(event) =>
+                  setForm({ ...form, fullName: event.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="invitePhone">Phone number</Label>
+              <Input
+                id="invitePhone"
+                type="tel"
+                autoComplete="tel"
+                value={form.phone}
+                onChange={(event) =>
+                  setForm({ ...form, phone: event.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="inviteNote">Personal note (optional)</Label>
+              <Textarea
+                id="inviteNote"
+                rows={3}
+                value={form.note}
+                onChange={(event) =>
+                  setForm({ ...form, note: event.target.value })
+                }
+              />
+            </div>
+          </fieldset>
+        </form>
+      )}
+    </DetailModal>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────
+function ClientRow({ client }: { client: ConsultantClient }) {
+  const invited = pendingInvite(client);
+  const name =
+    client.patientName ??
+    client.email ??
+    `Patient ${client.patientId.slice(0, 8)}`;
 
+  return (
+    <tr className="group align-middle even:bg-background/30 hover:bg-primary/5 focus-within:bg-primary/5">
+      <td className="py-4 pl-5 pr-4">
+        {invited ? (
+          <p className="break-words font-semibold text-ink">{name}</p>
+        ) : (
+          <Link
+            href={`/consultant/patients/${client.patientId}`}
+            className="break-words font-semibold text-ink hover:text-primary hover:underline focus-visible:outline-primary"
+          >
+            {name}
+          </Link>
+        )}
+        {client.email ? (
+          <p className="mt-1 break-words text-xs text-muted">{client.email}</p>
+        ) : null}
+        {client.phone ? (
+          <p className="mt-1 text-xs text-muted">{client.phone}</p>
+        ) : null}
+      </td>
+      <td className="px-4 py-4 text-xs text-muted">
+        {formatDiabetesType(client.diabetesType)}
+      </td>
+      <td className="px-4 py-4">
+        <Badge
+          className="rounded-md px-2 tracking-normal"
+          variant={
+            invited
+              ? "warning"
+              : client.profileComplete
+                ? "success"
+                : "secondary"
+          }
+        >
+          {client.inviteStatus === "INVITED"
+            ? "Invite pending"
+            : client.inviteStatus === "REJECTED"
+              ? "Invite declined"
+              : client.profileComplete
+                ? "Complete"
+                : "Pending setup"}
+        </Badge>
+      </td>
+      <td className="px-4 py-4">
+        <dl className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-2 gap-y-1.5 text-xs tabular-nums">
+          <dt className="text-muted">Last</dt>
+          <dd>{formatDate(client.lastAppointmentAt)}</dd>
+          <dt className="text-muted">Next</dt>
+          <dd>{formatDate(client.nextAppointmentAt)}</dd>
+        </dl>
+      </td>
+      <td className="px-4 py-4 text-right">
+        {invited ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled
+            title="Patient details are available after the invitation is accepted"
+          >
+            View details
+          </Button>
+        ) : (
+          <Button
+            href={`/consultant/patients/${client.patientId}`}
+            variant="secondary"
+            size="sm"
+            aria-label={`View details for ${name}`}
+          >
+            View details
+          </Button>
+        )}
+      </td>
+    </tr>
+  );
+}
 export function GraphqlClientsList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filter, setFilter] = useState<PatientFilter>("all");
+  const [sort, setSort] = useState("name");
+  const [page, setPage] = useState(1);
   const [showInvite, setShowInvite] = useState(false);
-  const [resendAlert, setResendAlert] = useState<AlertState>(null);
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    if (debounceTimer) clearTimeout(debounceTimer);
-    const timer = setTimeout(() => setDebouncedSearch(value), 400);
-    setDebounceTimer(timer);
-  }, [debounceTimer]);
-
-  const { data, loading, error } = useQuery<{ consultantClients: ConsultantClient[] }>(
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const query = useQuery<{ consultantClients: ConsultantClient[] }>(
     CONSULTANT_CLIENTS_QUERY,
     {
       variables: { limit: 50, search: debouncedSearch || undefined },
-      fetchPolicy: "network-only",
+      fetchPolicy: "cache-and-network",
+      notifyOnNetworkStatusChange: true,
     },
   );
-
-  const clients = data?.consultantClients ?? [];
-  const activeAlerts = clients.filter((c) => c.latestAlertSeverity).length;
+  const clients = query.data?.consultantClients ?? [];
+  const filtered = clients
+    .filter(
+      (client) =>
+        filter === "all" ||
+        (filter === "attention"
+          ? needsAttention(client)
+          : filter === "invites"
+            ? pendingInvite(client)
+            : !client.profileComplete && !pendingInvite(client)),
+    )
+    .sort((left, right) => {
+      if (sort === "next")
+        return (
+          (left.nextAppointmentAt ?? "9999").localeCompare(
+            right.nextAppointmentAt ?? "9999",
+          ) ||
+          (left.patientName ?? left.email ?? "").localeCompare(
+            right.patientName ?? right.email ?? "",
+          )
+        );
+      return (left.patientName ?? left.email ?? "").localeCompare(
+        right.patientName ?? right.email ?? "",
+      );
+    });
+  const tabs: { key: PatientFilter; label: string; count: number }[] = [
+    { key: "all", label: "All", count: clients.length },
+    {
+      key: "attention",
+      label: "Needs attention",
+      count: clients.filter(needsAttention).length,
+    },
+    {
+      key: "setup",
+      label: "Pending setup",
+      count: clients.filter(
+        (client) => !client.profileComplete && !pendingInvite(client),
+      ).length,
+    },
+    {
+      key: "invites",
+      label: "Invitations",
+      count: clients.filter(pendingInvite).length,
+    },
+  ];
+  const pages = Math.max(1, Math.ceil(filtered.length / 25));
+  const currentPage = Math.min(page, pages);
+  const offset = (currentPage - 1) * 25;
+  const visible = filtered.slice(offset, offset + 25);
 
   return (
-    <div className="space-y-5">
-      {/* Toolbar */}
+    <div className="min-w-0 space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+        <h1 className="text-xl font-semibold text-ink">Patients</h1>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={query.loading}
+            title="Refresh patients"
+            aria-label="Refresh patients"
+            onClick={() => void query.refetch()}
+          >
+            <RefreshCw className="size-4" />
+          </Button>
+          <Button type="button" size="sm" onClick={() => setShowInvite(true)}>
+            <UserPlus className="size-4" />
+            Invite patient
+          </Button>
+        </div>
+      </header>
+      <WorkspaceTabs
+        id="patients-list"
+        label="Patient filters"
+        value={filter}
+        onChange={(value) => {
+          setFilter(value);
+          setPage(1);
+        }}
+        tabs={tabs}
+      />
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-          <input
+        <div className="relative min-w-48 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted" />
+          <Input
             type="search"
-            placeholder="Search by name, email, or phone…"
+            aria-label="Search patients"
+            placeholder="Search name, email, or phone"
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="flex h-11 w-full rounded-xl border border-border bg-surface pl-9 pr-4 text-sm text-text outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-9"
           />
         </div>
-        <Button
-          variant={showInvite ? "secondary" : "primary"}
-          size="sm"
-          onClick={() => setShowInvite((v) => !v)}
-        >
-          <UserPlus className="size-4" />
-          {showInvite ? "Cancel" : "Invite Patient"}
-        </Button>
+        <Select
+          aria-label="Sort patients"
+          className="w-full sm:w-48"
+          value={sort}
+          onChange={(event) => {
+            setSort(event.target.value);
+            setPage(1);
+          }}
+          options={[
+            { value: "name", label: "Name: A to Z" },
+            { value: "next", label: "Next appointment" },
+          ]}
+        />
+        {clients.some((client) => client.latestAlertSeverity) ? (
+          <Button
+            href="/consultant/monitoring/alerts"
+            size="sm"
+            variant="ghost"
+          >
+            <AlertCircle className="size-4 text-danger" />
+            Review alerts
+          </Button>
+        ) : null}
       </div>
-
-      {/* Alert summary */}
-      {!loading && activeAlerts > 0 ? (
-        <div className="flex items-center gap-2 rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger">
-          <Bell className="size-4 shrink-0" />
-          <p>
-            <span className="font-semibold">{activeAlerts} patient{activeAlerts !== 1 ? "s" : ""}</span>{" "}
-            with unacknowledged monitoring alerts.{" "}
-            <Link href="/consultant/monitoring/alerts" className="font-medium underline">Review alerts</Link>
-          </p>
-        </div>
-      ) : null}
-
-      {/* Resend success alert */}
-      {resendAlert ? (
-        <InlineAlert alert={resendAlert} onDismiss={() => setResendAlert(null)} />
-      ) : null}
-
-      {/* Invite panel */}
-      {showInvite ? (
-        <InvitePanel onClose={() => setShowInvite(false)} />
-      ) : null}
-
-      {/* Stats row */}
-      {!loading && clients.length > 0 ? (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted">
-            {clients.length} client{clients.length !== 1 ? "s" : ""}
-            {debouncedSearch ? ` matching "${debouncedSearch}"` : ""}
-          </p>
-          <div className="flex gap-3 text-xs text-muted">
-            {clients.filter((c) => !c.profileComplete).length > 0 ? (
-              <span>{clients.filter((c) => !c.profileComplete).length} pending setup</span>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Error */}
-      {error ? (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
-          Unable to load client list.
-        </div>
-      ) : null}
-
-      {/* Loading skeletons */}
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-lg bg-border/40" />
-          ))}
-        </div>
-      ) : null}
-
-      {/* Client list */}
-      {!loading && clients.length > 0 ? (
-        <div className="space-y-3">
-          {clients.map((client) => (
-            <ClientRow
-              key={client.patientId}
-              client={client}
-              onResendSuccess={(msg) => setResendAlert({ type: "success", message: msg })}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {/* Empty state */}
-      {!loading && clients.length === 0 && !error ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-surface px-6 py-12 text-center">
-          <Users className="size-8 text-muted/40" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-text">
-              {debouncedSearch ? `No clients matching "${debouncedSearch}"` : "No clients yet"}
-            </p>
-            <p className="text-xs text-muted">
-              {debouncedSearch
-                ? "Try a different name, email, or phone number."
-                : "Invite your first patient to get started."}
-            </p>
-          </div>
-          {!debouncedSearch ? (
-            <Button variant="primary" size="sm" onClick={() => setShowInvite(true)}>
-              <UserPlus className="size-4" />
-              Invite Patient
-            </Button>
+      {tabs.map((tab) => (
+        <section
+          key={tab.key}
+          role="tabpanel"
+          id={`patients-list-panel-${tab.key}`}
+          aria-labelledby={`patients-list-tab-${tab.key}`}
+          hidden={filter !== tab.key}
+          aria-busy={query.loading}
+        >
+          {filter === tab.key ? (
+            <>
+              {query.error ? (
+                <div className="space-y-3 border-y border-border py-8 text-center">
+                  <p role="alert" className="text-sm text-danger">
+                    Unable to load patients.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void query.refetch()}
+                  >
+                    <RefreshCw className="size-4" />
+                    Retry
+                  </Button>
+                </div>
+              ) : query.loading && !query.data ? (
+                <div className="space-y-3 py-6" aria-label="Loading patients">
+                  {[0, 1, 2, 3].map((row) => (
+                    <div
+                      key={row}
+                      className="h-16 animate-pulse bg-border/30"
+                    />
+                  ))}
+                </div>
+              ) : !visible.length ? (
+                <p className="border-y border-border py-12 text-center text-sm text-muted">
+                  {search || filter !== "all"
+                    ? "No patients match these filters."
+                    : "No patients yet."}
+                </p>
+              ) : (
+                <div
+                  role="region"
+                  aria-label="Patient table"
+                  tabIndex={0}
+                  className="overflow-x-auto border-y border-border focus-visible:outline-primary"
+                >
+                  <table className="w-full min-w-[880px] table-fixed text-left text-sm">
+                    <caption className="sr-only">
+                      Patients matching the selected filters
+                    </caption>
+                    <colgroup>
+                      <col />
+                      <col className="w-28" />
+                      <col className="w-36" />
+                      <col className="w-48" />
+                      <col className="w-36" />
+                    </colgroup>
+                    <thead className="border-b border-border bg-background/80 text-xs text-muted">
+                      <tr>
+                        {[
+                          "Patient",
+                          "Diabetes type",
+                          "Status",
+                          "Appointments",
+                          "Actions",
+                        ].map((label) => (
+                          <th
+                            key={label}
+                            scope="col"
+                            className="px-4 py-3.5 font-semibold first:pl-5"
+                          >
+                            {label === "Actions" ? (
+                              <span className="sr-only">Actions</span>
+                            ) : (
+                              label
+                            )}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60 bg-surface">
+                      {visible.map((client) => (
+                        <ClientRow key={client.patientId} client={client} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {!query.error && query.data ? (
+                <footer className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <p className="text-xs text-muted">
+                    {filtered.length
+                      ? `${offset + 1}-${Math.min(offset + 25, filtered.length)} of ${filtered.length} loaded patients`
+                      : "0 patients"}
+                  </p>
+                  {pages > 1 ? (
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        title="Previous page"
+                        aria-label="Previous page"
+                        disabled={currentPage === 1}
+                        onClick={() => setPage(currentPage - 1)}
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                      <span className="text-xs tabular-nums text-muted">
+                        Page {currentPage} of {pages}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        title="Next page"
+                        aria-label="Next page"
+                        disabled={currentPage === pages}
+                        onClick={() => setPage(currentPage + 1)}
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    </div>
+                  ) : null}
+                </footer>
+              ) : null}
+            </>
           ) : null}
-        </div>
-      ) : null}
+        </section>
+      ))}
+      {showInvite ? <InviteModal onClose={() => setShowInvite(false)} /> : null}
     </div>
   );
 }

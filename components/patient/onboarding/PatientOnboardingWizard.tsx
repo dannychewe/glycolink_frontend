@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import { FormProvider, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { safeCareDestination, pendingCareDestination, clearCareDestination } from "@/lib/auth/care-destination";
 import {
   AlertCircle,
   ArrowLeft,
@@ -246,12 +247,96 @@ export function PatientOnboardingWizard() {
     }
   }, [consentsData, setValue]);
 
+  const [stepSaving, setStepSaving] = useState(false);
+
+  async function saveStepToBackend(step: number): Promise<boolean> {
+    const values = methods.getValues();
+    setStepSaving(true);
+    setSubmitError(null);
+    setErrorStep(null);
+
+    try {
+      if (step === 0) {
+        await completeProfile({
+          variables: {
+            data: {
+              fullName: values.fullName,
+              dateOfBirth: values.dateOfBirth,
+            },
+          },
+        });
+      } else if (step === 1) {
+        await completeProfile({
+          variables: {
+            data: {
+              diabetesType: values.diabetesType.toUpperCase(),
+              diagnosisDate: values.diagnosisDate,
+            },
+          },
+        });
+      } else if (step === 2) {
+        if (existingContactId) {
+          await updatePatientContact({
+            variables: {
+              contactId: existingContactId,
+              data: {
+                name: values.emergencyContactName,
+                relationship: values.emergencyContactRelationship,
+                phone: values.emergencyContactPhone,
+                isPrimary: true,
+              },
+            },
+          });
+        } else {
+          const result = await addPatientContact({
+            variables: {
+              data: {
+                name: values.emergencyContactName,
+                relationship: values.emergencyContactRelationship,
+                phone: values.emergencyContactPhone,
+                isPrimary: true,
+              },
+            },
+          });
+          const newId = (result.data as { addPatientContact: { contact: { id: string } } })
+            ?.addPatientContact?.contact?.id;
+          if (newId) setExistingContactId(newId);
+        }
+      } else if (step === 3 && !consentAlreadyAccepted) {
+        await acceptConsent({
+          variables: { policyType: "terms_of_service", version: "v1" },
+        });
+        setConsentAlreadyAccepted(true);
+      }
+      return true;
+    } catch (error) {
+      const code = getGraphQLErrorCode(error);
+      if (code === "INVALID_DIABETES_TYPE" || code === "INVALID_DIAGNOSIS_DATE") {
+        setSubmitError(getGraphQLErrorMessage(error, "Please check your diabetes profile details."));
+        setErrorStep(1);
+      } else if (code === "INVALID_DATE_OF_BIRTH" || code === "INVALID_PHONE") {
+        setSubmitError(getGraphQLErrorMessage(error, "Please check your basic information."));
+        setErrorStep(0);
+      } else if (code === "DUPLICATE_CONTACT" || code === "INVALID_CONTACT") {
+        setSubmitError(getGraphQLErrorMessage(error, "There was an issue with your emergency contact details."));
+        setErrorStep(2);
+      } else {
+        setSubmitError(getGraphQLErrorMessage(error, "Unable to save. Please try again."));
+      }
+      return false;
+    } finally {
+      setStepSaving(false);
+    }
+  }
+
   async function handleNext() {
     const fields = steps[currentStep].fields;
     const isValid = fields.length > 0 ? await methods.trigger(fields) : true;
     if (!isValid) return;
-    setSubmitError(null);
-    setErrorStep(null);
+
+    const saved = await saveStepToBackend(currentStep);
+    if (!saved) return;
+
     setCurrentStep((step) => Math.min(step + 1, REVIEW_STEP));
   }
 
@@ -267,83 +352,28 @@ export function PatientOnboardingWizard() {
     setCurrentStep(stepIndex);
   }
 
-  const submitProfile = methods.handleSubmit(async () => {
+  async function submitProfile() {
     setSubmitError(null);
     setErrorStep(null);
     setSubmitMessage(null);
     setIsSubmitting(true);
 
-    const values = methods.getValues();
-
     try {
-      await completeProfile({
-        variables: {
-          data: {
-            fullName: values.fullName,
-            dateOfBirth: values.dateOfBirth,
-            // diabetesType is a GraphQL enum (TYPE_1, TYPE_2, …); send the uppercase name.
-            diabetesType: values.diabetesType.toUpperCase(),
-            diagnosisDate: values.diagnosisDate,
-          },
-        },
-      });
-
-      if (existingContactId) {
-        await updatePatientContact({
-          variables: {
-            contactId: existingContactId,
-            data: {
-              name: values.emergencyContactName,
-              relationship: values.emergencyContactRelationship,
-              phone: values.emergencyContactPhone,
-              isPrimary: true,
-            },
-          },
-        });
-      } else {
-        await addPatientContact({
-          variables: {
-            data: {
-              name: values.emergencyContactName,
-              relationship: values.emergencyContactRelationship,
-              phone: values.emergencyContactPhone,
-              isPrimary: true,
-            },
-          },
-        });
-      }
-
-      if (!consentAlreadyAccepted) {
-        await acceptConsent({
-          variables: { policyType: "terms_of_service", version: "v1" },
-        });
-      }
-
       const readinessResult = await refetchReadiness();
       const updatedNextAction =
         readinessResult.data?.patientOnboardingReadiness?.nextAction ?? null;
 
       if (updatedNextAction === "OPEN_DASHBOARD") {
-        router.push("/patient/dashboard");
+        const next = safeCareDestination(new URLSearchParams(window.location.search).get("next")) ?? pendingCareDestination();
+        if (next) clearCareDestination();
+        router.push(next ?? "/patient/dashboard");
         return;
       }
 
-      setSubmitMessage("Profile saved.");
+      setSubmitMessage("Profile saved. You’re all set!");
     } catch (error) {
       const code = getGraphQLErrorCode(error);
-
-      if (code === "INVALID_DIABETES_TYPE" || code === "INVALID_DIAGNOSIS_DATE") {
-        setSubmitError(getGraphQLErrorMessage(error, "Please check your diabetes profile details."));
-        setErrorStep(1);
-      } else if (code === "INVALID_DATE_OF_BIRTH" || code === "INVALID_PHONE") {
-        setSubmitError(getGraphQLErrorMessage(error, "Please check your basic information."));
-        setErrorStep(0);
-      } else if (code === "DUPLICATE_CONTACT" || code === "INVALID_CONTACT") {
-        setSubmitError(getGraphQLErrorMessage(error, "There was an issue with your emergency contact details."));
-        setErrorStep(3);
-      } else if (code === "PATIENT_ACCESS_DENIED" || code === "TENANT_ACCESS_DENIED") {
-        setSubmitError(getGraphQLErrorMessage(error, "You do not have access to update this patient profile."));
-      } else if (
+      if (
         code === "AUTH_TOKEN_EXPIRED" ||
         code === "AUTH_TOKEN_INVALID" ||
         code === "AUTH_SESSION_REVOKED" ||
@@ -356,25 +386,18 @@ export function PatientOnboardingWizard() {
     } finally {
       setIsSubmitting(false);
     }
-  });
+  }
 
   async function handlePrimaryAction() {
     setSubmitError(null);
     setSubmitMessage(null);
 
-    // Readiness describes the next incomplete onboarding requirement, but it
-    // must not override the sequential navigation of the wizard itself.
     if (!isLastStep) {
       await handleNext();
       return;
     }
 
-    if (isLastStep) {
-      await submitProfile();
-      return;
-    }
-
-    await handleNext();
+    await submitProfile();
   }
 
   return (
@@ -488,7 +511,7 @@ export function PatientOnboardingWizard() {
             type="button"
             variant="ghost"
             onClick={handleBack}
-            disabled={isFirstStep || isSubmitting}
+            disabled={isFirstStep || isSubmitting || stepSaving}
             className="gap-1.5"
           >
             <ArrowLeft className="size-4" />
@@ -505,7 +528,7 @@ export function PatientOnboardingWizard() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Submitting…
+                  Finishing…
                 </>
               ) : (
                 <>
@@ -518,11 +541,20 @@ export function PatientOnboardingWizard() {
             <Button
               type="button"
               onClick={() => void handlePrimaryAction()}
-              disabled={isSubmitting}
+              disabled={stepSaving}
               className="gap-1.5 px-6"
             >
-              {primaryLabel}
-              <ArrowRight className="size-4" />
+              {stepSaving ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  {primaryLabel}
+                  <ArrowRight className="size-4" />
+                </>
+              )}
             </Button>
           )}
         </div>

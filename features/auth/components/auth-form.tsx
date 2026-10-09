@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { safeCareDestination, rememberCareDestination, pendingCareDestination, clearCareDestination } from "@/lib/auth/care-destination";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -84,6 +85,8 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (isRegister) {
+        const careNext = safeCareDestination(searchParams?.get("next")) ?? (values.accountType === "CLIENT" ? "/patient/providers" : null);
+        if (careNext) rememberCareDestination(careNext);
         const result = await registerAccount({
           email: values.email,
           password: values.password,
@@ -92,18 +95,19 @@ export function AuthForm({ mode }: AuthFormProps) {
         });
 
         if (result.verificationRequired) {
-          router.push(`/verify-email?email=${encodeURIComponent(result.user.email)}`);
+          router.push(`/verify-email?email=${encodeURIComponent(result.user.email)}${careNext ? `&next=${encodeURIComponent(careNext)}` : ""}`);
           return;
         }
 
-        router.push("/login");
+        router.push(careNext ? `/login?next=${encodeURIComponent(careNext)}` : "/login");
         return;
       }
 
       await login({ email: values.email, password: values.password });
 
-      const next = searchParams?.get("next");
+      const next = safeCareDestination(searchParams?.get("next")) ?? pendingCareDestination();
       if (next) {
+        clearCareDestination();
         router.push(next);
         return;
       }
@@ -118,7 +122,9 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       if (code === "AUTH_USER_NOT_VERIFIED") {
-        router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
+        const next = safeCareDestination(searchParams?.get("next")) ?? pendingCareDestination();
+        if (next) rememberCareDestination(next);
+        router.push(`/verify-email?email=${encodeURIComponent(values.email)}${next ? `&next=${encodeURIComponent(next)}` : ""}`);
         return;
       }
 
@@ -243,7 +249,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         {isRegister ? (
           <>
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-primary underline underline-offset-4">
+            <Link href={safeCareDestination(searchParams?.get("next")) ? `/login?next=${encodeURIComponent(searchParams!.get("next")!)}` : "/login"} className="font-medium text-primary underline underline-offset-4">
               Sign in
             </Link>
           </>
@@ -251,7 +257,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           <>
             Need an account?{" "}
             <Link
-              href="/register"
+              href={safeCareDestination(searchParams?.get("next")) ? `/register?next=${encodeURIComponent(searchParams!.get("next")!)}` : "/register"}
               className="font-medium text-primary underline underline-offset-4"
             >
               Register

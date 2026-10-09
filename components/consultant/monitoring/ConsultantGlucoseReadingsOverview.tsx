@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Panel, PanelEmpty, PanelHeader, PanelList, PanelTitle, ViewAllLink } from "@/components/ui/panel";
 import {
   CONSULTANT_MONITORING_OVERVIEW_QUERY,
+  GLUCOSE_UNIT,
   type ConsultantMonitoringOverviewItem,
 } from "@/lib/monitoring/graphql";
 import { cn } from "@/lib/utils/cn";
@@ -25,7 +26,7 @@ function formatReading(value: number | string | null | undefined, unit: string |
   if (value === null || value === undefined) return "No reading";
   const numeric = Number(value);
   const formatted = Number.isFinite(numeric) ? numeric.toFixed(1) : String(value);
-  return `${formatted}${unit ? ` ${unit}` : ""}`;
+  return `${formatted} ${unit ?? GLUCOSE_UNIT}`;
 }
 
 function formatDate(value: string | null | undefined) {

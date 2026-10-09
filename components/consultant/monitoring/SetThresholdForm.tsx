@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@apollo/client";
 import { CheckCircle2 } from "lucide-react";
-import { SET_THRESHOLD_MUTATION } from "@/lib/monitoring/graphql";
+import { SET_THRESHOLD_MUTATION, type SetThresholdVariables } from "@/lib/monitoring/graphql";
 import { CONSULTANT_CLIENTS_QUERY } from "@/lib/consultant/clients-graphql";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ type ConsultantClient = {
 
 export function SetThresholdForm() {
   const [succeeded, setSucceeded] = useState(false);
-  const [setThreshold, { loading, error }] = useMutation(SET_THRESHOLD_MUTATION);
+  const [setThreshold, { loading, error }] = useMutation<unknown, SetThresholdVariables>(SET_THRESHOLD_MUTATION);
 
   const { data: clientsData, loading: clientsLoading } = useQuery<{
     consultantClients: ConsultantClient[];
@@ -62,15 +62,21 @@ export function SetThresholdForm() {
   }));
 
   const onSubmit = handleSubmit(async (values) => {
-    await setThreshold({
-      variables: {
-        patientId: values.patientId,
-        data: {
-          glucoseLow: Number(values.glucoseLow),
-          glucoseHigh: Number(values.glucoseHigh),
+    setSucceeded(false);
+    try {
+      await setThreshold({
+        variables: {
+          patientId: values.patientId,
+          data: {
+            type: "glucose",
+            minValue: Number(values.glucoseLow),
+            maxValue: Number(values.glucoseHigh),
+          },
         },
-      },
-    });
+      });
+    } catch {
+      return;
+    }
 
     setSucceeded(true);
     setTimeout(() => setSucceeded(false), 4000);

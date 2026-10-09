@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-context";
+import { safeCareDestination, pendingCareDestination, clearCareDestination } from "@/lib/auth/care-destination";
 
 export function AuthRedirect() {
   const router = useRouter();
@@ -15,12 +16,13 @@ export function AuthRedirect() {
     }
 
     if (!user) {
-      const next = searchParams?.get("next");
+      const next = safeCareDestination(searchParams?.get("next")) ?? pendingCareDestination();
       router.replace(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
       return;
     }
 
-    const next = searchParams?.get("next");
+    const next = safeCareDestination(searchParams?.get("next")) ?? pendingCareDestination();
+    if (next) clearCareDestination();
     router.replace(next || getDefaultAuthenticatedRoute());
   }, [getDefaultAuthenticatedRoute, router, searchParams, status, user]);
 

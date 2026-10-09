@@ -3,7 +3,7 @@
 import { useQuery } from "@apollo/client";
 import { useMemo } from "react";
 import { Activity } from "lucide-react";
-import { MONITORING_SNAPSHOT_QUERY } from "@/lib/monitoring/graphql";
+import { GLUCOSE_UNIT, MONITORING_SNAPSHOT_QUERY } from "@/lib/monitoring/graphql";
 import { GlucoseHeroCard, glucoseStatusKey } from "@/components/design-system";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/panel";
@@ -47,7 +47,7 @@ export function MonitoringSnapshotCard({ onLogReading }: { onLogReading?: () => 
 
   const latest = data?.monitoringSnapshot?.latestGlucose;
   const trend = data?.monitoringSnapshot?.trend;
-  const unit = useMemo(() => latest?.unit ?? "mmol/L", [latest?.unit]);
+  const unit = useMemo(() => latest?.unit ?? GLUCOSE_UNIT, [latest?.unit]);
 
   if (loading) {
     return <div className="h-52 animate-pulse rounded-lg bg-border/40" />;

@@ -268,9 +268,10 @@ export function PaymentDetailView({ paymentId }: PaymentDetailViewProps) {
             </div>
           ) : null}
 
-          <Button href="/patient/payments" variant="secondary">
-            Back to payments
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {invoice.programmeEnrolmentId ? <Button href={`/patient/care-plan/${invoice.programmeEnrolmentId}`} variant="secondary">View care programme</Button> : null}
+            <Button href="/patient/payments" variant="secondary">Back to payments</Button>
+          </div>
         </CardContent>
       </Card>
     </div>

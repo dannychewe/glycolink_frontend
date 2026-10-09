@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { rememberCareDestination } from "@/lib/auth/care-destination";
 import {
   getUserAccountType,
   getUserAudienceValues,
@@ -37,7 +38,9 @@ export function AuthGuard({ children, allowedRoles, requireSystemAdmin = false }
     }
 
     if (!user.isVerified) {
-      router.replace(`/verify-email?email=${encodeURIComponent(user.email)}`);
+      const next = `${window.location.pathname}${window.location.search}`;
+      rememberCareDestination(next);
+      router.replace(`/verify-email?email=${encodeURIComponent(user.email)}&next=${encodeURIComponent(next)}`);
       return;
     }
 

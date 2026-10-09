@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import { useRouter } from "next/navigation";
+import { clearCareDestination } from "@/lib/auth/care-destination";
 import { BookingCalendar } from "@/components/patient/BookingCalendar";
 import { BookingSummary } from "@/components/patient/BookingSummary";
 import { TimeSlotPicker } from "@/components/patient/TimeSlotPicker";
@@ -142,6 +143,7 @@ export function BookingFlow({ provider }: BookingFlowProps) {
         },
       });
       const appointmentId = data?.bookAppointment?.appointment?.id;
+      if (appointmentId) clearCareDestination();
       router.push(appointmentId ? `/patient/bookings/${appointmentId}` : "/patient/bookings");
     } catch (error) {
       setBookingAlert(mapBookingError(error));

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@apollo/client";
-import { MY_READINGS_QUERY } from "@/lib/monitoring/graphql";
+import { GLUCOSE_UNIT, MY_READINGS_QUERY } from "@/lib/monitoring/graphql";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, glucoseStatusKey } from "@/components/design-system";
@@ -123,7 +123,7 @@ export function GraphqlReadingsList() {
                   <div className="flex items-center gap-2">
                     <p className="text-base font-semibold text-text">
                       {Number(reading.value).toFixed(isGlucose ? 1 : 0)}
-                      {reading.unit ? <span className="ml-1 text-sm font-normal text-muted">{reading.unit}</span> : null}
+                      <span className="ml-1 text-sm font-normal text-muted">{reading.unit ?? (isGlucose ? GLUCOSE_UNIT : "")}</span>
                     </p>
                     {!isGlucose && reading.vitalType ? (
                       <span className="text-xs text-muted">· {formatVitalType(reading.vitalType)}</span>

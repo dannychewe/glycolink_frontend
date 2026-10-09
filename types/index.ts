@@ -121,7 +121,7 @@ export type LabOrderRecord = {
 export type GlucoseReading = {
   id: string;
   value: number;
-  unit: "mg/dL";
+  unit: "mmol/L";
   timestamp: string;
 };
 

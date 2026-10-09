@@ -3,9 +3,11 @@
 import { useQuery } from "@apollo/client";
 import { BookingFlow } from "@/components/patient/BookingFlow";
 import { Button } from "@/components/ui/button";
-import { useAuth, getGraphQLErrorCode, getUserAccountType } from "@/features/auth/auth-context";
+import { useAuth, getGraphQLErrorCode, getGraphQLErrorMessage, getUserAccountType } from "@/features/auth/auth-context";
 import { PROVIDER_QUERY } from "@/lib/providers/directory-graphql";
 import type { BookableProvider } from "@/types";
+import { MY_PATIENT_PROFILE_QUERY } from "@/lib/patient/clinical-profile-graphql";
+import { rememberCareDestination } from "@/lib/auth/care-destination";
 
 type ProviderDetailData = {
   provider: {
@@ -33,6 +35,10 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
   const code = getGraphQLErrorCode(error);
   const accountType = getUserAccountType(user);
   const isVerifiedUser = Boolean(user?.isVerified);
+  const profileQuery = useQuery<{ myPatientProfile: { profileComplete: boolean } | null }>(MY_PATIENT_PROFILE_QUERY, {
+    fetchPolicy: "network-only",
+    skip: !isAuthenticated || !isVerifiedUser || accountType !== "PATIENT",
+  });
 
   if (!isAuthenticated) {
     return (
@@ -70,12 +76,11 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
 
   if (error || !provider) {
     return (
-      <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-4 text-sm text-danger">
-        {code === "PROVIDER_NOT_FOUND"
-          ? "Provider not found."
-          : code === "PROVIDER_ACCESS_DENIED"
-            ? "This provider is not available under your clinic's consultant access settings."
-            : "Unable to load provider details."}
+      <div className="space-y-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-4 text-sm text-danger">
+        <p>{code === "PROVIDER_NOT_FOUND" || code === "PROVIDER_ACCESS_DENIED"
+          ? getGraphQLErrorMessage(error, "This consultant is currently unavailable for booking. Please contact your clinic.")
+          : "Unable to load consultant details. Please try again."}</p>
+        <Button href="/patient/care-plan" variant="secondary" size="sm">Back to care plans</Button>
       </div>
     );
   }
@@ -84,6 +89,21 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
     return (
       <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-4 text-sm text-warning">
         This provider is currently not eligible for booking.
+      </div>
+    );
+  }
+
+  if (profileQuery.loading) {
+    return <p className="text-sm text-muted">Checking your patient profile...</p>;
+  }
+
+  if (!profileQuery.data?.myPatientProfile?.profileComplete) {
+    const next = `/patient/providers/${providerId}/book`;
+    return (
+      <div className="space-y-3 border border-border bg-surface px-4 py-4">
+        <p className="text-sm text-text">Complete your patient profile before booking this consultation.</p>
+        <Button href={`/patient/onboarding?next=${encodeURIComponent(next)}`} onClick={() => rememberCareDestination(next)}>Complete patient profile</Button>
+        <Button href={`/providers/${providerId}`} variant="secondary">Back to care options</Button>
       </div>
     );
   }

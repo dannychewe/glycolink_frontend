@@ -18,7 +18,6 @@ export type CareProgrammeStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "ARCHIVED" | s
 export type ProgrammeEnrolmentStatus =
   | "INVITED"
   | "PENDING_BASELINE"
-  | "READY_FOR_ACTIVATION"
   | "ACTIVE"
   | "PAUSED"
   | "COMPLETED"
@@ -26,7 +25,8 @@ export type ProgrammeEnrolmentStatus =
   | string;
 
 export type ProgrammeBaselineStatus =
-  | "DRAFT"
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
   | "SUBMITTED"
   | "UNDER_REVIEW"
   | "APPROVED"
@@ -43,6 +43,8 @@ export type ProgrammeCarePlanStatus =
   | "CANCELLED"
   | "SUPERSEDED"
   | string;
+
+export type CarePlanProgrammePlanType = "GENERAL" | "MEAL_PLAN" | "EXERCISE_PLAN" | string;
 
 export type MonitoringWindowStatus =
   | "SCHEDULED"
@@ -96,6 +98,8 @@ export type AlertOwnershipEvent = {
 export type ProgrammeProviderSummary = {
   id: UUID;
   displayName?: string | null;
+  bookingAvailable?: boolean;
+  bookingUnavailableReason?: string | null;
 };
 
 export type ProgrammePatientSummary = {
@@ -116,6 +120,8 @@ export type CareProgramme = {
   defaultMonitoringCadenceDays: number;
   settingsJson: string;
   enrolmentOpen: boolean;
+  publicEnrolmentEnabled?: boolean;
+  offeringProviders?: ProgrammeProviderSummary[];
   startsAt?: DateString | null;
   endsAt?: DateString | null;
   activatedAt?: DateTimeString | null;
@@ -131,6 +137,8 @@ export type CareProgramme = {
   } | null;
   patientOffer?: string | null;
   whoItIsFor?: string | null;
+  whatHappensNext?: string | null;
+  careJourneyPreview?: ProgrammeCareJourneyMilestone[];
   myEnrolmentStatus?: string | null;
 };
 
@@ -190,6 +198,7 @@ export type ProgrammeCareTeamAssignment = {
   id: UUID;
   role: string;
   assignedUserId: UUID;
+  assignedUserDisplayName: string;
   provider?: ProgrammeProviderSummary | null;
   active: boolean;
   assignedAt: DateTimeString;
@@ -202,6 +211,7 @@ export type ProgrammeEnrolment = {
   programme: CareProgramme;
   patient: ProgrammePatientSummary;
   status: ProgrammeEnrolmentStatus;
+  availableActions: string[];
   enrolledAt: DateTimeString;
   startsAt?: DateString | null;
   expectedEndsAt?: DateString | null;
@@ -214,6 +224,7 @@ export type ProgrammeEnrolment = {
   baselineCompletedAt?: DateTimeString | null;
   baselinePcqResponseId?: UUID | null;
   carePlanReady: boolean;
+  hasSharedPlanAccess: boolean;
   carePlanReadyAt?: DateTimeString | null;
   carePlanId?: UUID | null;
   pauseReason?: string | null;
@@ -269,6 +280,64 @@ export type ProgrammeCarePlan = {
   createdAt: DateTimeString;
   updatedAt: DateTimeString;
 };
+
+export type CarePlanProgrammeItem = {
+  id: UUID;
+  title: string;
+  description?: string | null;
+  dayNumber?: number | null;
+  timeOfDay?: string | null;
+  mealType?: string | null;
+  exerciseType?: string | null;
+  durationMinutes?: number | null;
+  intensity?: string | null;
+  instructions?: string | null;
+  metadataJson: JsonValue;
+  sortOrder: number;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+};
+
+export type CarePlanProgramme = {
+  id: UUID;
+  programme: CareProgramme;
+  title: string;
+  description?: string | null;
+  planType: CarePlanProgrammePlanType;
+  startsOnDay?: number | null;
+  endsOnDay?: number | null;
+  durationDays?: number | null;
+  instructions?: string | null;
+  metadataJson: JsonValue;
+  sortOrder: number;
+  items: CarePlanProgrammeItem[];
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+};
+
+export type MonitoringRequirementConfiguration = {
+  observationTypes: Array<{ value: string; label: string }>;
+  glucoseContexts: Array<{ value: string; label: string }>;
+  cadences: Array<{ value: string; label: string; requiredFields: string[]; unsupportedFields: string[] }>;
+  weekdays: Array<{ value: string; label: string }>;
+  reminderSettings: Array<{ key: string; valueType: string; defaultValue: boolean | number | null; nullable: boolean }>;
+  timeOfDayRequired: boolean;
+  maxFrequencyPerInterval: number;
+};
+
+export const MONITORING_REQUIREMENT_CONFIGURATION_QUERY = gql`
+  query MonitoringRequirementConfiguration {
+    monitoringRequirementConfiguration {
+      observationTypes { value label }
+      glucoseContexts { value label }
+      cadences { value label requiredFields unsupportedFields }
+      weekdays { value label }
+      reminderSettings { key valueType defaultValue nullable }
+      timeOfDayRequired
+      maxFrequencyPerInterval
+    }
+  }
+`;
 
 export type ProgrammeMonitoringRequirement = {
   id: UUID;
@@ -445,13 +514,19 @@ export type EnrolmentReadiness = {
 };
 
 export type ClinicProgrammeDashboardOverview = {
+  dateRange: ReportingDateRange;
   programmePopulation: {
     totalEnrolments: number;
+    invited: number;
     pendingBaseline: number;
     active: number;
     paused: number;
+    completed: number;
+    withdrawn: number;
     newEnrolments: number;
+    retentionCount: number;
     retentionRate?: number | null;
+    retentionDefinition?: string | null;
   };
   readiness: {
     readyForActivation: number;
@@ -461,15 +536,24 @@ export type ClinicProgrammeDashboardOverview = {
     missingLeadProvider: number;
     missingActiveCarePlan: number;
     missingValidMonitoringConfiguration: number;
+    pausedOrInactiveProgrammeBlockers: number;
+    primaryBlockerBreakdown: JsonValue;
+    details: JsonValue;
   };
   monitoringAdherence: {
     patientsExpected: number;
+    patientsWithSatisfiedExpectation: number;
+    totalExpectedWindows: number;
     satisfiedWindows: number;
     missedWindows: number;
+    excusedWindows: number;
+    cancelledOrSupersededWindows: number;
     openMonitoringGaps: number;
     patientsWithOpenMonitoringGaps: number;
     patientsWithConsecutiveMissedExpectations: number;
     adherenceRate?: number | null;
+    adherenceDenominator: number;
+    excusedTreatment: string;
   };
   clinicalAlerts: {
     totalActiveAlerts: number;
@@ -478,22 +562,39 @@ export type ClinicProgrammeDashboardOverview = {
     patientContacted: number;
     consultationRequired: number;
     escalated: number;
+    resolvedDuringPeriod: number;
+    dismissedDuringPeriod: number;
     unassignedActiveAlerts: number;
     overdueActiveAlerts: number;
+    alertsWithoutConfiguredTarget: number;
     monitoringGapWorkItems: number;
     clinicalThresholdAlerts: number;
+    followUpAdminWorkItems: number;
     alertsAwaitingFirstReview: number;
   };
   responsePerformance: {
     medianTimeToFirstReviewMinutes?: number | null;
+    averageTimeToFirstReviewMinutes?: number | null;
     medianTimeToResolutionMinutes?: number | null;
+    averageTimeToResolutionMinutes?: number | null;
+    reviewedWithinDueTimePercent?: number | null;
+    resolvedWithinDueTimePercent?: number | null;
+    alertsWithoutReviewTarget: number;
+    alertsWithoutResolutionTarget: number;
     unresolvedOverdueAlerts: number;
+    escalationCount: number;
+    reopenedAlertCount: number;
   };
   careTeamWorkload: {
+    activeAlertsByOwner: JsonValue;
     unassignedAlerts: number;
+    alertsClaimedDuringPeriod: number;
+    alertsResolvedDuringPeriod: number;
     openFollowUps: number;
     escalatedItems: number;
+    patientsAssignedByMember: JsonValue;
   };
+  metricDefinitionKeys?: string[];
 };
 
 export type ClinicPatientCohortRow = {
@@ -722,6 +823,7 @@ export type ProgrammePaymentIntent = {
   currency: string;
   method: string;
   status: string;
+  failureReason?: string | null;
   expiresAt?: DateTimeString | null;
   confirmedAt?: DateTimeString | null;
 };
@@ -789,6 +891,8 @@ export const CARE_PROGRAMME_FIELDS = gql`
     defaultMonitoringCadenceDays
     settingsJson
     enrolmentOpen
+    publicEnrolmentEnabled
+    offeringProviders { id displayName }
     startsAt
     endsAt
     activatedAt
@@ -801,6 +905,16 @@ export const CARE_PROGRAMME_FIELDS = gql`
       name
       type
       status
+    }
+    patientOffer
+    whoItIsFor
+    whatHappensNext
+    careJourneyPreview {
+      title
+      description
+      eventType
+      day
+      endDay
     }
   }
 `;
@@ -841,6 +955,7 @@ export const PROGRAMME_ENROLMENT_FIELDS = gql`
     }
     status
     enrolledAt
+    availableActions
     startsAt
     expectedEndsAt
     completedAt
@@ -848,6 +963,8 @@ export const PROGRAMME_ENROLMENT_FIELDS = gql`
     leadProvider {
       id
       displayName
+      bookingAvailable
+      bookingUnavailableReason
     }
     monitoringCadenceDays
     monitoringCadenceOverrideDays
@@ -855,6 +972,7 @@ export const PROGRAMME_ENROLMENT_FIELDS = gql`
     baselineCompletedAt
     baselinePcqResponseId
     carePlanReady
+    hasSharedPlanAccess
     carePlanReadyAt
     carePlanId
     pauseReason
@@ -864,6 +982,7 @@ export const PROGRAMME_ENROLMENT_FIELDS = gql`
       id
       role
       assignedUserId
+      assignedUserDisplayName
       provider {
         id
         displayName
@@ -937,6 +1056,50 @@ export const PROGRAMME_CARE_PLAN_FIELDS = gql`
     }
     approvedAt
     supersededById
+    createdAt
+    updatedAt
+  }
+`;
+
+export const CARE_PLAN_PROGRAMME_ITEM_FIELDS = gql`
+  fragment CarePlanProgrammeItemFields on CarePlanProgrammeItemType {
+    id
+    title
+    description
+    dayNumber
+    timeOfDay
+    mealType
+    exerciseType
+    durationMinutes
+    intensity
+    instructions
+    metadataJson
+    sortOrder
+    createdAt
+    updatedAt
+  }
+`;
+
+export const CARE_PLAN_PROGRAMME_FIELDS = gql`
+  ${CARE_PROGRAMME_FIELDS}
+  ${CARE_PLAN_PROGRAMME_ITEM_FIELDS}
+  fragment CarePlanProgrammeFields on CarePlanProgrammeType {
+    id
+    programme {
+      ...CareProgrammeFields
+    }
+    title
+    description
+    planType
+    startsOnDay
+    endsOnDay
+    durationDays
+    instructions
+    metadataJson
+    sortOrder
+    items {
+      ...CarePlanProgrammeItemFields
+    }
     createdAt
     updatedAt
   }
@@ -1333,8 +1496,10 @@ export const BROWSABLE_PROGRAMMES_QUERY = gql`
       programmeType
       enrolmentOpen
       defaultDurationDays
+      defaultMonitoringCadenceDays
       patientOffer
       whoItIsFor
+      whatHappensNext
       myEnrolmentStatus
       organization {
         id
@@ -1398,6 +1563,24 @@ export const PROGRAMME_CURRENT_CARE_PLAN_QUERY = gql`
   query ProgrammeCurrentCarePlan($enrolmentId: UUID!) {
     programmeCurrentCarePlan(enrolmentId: $enrolmentId) {
       ...ProgrammeCarePlanFields
+    }
+  }
+`;
+
+export const CARE_PLAN_PROGRAMMES_QUERY = gql`
+  ${CARE_PLAN_PROGRAMME_FIELDS}
+  query CarePlanProgrammes($programmeId: UUID!, $planType: String) {
+    carePlanProgrammes(programmeId: $programmeId, planType: $planType) {
+      ...CarePlanProgrammeFields
+    }
+  }
+`;
+
+export const CARE_PLAN_PROGRAMME_QUERY = gql`
+  ${CARE_PLAN_PROGRAMME_FIELDS}
+  query CarePlanProgramme($id: UUID!) {
+    carePlanProgramme(id: $id) {
+      ...CarePlanProgrammeFields
     }
   }
 `;
@@ -2085,6 +2268,7 @@ export const PROGRAMME_PAYMENT_INTENTS_QUERY = gql`
       currency
       method
       status
+      failureReason
       expiresAt
       confirmedAt
     }
@@ -2244,6 +2428,77 @@ export const ARCHIVE_CARE_PROGRAMME_MUTATION = gql`
   }
 `;
 
+export const DELETE_CARE_PROGRAMME_MUTATION = gql`
+  mutation DeleteCareProgramme($programmeId: UUID!) {
+    deleteCareProgramme(programmeId: $programmeId) {
+      deletedId
+      ok
+    }
+  }
+`;
+
+export const CREATE_CARE_PLAN_PROGRAMME_MUTATION = gql`
+  ${CARE_PLAN_PROGRAMME_FIELDS}
+  mutation CreateCarePlanProgramme($programmeId: UUID!, $data: CarePlanProgrammeInput!) {
+    createCarePlanProgramme(programmeId: $programmeId, data: $data) {
+      carePlanProgramme {
+        ...CarePlanProgrammeFields
+      }
+    }
+  }
+`;
+
+export const UPDATE_CARE_PLAN_PROGRAMME_MUTATION = gql`
+  ${CARE_PLAN_PROGRAMME_FIELDS}
+  mutation UpdateCarePlanProgramme($carePlanProgrammeId: UUID!, $data: CarePlanProgrammeInput!) {
+    updateCarePlanProgramme(carePlanProgrammeId: $carePlanProgrammeId, data: $data) {
+      carePlanProgramme {
+        ...CarePlanProgrammeFields
+      }
+    }
+  }
+`;
+
+export const DELETE_CARE_PLAN_PROGRAMME_MUTATION = gql`
+  mutation DeleteCarePlanProgramme($carePlanProgrammeId: UUID!) {
+    deleteCarePlanProgramme(carePlanProgrammeId: $carePlanProgrammeId) {
+      deletedId
+      ok
+    }
+  }
+`;
+
+export const CREATE_CARE_PLAN_PROGRAMME_ITEM_MUTATION = gql`
+  ${CARE_PLAN_PROGRAMME_ITEM_FIELDS}
+  mutation CreateCarePlanProgrammeItem($carePlanProgrammeId: UUID!, $data: CarePlanProgrammeItemInput!) {
+    createCarePlanProgrammeItem(carePlanProgrammeId: $carePlanProgrammeId, data: $data) {
+      item {
+        ...CarePlanProgrammeItemFields
+      }
+    }
+  }
+`;
+
+export const UPDATE_CARE_PLAN_PROGRAMME_ITEM_MUTATION = gql`
+  ${CARE_PLAN_PROGRAMME_ITEM_FIELDS}
+  mutation UpdateCarePlanProgrammeItem($itemId: UUID!, $data: CarePlanProgrammeItemInput!) {
+    updateCarePlanProgrammeItem(itemId: $itemId, data: $data) {
+      item {
+        ...CarePlanProgrammeItemFields
+      }
+    }
+  }
+`;
+
+export const DELETE_CARE_PLAN_PROGRAMME_ITEM_MUTATION = gql`
+  mutation DeleteCarePlanProgrammeItem($itemId: UUID!) {
+    deleteCarePlanProgrammeItem(itemId: $itemId) {
+      deletedId
+      ok
+    }
+  }
+`;
+
 export const ACTIVATE_PROGRAMME_ENROLMENT_MUTATION = gql`
   ${PROGRAMME_ENROLMENT_FIELDS}
   mutation ActivateProgrammeEnrolment($enrolmentId: UUID!) {
@@ -2273,6 +2528,31 @@ export const RESUME_PROGRAMME_ENROLMENT_MUTATION = gql`
       enrolment {
         ...ProgrammeEnrolmentFields
       }
+    }
+  }
+`;
+
+export const COMPLETE_PROGRAMME_ENROLMENT_MUTATION = gql`
+  ${PROGRAMME_ENROLMENT_FIELDS}
+  mutation CompleteProgrammeEnrolment($enrolmentId: UUID!, $reason: String) {
+    completeProgrammeEnrolment(enrolmentId: $enrolmentId, reason: $reason) {
+      enrolment { ...ProgrammeEnrolmentFields }
+    }
+  }
+`;
+
+export type ProgrammeCareTeamCandidate = {
+  userId: UUID;
+  providerId: UUID | null;
+  displayName: string;
+  roles: string[];
+};
+
+export const PROGRAMME_CARE_TEAM_CANDIDATES_QUERY = gql`
+  query ProgrammeCareTeamCandidates($enrolmentId: UUID!) {
+    programmeEnrolment(id: $enrolmentId) {
+      id
+      careTeamCandidates { userId providerId displayName roles }
     }
   }
 `;
@@ -2805,6 +3085,17 @@ export const GENERATE_PROGRAMME_INVOICE_MUTATION = gql`
   }
 `;
 
+export const ENSURE_PATIENT_PAYABLE_PROGRAMME_INVOICE_MUTATION = gql`
+  ${PROGRAMME_INVOICE_FIELDS}
+  mutation EnsurePatientPayableProgrammeInvoice($enrolmentId: UUID!) {
+    ensurePatientPayableProgrammeInvoice(enrolmentId: $enrolmentId) {
+      invoice {
+        ...ProgrammeInvoiceFields
+      }
+    }
+  }
+`;
+
 export const ISSUE_PROGRAMME_INVOICE_MUTATION = gql`
   ${PROGRAMME_INVOICE_FIELDS}
   mutation IssueProgrammeInvoice($invoiceId: UUID!) {
@@ -2963,6 +3254,130 @@ export const RECORD_PROGRAMME_CASH_PAYMENT_MUTATION = gql`
         status
         confirmedAt
       }
+    }
+  }
+`;
+
+export const PAUSE_PROGRAMME_CARE_PLAN_MUTATION = gql`
+  ${PROGRAMME_CARE_PLAN_FIELDS}
+  mutation PauseProgrammeCarePlan($carePlanId: UUID!, $reason: String) {
+    pauseProgrammeCarePlan(carePlanId: $carePlanId, reason: $reason) {
+      carePlan {
+        ...ProgrammeCarePlanFields
+      }
+    }
+  }
+`;
+
+export const RESUME_PROGRAMME_CARE_PLAN_MUTATION = gql`
+  ${PROGRAMME_CARE_PLAN_FIELDS}
+  mutation ResumeProgrammeCarePlan($carePlanId: UUID!, $reason: String) {
+    resumeProgrammeCarePlan(carePlanId: $carePlanId, reason: $reason) {
+      carePlan {
+        ...ProgrammeCarePlanFields
+      }
+    }
+  }
+`;
+
+export const COMPLETE_PROGRAMME_CARE_PLAN_MUTATION = gql`
+  ${PROGRAMME_CARE_PLAN_FIELDS}
+  mutation CompleteProgrammeCarePlan($carePlanId: UUID!, $reason: String) {
+    completeProgrammeCarePlan(carePlanId: $carePlanId, reason: $reason) {
+      carePlan {
+        ...ProgrammeCarePlanFields
+      }
+    }
+  }
+`;
+
+export const CANCEL_PROGRAMME_CARE_PLAN_MUTATION = gql`
+  ${PROGRAMME_CARE_PLAN_FIELDS}
+  mutation CancelProgrammeCarePlan($carePlanId: UUID!, $reason: String) {
+    cancelProgrammeCarePlan(carePlanId: $carePlanId, reason: $reason) {
+      carePlan {
+        ...ProgrammeCarePlanFields
+      }
+    }
+  }
+`;
+
+export const MARK_PROGRAMME_BASELINE_COMPLETED_MUTATION = gql`
+  ${PROGRAMME_ENROLMENT_FIELDS}
+  mutation MarkProgrammeBaselineCompleted($enrolmentId: UUID!, $pcqResponseId: UUID) {
+    markProgrammeBaselineCompleted(enrolmentId: $enrolmentId, pcqResponseId: $pcqResponseId) {
+      enrolment {
+        ...ProgrammeEnrolmentFields
+      }
+    }
+  }
+`;
+
+export const CREATE_SUPERSEDING_PROGRAMME_BASELINE_MUTATION = gql`
+  ${PROGRAMME_BASELINE_FIELDS}
+  mutation CreateSupersedingProgrammeBaseline($baselineId: UUID!, $data: ProgrammeBaselineInput) {
+    createSupersedingProgrammeBaseline(baselineId: $baselineId, data: $data) {
+      baseline {
+        ...ProgrammeBaselineFields
+      }
+    }
+  }
+`;
+
+export const CONFIGURE_PROGRAMME_ALERT_RULE_MUTATION = gql`
+  mutation ConfigureProgrammeAlertRule($carePlanId: UUID!, $data: AlertRuleInput!) {
+    configureProgrammeAlertRule(carePlanId: $carePlanId, data: $data) {
+      alertRuleId
+    }
+  }
+`;
+
+export const PROGRAMME_BASELINE_HISTORY_QUERY = gql`
+  ${PROGRAMME_BASELINE_FIELDS}
+  query ProgrammeBaselineHistory($enrolmentId: UUID!) {
+    programmeBaselineHistory(enrolmentId: $enrolmentId) {
+      ...ProgrammeBaselineFields
+    }
+  }
+`;
+
+export const PROGRAMME_DEFAULT_MONITORING_REQUIREMENTS_QUERY = gql`
+  ${PROGRAMME_MONITORING_REQUIREMENT_FIELDS}
+  query ProgrammeDefaultMonitoringRequirements($programmeId: UUID!) {
+    programmeDefaultMonitoringRequirements(programmeId: $programmeId) {
+      ...ProgrammeMonitoringRequirementFields
+    }
+  }
+`;
+
+export type ReportingMetricDefinition = {
+  key: string;
+  name: string;
+  definition: string;
+  numerator?: string | null;
+  denominator?: string | null;
+  includedStatuses?: JsonValue;
+  excludedStatuses?: JsonValue;
+  dateField?: string | null;
+  timezoneTreatment?: string | null;
+  nullHandling?: string | null;
+  permissionScope?: string | null;
+};
+
+export const REPORTING_METRIC_DEFINITIONS_QUERY = gql`
+  query ReportingMetricDefinitions {
+    reportingMetricDefinitions {
+      key
+      name
+      definition
+      numerator
+      denominator
+      includedStatuses
+      excludedStatuses
+      dateField
+      timezoneTreatment
+      nullHandling
+      permissionScope
     }
   }
 `;

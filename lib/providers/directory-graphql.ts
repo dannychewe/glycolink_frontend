@@ -56,6 +56,8 @@ export const PROVIDER_QUERY = gql`
       status
       verificationStatus
       eligible
+      bookingAvailable
+      bookingUnavailableReason
       specialties
       subSpecialties
       averageRating

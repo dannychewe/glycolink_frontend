@@ -8,7 +8,7 @@ export const mockConsultationSummaries: ConsultantEncounterSummary[] = [
     time: "09:00",
     soap: {
       subjective:
-        "Patient reports persistent evening fatigue, increased thirst, and two post-prandial glucose readings above 220 mg/dL over the last week.",
+        "Patient reports persistent evening fatigue, increased thirst, and two post-prandial glucose readings above 12.2 mmol/L over the last week.",
       objective:
         "Latest home readings remain above target. Most recent HbA1c is 8.2%. No acute distress reported during the consultation.",
       assessment:

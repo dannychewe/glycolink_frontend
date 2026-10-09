@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useUrlState } from "@/lib/use-url-state";
 import { useMutation, useQuery } from "@apollo/client";
+import type { ApolloError } from "@apollo/client";
 import { AlertCircle, CalendarRange, CheckCircle2, ClipboardCheck, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +11,9 @@ import { DetailModal } from "@/components/ui/detail-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
+import { ProgrammeSharedPlansReadOnly } from "./ProgrammeSharedPlansReadOnly";
+import { ProgrammeEnrolmentActions } from "./ProgrammeEnrolmentActions";
 import {
   Panel,
   PanelBody,
@@ -21,6 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-context";
 import { hasProgrammePermission } from "@/lib/programmes/permissions";
+import { monitoringFieldErrors, reminderFormValues, reminderPayload, REMINDER_SETTING_LABELS, type ReminderFormValues } from "@/lib/programmes/monitoring-requirement-form";
 import {
   ADD_PATIENT_MONITORING_REQUIREMENT_MUTATION,
   APPROVE_ACTIVATE_PROGRAMME_CARE_PLAN_MUTATION,
@@ -33,6 +39,7 @@ import {
   GENERATE_PROGRAMME_SCHEDULE_MUTATION,
   MARK_PROGRAMME_SCHEDULE_ITEM_DONE_MUTATION,
   MONITORING_GAP_HISTORY_QUERY,
+  MONITORING_REQUIREMENT_CONFIGURATION_QUERY,
   PATIENT_MONITORING_ADHERENCE_SUMMARY_QUERY,
   PATIENT_PROGRAMME_ENROLMENTS_QUERY,
   PROGRAMME_CURRENT_BASELINE_QUERY,
@@ -47,6 +54,7 @@ import {
   type EnrolmentReadiness,
   type ExpectedMonitoringWindow,
   type MonitoringGap,
+  type MonitoringRequirementConfiguration,
   type ProgrammeBaselineAssessment,
   type ProgrammeCarePlan,
   type ProgrammeEnrolment,
@@ -888,57 +896,115 @@ function CareJourneyCalendarPanel({
   );
 }
 
+function isAdherenceAccessDenied(error?: ApolloError) {
+  return error?.graphQLErrors.some((item) => item.extensions?.code === "ADHERENCE_ACCESS_DENIED") ?? false;
+}
+
+function MonitoringQueryNotice({ error, loading, label, onRetry }: {
+  error?: ApolloError;
+  loading: boolean;
+  label: string;
+  onRetry: () => void;
+}) {
+  if (error) {
+    const denied = isAdherenceAccessDenied(error);
+    return (
+      <div role={denied ? "status" : "alert"} className="space-y-2 text-sm text-muted">
+        <p>{denied ? `Access to ${label.toLowerCase()} is restricted to the patient's authorised monitoring team.` : `Unable to load ${label.toLowerCase()}.`}</p>
+        {!denied ? (
+          <Button type="button" size="sm" variant="secondary" onClick={onRetry}>Retry</Button>
+        ) : null}
+      </div>
+    );
+  }
+  if (loading) return <p role="status" className="text-sm text-muted">Loading {label.toLowerCase()}...</p>;
+  return null;
+}
+
 function MonitoringSchedulePanel({
   enrolmentId,
   requirements,
   windows,
+  windowsError,
+  windowsLoading,
+  onRetryWindows,
   onChanged,
   canManage,
 }: {
   enrolmentId: string;
   requirements: ProgrammeMonitoringRequirement[];
   windows: ExpectedMonitoringWindow[];
+  windowsError?: ApolloError;
+  windowsLoading: boolean;
+  onRetryWindows: () => void;
   onChanged: () => void;
   canManage: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [selectedRequirementId, setSelectedRequirementId] = useState<string | null>(null);
+  const [selectedRequirementId, setSelectedRequirementId] = useState<
+    string | null
+  >(null);
   const [observationType, setObservationType] = useState("glucose");
   const [observationContext, setObservationContext] = useState("fasting");
-  const [cadenceType, setCadenceType] = useState("daily");
+  const [cadenceType, setCadenceType] = useState("interval_days");
   const [intervalDays, setIntervalDays] = useState("1");
   const [frequencyPerInterval, setFrequencyPerInterval] = useState("1");
-  const [applicableDays, setApplicableDays] = useState("monday,tuesday,wednesday,thursday,friday,saturday,sunday");
+  const [applicableDays, setApplicableDays] = useState<string[]>([]);
   const [timeOfDay, setTimeOfDay] = useState("07:00");
-  const [reminders, setReminders] = useState("08:00");
+  const [reminders, setReminders] = useState<ReminderFormValues>({});
+  const [loadedReminderKeys, setLoadedReminderKeys] = useState<string[]>([]);
+  const [requiredReading, setRequiredReading] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const configurationQuery = useQuery<{
+    monitoringRequirementConfiguration: MonitoringRequirementConfiguration;
+  }>(MONITORING_REQUIREMENT_CONFIGURATION_QUERY, { skip: !formOpen });
+  const configuration =
+    configurationQuery.data?.monitoringRequirementConfiguration;
+  const cadence = configuration?.cadences.find(
+    (option) => option.value === cadenceType,
+  );
+  const needsInterval =
+    cadence?.requiredFields.includes("intervalDays") ?? false;
+  const needsWeekdays =
+    cadence?.requiredFields.includes("applicableDaysJson") ?? false;
   const [gracePeriodDays, setGracePeriodDays] = useState("1");
-  const [addRequirement, addState] = useMutation(ADD_PATIENT_MONITORING_REQUIREMENT_MUTATION);
-  const [updateRequirement, updateState] = useMutation(UPDATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION);
-  const [deactivateRequirement, deactivateState] = useMutation(DEACTIVATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION);
-  const saving = addState.loading || updateState.loading || deactivateState.loading;
+  const [addRequirement, addState] = useMutation(
+    ADD_PATIENT_MONITORING_REQUIREMENT_MUTATION,
+  );
+  const [updateRequirement, updateState] = useMutation(
+    UPDATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION,
+  );
+  const [deactivateRequirement, deactivateState] = useMutation(
+    DEACTIVATE_PROGRAMME_MONITORING_REQUIREMENT_MUTATION,
+  );
+  const saving =
+    addState.loading || updateState.loading || deactivateState.loading;
+  const validChoices =
+    configuration?.observationTypes.some(
+      (option) => option.value === observationType,
+    ) &&
+    configuration?.cadences.some((option) => option.value === cadenceType) &&
+    (observationType !== "glucose" ||
+      configuration?.glucoseContexts.some(
+        (option) => option.value === observationContext,
+      ));
 
   function requirementPayload() {
     return {
       observationType,
-      observationContext,
-      required: true,
+      observationContext:
+        observationType === "glucose" ? observationContext : "",
+      required: requiredReading,
       cadenceType,
-      intervalDays: Number(intervalDays) || undefined,
-      frequencyPerInterval: Number(frequencyPerInterval) || undefined,
-      applicableDaysJson: applicableDays
-        .split(",")
-        .map((day) => day.trim())
-        .filter(Boolean),
-      timeOfDay: timeOfDay || undefined,
-      reminderConfigJson: {
-        reminders: reminders
-          .split(",")
-          .map((time) => time.trim())
-          .filter(Boolean)
-          .map((time) => ({ time })),
-      },
-      gracePeriodDays: Number(gracePeriodDays) || 0,
+      intervalDays: needsInterval ? Number(intervalDays) : null,
+      frequencyPerInterval: Number(frequencyPerInterval),
+      applicableDaysJson: needsWeekdays ? applicableDays : [],
+      timeOfDay,
+      reminderConfigJson: configuration
+        ? reminderPayload(configuration, reminders)
+        : {},
+      gracePeriodDays: Number(gracePeriodDays),
     };
   }
 
@@ -946,34 +1012,115 @@ function MonitoringSchedulePanel({
     setSelectedRequirementId(null);
     setObservationType("glucose");
     setObservationContext("fasting");
-    setCadenceType("daily");
+    setCadenceType("interval_days");
     setIntervalDays("1");
     setFrequencyPerInterval("1");
-    setApplicableDays("monday,tuesday,wednesday,thursday,friday,saturday,sunday");
+    setApplicableDays([]);
     setTimeOfDay("07:00");
-    setReminders("08:00");
+    setReminders({});
+    setLoadedReminderKeys([]);
+    setRequiredReading(true);
+    setFieldErrors({});
+    setError(null);
     setGracePeriodDays("1");
   }
 
   function loadRequirement(requirement: ProgrammeMonitoringRequirement) {
     setSelectedRequirementId(requirement.id);
-    setObservationType(requirement.observationType ?? "glucose");
-    setObservationContext(requirement.observationContext ?? "");
-    setCadenceType(requirement.cadenceType ?? "daily");
+    setObservationType(requirement.observationType?.toLowerCase() ?? "glucose");
+    setObservationContext(requirement.observationContext?.toLowerCase() ?? "");
+    setCadenceType(requirement.cadenceType?.toLowerCase() ?? "interval_days");
     setIntervalDays(String(requirement.intervalDays ?? 1));
     setFrequencyPerInterval(String(requirement.frequencyPerInterval ?? 1));
-    setApplicableDays(Array.isArray(requirement.applicableDaysJson) ? requirement.applicableDaysJson.join(",") : "");
+    setApplicableDays(
+      Array.isArray(requirement.applicableDaysJson)
+        ? requirement.applicableDaysJson.filter(
+            (day): day is string => typeof day === "string",
+          )
+        : [],
+    );
     setTimeOfDay(requirement.timeOfDay ?? "");
     setGracePeriodDays(String(requirement.gracePeriodDays ?? 0));
+    setReminders(reminderFormValues(requirement.reminderConfigJson));
+    setLoadedReminderKeys(
+      requirement.reminderConfigJson &&
+        typeof requirement.reminderConfigJson === "object" &&
+        !Array.isArray(requirement.reminderConfigJson)
+        ? Object.keys(requirement.reminderConfigJson)
+        : [],
+    );
+    setRequiredReading(requirement.required);
+    setFieldErrors({});
+    setError(null);
   }
 
   async function handleSaveRequirement(event: FormEvent) {
     event.preventDefault();
+    if (!canManage || saving) return;
+    setFieldErrors({});
+    if (!validChoices) {
+      setError("Select a supported observation type, context, and cadence.");
+      return;
+    }
+    if (!configuration) return;
+    const validation: Record<string, string> = {};
+    if (configuration.timeOfDayRequired && !timeOfDay)
+      validation.timeOfDay = "Choose a time of day.";
+    if (
+      needsInterval &&
+      (!intervalDays ||
+        !Number.isInteger(Number(intervalDays)) ||
+        Number(intervalDays) < 1)
+    )
+      validation.intervalDays = "Enter a positive whole number.";
+    if (
+      needsWeekdays &&
+      (!applicableDays.length ||
+        applicableDays.some(
+          (day) =>
+            !configuration.weekdays.some((option) => option.value === day),
+        ))
+    )
+      validation.applicableDaysJson = "Select valid weekdays.";
+    if (
+      !frequencyPerInterval ||
+      !Number.isInteger(Number(frequencyPerInterval)) ||
+      Number(frequencyPerInterval) < 1 ||
+      Number(frequencyPerInterval) > configuration.maxFrequencyPerInterval
+    )
+      validation.frequencyPerInterval = `Choose between 1 and ${configuration.maxFrequencyPerInterval} readings per interval.`;
+    if (
+      !gracePeriodDays ||
+      !Number.isInteger(Number(gracePeriodDays)) ||
+      Number(gracePeriodDays) < 0
+    )
+      validation.gracePeriodDays = "Enter a nonnegative whole number.";
+    for (const setting of configuration.reminderSettings) {
+      if (setting.valueType === "boolean") continue;
+      const value = reminders[setting.key] ?? setting.defaultValue;
+      if (setting.nullable && (value === "" || value === null)) continue;
+      if (
+        value === "" ||
+        value === null ||
+        !Number.isInteger(Number(value)) ||
+        Number(value) < 1
+      )
+        validation[`reminderConfigJson.${setting.key}`] =
+          "Enter a positive whole number.";
+    }
+    if (Object.keys(validation).length) {
+      setError(null);
+      setFieldErrors(validation);
+      return;
+    }
     setError(null);
     try {
       if (selectedRequirementId) {
         await updateRequirement({
-          variables: { requirementId: selectedRequirementId, data: requirementPayload() },
+          variables: {
+            requirementId: selectedRequirementId,
+            data: requirementPayload(),
+          },
         });
       } else {
         await addRequirement({
@@ -986,6 +1133,7 @@ function MonitoringSchedulePanel({
       setFormOpen(false);
       onChanged();
     } catch (err) {
+      setFieldErrors(monitoringFieldErrors(err));
       setError(mapError(err));
     }
   }
@@ -994,7 +1142,8 @@ function MonitoringSchedulePanel({
     setError(null);
     try {
       await deactivateRequirement({ variables: { requirementId } });
-      if (selectedRequirementId === requirementId) setSelectedRequirementId(null);
+      if (selectedRequirementId === requirementId)
+        setSelectedRequirementId(null);
       onChanged();
     } catch (err) {
       setError(mapError(err));
@@ -1022,7 +1171,11 @@ function MonitoringSchedulePanel({
         </Button>
       </PanelHeader>
       <PanelBody className="space-y-4">
-        {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
+        {error ? (
+          <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
         {requirements.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border bg-background px-4 py-6 text-center text-sm text-muted">
             No active programme monitoring requirements.
@@ -1030,10 +1183,20 @@ function MonitoringSchedulePanel({
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {requirements.map((requirement) => (
-              <div key={requirement.id} className="rounded-lg border border-border bg-background px-4 py-3">
-                <p className="text-sm font-semibold text-text">{titleCase(requirement.observationContext ?? requirement.observationType)}</p>
+              <div
+                key={requirement.id}
+                className="rounded-lg border border-border bg-background px-4 py-3"
+              >
+                <p className="text-sm font-semibold text-text">
+                  {titleCase(
+                    requirement.observationContext ||
+                      requirement.observationType,
+                  )}
+                </p>
                 <p className="mt-1 text-xs text-muted">
-                  {titleCase(requirement.cadenceType)} · {requirement.timeOfDay ?? "any time"} · grace {requirement.gracePeriodDays ?? 0} days
+                  {titleCase(requirement.cadenceType)} ·{" "}
+                  {requirement.timeOfDay ?? "any time"} · grace{" "}
+                  {requirement.gracePeriodDays ?? 0} days
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
@@ -1049,7 +1212,14 @@ function MonitoringSchedulePanel({
                     <Pencil className="size-4" />
                     Edit requirement
                   </Button>
-                  <Button type="button" size="sm" variant="secondary" className="text-danger" disabled={!canManage || saving} onClick={() => void handleDeactivate(requirement.id)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="text-danger"
+                    disabled={!canManage || saving}
+                    onClick={() => void handleDeactivate(requirement.id)}
+                  >
                     Deactivate
                   </Button>
                 </div>
@@ -1058,17 +1228,35 @@ function MonitoringSchedulePanel({
           </div>
         )}
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Upcoming windows</p>
-          {windows.length === 0 ? (
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+            Upcoming windows
+          </p>
+          {windowsError || windowsLoading ? (
+            <MonitoringQueryNotice
+              error={windowsError}
+              loading={windowsLoading}
+              label="Expected monitoring windows"
+              onRetry={onRetryWindows}
+            />
+          ) : windows.length === 0 ? (
             <p className="text-sm text-muted">No expected windows available.</p>
           ) : (
             <div className="space-y-2">
               {windows.slice(0, 4).map((window) => (
-                <div key={window.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                  <span className="text-text">{titleCase(window.observationContext ?? window.observationType)}</span>
+                <div
+                  key={window.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <span className="text-text">
+                    {titleCase(
+                      window.observationContext || window.observationType,
+                    )}
+                  </span>
                   <span className="flex items-center gap-2 text-xs text-muted">
                     {formatDateTime(window.dueAt)}
-                    <Badge variant={statusVariant(window.status)}>{titleCase(window.status)}</Badge>
+                    <Badge variant={statusVariant(window.status)}>
+                      {titleCase(window.status)}
+                    </Badge>
                   </span>
                 </div>
               ))}
@@ -1079,55 +1267,279 @@ function MonitoringSchedulePanel({
 
       {formOpen ? (
         <DetailModal
-          title={selectedRequirementId ? "Edit monitoring requirement" : "New monitoring requirement"}
+          title={
+            selectedRequirementId
+              ? "Edit monitoring requirement"
+              : "New monitoring requirement"
+          }
           subtitle="What the patient needs to log or attend, and how often."
           onClose={() => setFormOpen(false)}
         >
-          <form onSubmit={(event) => void handleSaveRequirement(event)} className="space-y-3">
-            {error ? <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p> : null}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="requirement-observation">Observation type</Label>
-                <Input id="requirement-observation" value={observationType} onChange={(event) => setObservationType(event.target.value)} />
+          <form
+            onSubmit={(event) => void handleSaveRequirement(event)}
+            className="space-y-3"
+          >
+            {configurationQuery.loading && !configuration ? (
+              <p role="status" className="text-sm text-muted">
+                Loading monitoring options...
+              </p>
+            ) : null}
+            {configurationQuery.error ? (
+              <div role="alert" className="text-sm text-danger">
+                Monitoring options could not be loaded.{" "}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void configurationQuery.refetch()}
+                >
+                  Retry
+                </Button>
               </div>
+            ) : null}
+            {configuration &&
+            loadedReminderKeys.some(
+              (key) =>
+                !configuration.reminderSettings.some(
+                  (setting) => setting.key === key,
+                ),
+            ) ? (
+              <p role="status" className="text-sm text-muted">
+                This requirement has legacy reminder settings. Review the
+                reminder selections before saving; unsupported settings will be
+                removed.
+              </p>
+            ) : null}
+            {error ? (
+              <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+            ) : null}
+            {Object.keys(fieldErrors).length ? (
+              <ul role="alert" className="space-y-1 text-sm text-danger">
+                {Object.entries(fieldErrors).map(([field, message]) => (
+                  <li key={field}>
+                    <span className="font-medium">
+                      {REMINDER_SETTING_LABELS[field.split(".")[1]] ??
+                        titleCase(field.replace(/([A-Z])/g, " $1"))}
+                      :
+                    </span>{" "}
+                    {message}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <fieldset
+              disabled={
+                !canManage ||
+                saving ||
+                !configuration ||
+                Boolean(configurationQuery.error)
+              }
+              className="grid gap-3 sm:grid-cols-2"
+            >
               <div className="space-y-1.5">
-                <Label htmlFor="requirement-context">Context</Label>
-                <Input id="requirement-context" value={observationContext} onChange={(event) => setObservationContext(event.target.value)} />
+                <Label htmlFor="requirement-observation">
+                  Observation type
+                </Label>
+                <Select
+                  id="requirement-observation"
+                  value={observationType}
+                  options={configuration?.observationTypes ?? []}
+                  placeholder="Select observation type"
+                  required
+                  onChange={(event) => {
+                    setObservationType(event.target.value);
+                    setObservationContext("");
+                  }}
+                />
               </div>
+              {observationType === "glucose" ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="requirement-context">Context</Label>
+                  <Select
+                    id="requirement-context"
+                    value={observationContext}
+                    options={configuration?.glucoseContexts ?? []}
+                    onChange={(event) =>
+                      setObservationContext(event.target.value)
+                    }
+                  />
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="requirement-cadence">Cadence</Label>
-                <Input id="requirement-cadence" value={cadenceType} onChange={(event) => setCadenceType(event.target.value)} placeholder="daily, weekly, interval" />
+                <Select
+                  id="requirement-cadence"
+                  value={cadenceType}
+                  options={configuration?.cadences ?? []}
+                  placeholder="Select cadence"
+                  required
+                  onChange={(event) => setCadenceType(event.target.value)}
+                />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="requirement-interval">Interval days</Label>
-                <Input id="requirement-interval" type="number" min={1} value={intervalDays} onChange={(event) => setIntervalDays(event.target.value)} />
-              </div>
+              {needsInterval ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="requirement-interval">Interval days</Label>
+                  <Input
+                    id="requirement-interval"
+                    type="number"
+                    min={1}
+                    step={1}
+                    required
+                    value={intervalDays}
+                    onChange={(event) => setIntervalDays(event.target.value)}
+                  />
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="requirement-frequency">Frequency</Label>
-                <Input id="requirement-frequency" type="number" min={1} value={frequencyPerInterval} onChange={(event) => setFrequencyPerInterval(event.target.value)} />
+                <Input
+                  id="requirement-frequency"
+                  type="number"
+                  min={1}
+                  max={configuration?.maxFrequencyPerInterval ?? 1}
+                  step={1}
+                  required
+                  value={frequencyPerInterval}
+                  onChange={(event) =>
+                    setFrequencyPerInterval(event.target.value)
+                  }
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="requirement-time">Time of day</Label>
-                <Input id="requirement-time" type="time" value={timeOfDay} onChange={(event) => setTimeOfDay(event.target.value)} />
+                <Input
+                  id="requirement-time"
+                  type="time"
+                  required={configuration?.timeOfDayRequired ?? true}
+                  value={timeOfDay}
+                  onChange={(event) => setTimeOfDay(event.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="requirement-grace">Grace days</Label>
-                <Input id="requirement-grace" type="number" min={0} value={gracePeriodDays} onChange={(event) => setGracePeriodDays(event.target.value)} />
+                <Input
+                  id="requirement-grace"
+                  type="number"
+                  min={0}
+                  step={1}
+                  required
+                  value={gracePeriodDays}
+                  onChange={(event) => setGracePeriodDays(event.target.value)}
+                />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="requirement-reminders">Reminder times</Label>
-                <Input id="requirement-reminders" value={reminders} onChange={(event) => setReminders(event.target.value)} placeholder="08:00,18:00" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="requirement-days">Applicable days</Label>
-              <Textarea id="requirement-days" value={applicableDays} onChange={(event) => setApplicableDays(event.target.value)} placeholder="Applicable days, comma-separated" className="min-h-16" />
-            </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={requiredReading}
+                  onChange={(event) => setRequiredReading(event.target.checked)}
+                />
+                Required reading
+              </label>
+              {needsWeekdays ? (
+                <fieldset className="space-y-2 sm:col-span-2">
+                  <legend className="text-sm font-medium">
+                    Applicable weekdays
+                  </legend>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {configuration?.weekdays.map((day) => (
+                      <label
+                        key={day.value}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={applicableDays.includes(day.value)}
+                          onChange={(event) =>
+                            setApplicableDays((current) =>
+                              event.target.checked
+                                ? [...current, day.value]
+                                : current.filter(
+                                    (value) => value !== day.value,
+                                  ),
+                            )
+                          }
+                        />
+                        {day.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
+              <fieldset className="grid gap-3 border-t border-border pt-3 sm:col-span-2 sm:grid-cols-2">
+                <legend className="text-sm font-medium">
+                  Reminders and follow-up
+                </legend>
+                {configuration?.reminderSettings.map((setting) => {
+                  const value = reminders[setting.key] ?? setting.defaultValue;
+                  const label =
+                    REMINDER_SETTING_LABELS[setting.key] ??
+                    titleCase(setting.key);
+                  return setting.valueType === "boolean" ? (
+                    <label
+                      key={setting.key}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value === true}
+                        onChange={(event) =>
+                          setReminders((current) => ({
+                            ...current,
+                            [setting.key]: event.target.checked,
+                          }))
+                        }
+                      />
+                      {label}
+                    </label>
+                  ) : (
+                    <div key={setting.key} className="space-y-1.5">
+                      <Label htmlFor={`requirement-${setting.key}`}>
+                        {label}
+                      </Label>
+                      <Input
+                        id={`requirement-${setting.key}`}
+                        type="number"
+                        min={1}
+                        step={1}
+                        required={!setting.nullable}
+                        value={typeof value === "boolean" ? "" : (value ?? "")}
+                        onChange={(event) =>
+                          setReminders((current) => ({
+                            ...current,
+                            [setting.key]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </fieldset>
+            </fieldset>
             <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-              <Button type="submit" size="sm" disabled={!canManage || saving || !observationType.trim()}>
-                {saving ? "Saving…" : selectedRequirementId ? "Update requirement" : "Add requirement"}
+              <Button
+                type="submit"
+                size="sm"
+                disabled={
+                  !canManage ||
+                  saving ||
+                  !validChoices ||
+                  Boolean(configurationQuery.error)
+                }
+              >
+                {saving
+                  ? "Saving…"
+                  : selectedRequirementId
+                    ? "Update requirement"
+                    : "Add requirement"}
               </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setFormOpen(false)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setFormOpen(false)}
+              >
                 Cancel
               </Button>
             </div>
@@ -1141,42 +1553,62 @@ function MonitoringSchedulePanel({
 function GapAdherencePanel({
   gaps,
   adherence,
+  gapsError,
+  gapsLoading,
+  adherenceError,
+  adherenceLoading,
+  onRetryGaps,
+  onRetryAdherence,
 }: {
   gaps: MonitoringGap[];
   adherence?: AdherenceData["patientMonitoringAdherenceSummary"];
+  gapsError?: ApolloError;
+  gapsLoading: boolean;
+  adherenceError?: ApolloError;
+  adherenceLoading: boolean;
+  onRetryGaps: () => void;
+  onRetryAdherence: () => void;
 }) {
   return (
     <Panel>
       <PanelHeader>
-        <PanelTitle icon={AlertCircle} count={adherence?.openGapCount ?? gaps.length} countTone="warning">
+        <PanelTitle icon={AlertCircle} count={adherenceError || adherenceLoading ? undefined : adherence?.openGapCount} countTone="warning">
           Gaps And Adherence
         </PanelTitle>
       </PanelHeader>
       <PanelBody className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <StatTile
-            label="Open Gaps"
-            value={adherence?.openGapCount ?? gaps.length}
-            sublabel="missed monitoring"
-            icon={Icons.warning}
-            tone={(adherence?.openGapCount ?? gaps.length) > 0 ? "warning" : "success"}
-          />
-          <StatTile
-            label="Consecutive Misses"
-            value={adherence?.consecutiveMissedCount ?? 0}
-            sublabel="current risk signal"
-            icon={Icons.monitoring}
-            tone={(adherence?.consecutiveMissedCount ?? 0) > 0 ? "danger" : "neutral"}
-          />
-        </div>
-        {gaps.length === 0 ? (
+        {adherenceError || adherenceLoading ? (
+          <MonitoringQueryNotice error={adherenceError} loading={adherenceLoading} label="Monitoring adherence" onRetry={onRetryAdherence} />
+        ) : adherence ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatTile
+              label="Open Gaps"
+              value={adherence.openGapCount}
+              sublabel="missed monitoring"
+              icon={Icons.warning}
+              tone={adherence.openGapCount > 0 ? "warning" : "success"}
+            />
+            <StatTile
+              label="Consecutive Misses"
+              value={adherence.consecutiveMissedCount}
+              sublabel="current risk signal"
+              icon={Icons.monitoring}
+              tone={adherence.consecutiveMissedCount > 0 ? "danger" : "neutral"}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-muted">Monitoring adherence unavailable.</p>
+        )}
+        {gapsError || gapsLoading ? (
+          <MonitoringQueryNotice error={gapsError} loading={gapsLoading} label="Monitoring gap history" onRetry={onRetryGaps} />
+        ) : gaps.length === 0 ? (
           <p className="text-sm text-muted">No monitoring gaps for this enrolment.</p>
         ) : (
           <div className="space-y-2">
             {gaps.slice(0, 4).map((gap) => (
               <div key={gap.id} className="rounded-lg border border-border bg-background px-3 py-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-text">{titleCase(gap.observationContext ?? gap.observationType)}</p>
+                  <p className="text-sm font-medium text-text">{titleCase(gap.observationContext || gap.observationType)}</p>
                   <Badge variant={statusVariant(gap.status)}>{titleCase(gap.status)}</Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">
@@ -1191,67 +1623,124 @@ function GapAdherencePanel({
   );
 }
 
-export function PatientProgrammeContinuityPanel({ patientId }: { patientId: string }) {
+export function PatientProgrammeContinuityPanel({
+  patientId,
+}: {
+  patientId: string;
+}) {
+  const [selectedEnrolmentId, setSelectedEnrolmentId] = useUrlState(
+    "enrolment",
+    "",
+  );
+  const [activeTab, setActiveTab] = useUrlState("programmeTab", "readiness", [
+    "readiness",
+    "baseline",
+    "care",
+    "shared",
+    "journey",
+    "monitoring",
+    "adherence",
+    "team",
+  ]);
   const { user } = useAuth();
   const canManageCarePlans = hasProgrammePermission(user, "care_plan.manage");
   const canManageMonitoring = hasProgrammePermission(user, "monitoring.manage");
-  const enrolmentsQuery = useQuery<EnrolmentsData>(PATIENT_PROGRAMME_ENROLMENTS_QUERY, {
-    variables: { patientId },
-    fetchPolicy: "cache-and-network",
-  });
-  const enrolment = enrolmentsQuery.data?.clinicProgrammeEnrolments?.[0] ?? null;
+  const enrolmentsQuery = useQuery<EnrolmentsData>(
+    PATIENT_PROGRAMME_ENROLMENTS_QUERY,
+    {
+      variables: { patientId },
+      fetchPolicy: "cache-and-network",
+    },
+  );
+  const enrolments = enrolmentsQuery.data?.clinicProgrammeEnrolments ?? [];
+  const enrolment =
+    enrolments.find((item) => item.id === selectedEnrolmentId) ??
+    enrolments.find((item) => item.status.toUpperCase() === "ACTIVE") ??
+    enrolments[0] ??
+    null;
   const enrolmentId = enrolment?.id;
-  const readinessQuery = useQuery<ReadinessData>(PROGRAMME_ENROLMENT_READINESS_QUERY, {
-    variables: { enrolmentId },
-    skip: !enrolmentId,
-    fetchPolicy: "cache-and-network",
-  });
-  const baselineQuery = useQuery<BaselineData>(PROGRAMME_CURRENT_BASELINE_QUERY, {
-    variables: { enrolmentId },
-    skip: !enrolmentId,
-    fetchPolicy: "cache-and-network",
-  });
-  const carePlanQuery = useQuery<CarePlanData>(PROGRAMME_CURRENT_CARE_PLAN_QUERY, {
-    variables: { enrolmentId },
-    skip: !enrolmentId,
-    fetchPolicy: "cache-and-network",
-  });
+  const readinessQuery = useQuery<ReadinessData>(
+    PROGRAMME_ENROLMENT_READINESS_QUERY,
+    {
+      variables: { enrolmentId },
+      skip: !enrolmentId,
+      fetchPolicy: "cache-and-network",
+    },
+  );
+  const baselineQuery = useQuery<BaselineData>(
+    PROGRAMME_CURRENT_BASELINE_QUERY,
+    {
+      variables: { enrolmentId },
+      skip: !enrolmentId,
+      fetchPolicy: "cache-and-network",
+    },
+  );
+  const carePlanQuery = useQuery<CarePlanData>(
+    PROGRAMME_CURRENT_CARE_PLAN_QUERY,
+    {
+      variables: { enrolmentId },
+      skip: !enrolmentId,
+      fetchPolicy: "cache-and-network",
+    },
+  );
   const scheduleQuery = useQuery<ScheduleData>(PROGRAMME_SCHEDULE_QUERY, {
     variables: { enrolmentId },
     skip: !enrolmentId,
     fetchPolicy: "cache-and-network",
   });
-  const requirementsQuery = useQuery<RequirementsData>(EFFECTIVE_MONITORING_REQUIREMENTS_QUERY, {
-    variables: { enrolmentId },
-    skip: !enrolmentId,
-    fetchPolicy: "cache-and-network",
-  });
-  const windowsQuery = useQuery<WindowsData>(EXPECTED_MONITORING_WINDOWS_QUERY, {
-    variables: { enrolmentId, limit: 8 },
-    skip: !enrolmentId,
-    fetchPolicy: "cache-and-network",
-  });
+  const requirementsQuery = useQuery<RequirementsData>(
+    EFFECTIVE_MONITORING_REQUIREMENTS_QUERY,
+    {
+      variables: { enrolmentId },
+      skip: !enrolmentId,
+      fetchPolicy: "cache-and-network",
+    },
+  );
+  const windowsQuery = useQuery<WindowsData>(
+    EXPECTED_MONITORING_WINDOWS_QUERY,
+    {
+      variables: { enrolmentId, limit: 8 },
+      skip: !enrolmentId || activeTab !== "monitoring",
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
+    },
+  );
   const gapsQuery = useQuery<GapsData>(MONITORING_GAP_HISTORY_QUERY, {
     variables: { enrolmentId, limit: 8 },
-    skip: !enrolmentId,
+    skip: !enrolmentId || activeTab !== "adherence",
     fetchPolicy: "cache-and-network",
+    errorPolicy: "all",
   });
-  const adherenceQuery = useQuery<AdherenceData>(PATIENT_MONITORING_ADHERENCE_SUMMARY_QUERY, {
-    variables: { enrolmentId },
-    skip: !enrolmentId,
-    fetchPolicy: "cache-and-network",
-  });
+  const adherenceQuery = useQuery<AdherenceData>(
+    PATIENT_MONITORING_ADHERENCE_SUMMARY_QUERY,
+    {
+      variables: { enrolmentId },
+      skip: !enrolmentId || activeTab !== "adherence",
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
+    },
+  );
 
   function refetchProgramme() {
-    void enrolmentsQuery.refetch();
-    void readinessQuery.refetch();
-    void baselineQuery.refetch();
-    void carePlanQuery.refetch();
-    void scheduleQuery.refetch();
-    void requirementsQuery.refetch();
-    void windowsQuery.refetch();
-    void gapsQuery.refetch();
-    void adherenceQuery.refetch();
+    void Promise.allSettled([
+      enrolmentsQuery.refetch(),
+      readinessQuery.refetch(),
+      baselineQuery.refetch(),
+      carePlanQuery.refetch(),
+      scheduleQuery.refetch(),
+      requirementsQuery.refetch(),
+      ...(activeTab === "monitoring" &&
+      !isAdherenceAccessDenied(windowsQuery.error)
+        ? [windowsQuery.refetch()]
+        : []),
+      ...(activeTab === "adherence" && !isAdherenceAccessDenied(gapsQuery.error)
+        ? [gapsQuery.refetch()]
+        : []),
+      ...(activeTab === "adherence" &&
+      !isAdherenceAccessDenied(adherenceQuery.error)
+        ? [adherenceQuery.refetch()]
+        : []),
+    ]);
   }
 
   if (enrolmentsQuery.loading && !enrolment) {
@@ -1262,8 +1751,24 @@ export function PatientProgrammeContinuityPanel({ patientId }: { patientId: stri
     return (
       <Panel>
         <PanelEmpty>
-          <p className="font-medium text-text">No diabetes programme enrolment</p>
-          <p className="mt-1 text-xs text-muted">Enrol this patient in a clinic programme before baseline and care-plan work.</p>
+          <p
+            role={enrolmentsQuery.error ? "alert" : undefined}
+            className="font-medium text-text"
+          >
+            {enrolmentsQuery.error
+              ? "Unable to load programme enrolments."
+              : "No care programme enrolment"}
+          </p>
+          {enrolmentsQuery.error ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void enrolmentsQuery.refetch()}
+            >
+              Retry
+            </Button>
+          ) : null}
         </PanelEmpty>
       </Panel>
     );
@@ -1273,51 +1778,240 @@ export function PatientProgrammeContinuityPanel({ patientId }: { patientId: stri
   const baseline = baselineQuery.data?.programmeCurrentBaseline ?? null;
   const carePlan = carePlanQuery.data?.programmeCurrentCarePlan ?? null;
   const scheduleItems = scheduleQuery.data?.programmeSchedule ?? [];
-  const requirements = requirementsQuery.data?.effectiveMonitoringRequirements ?? [];
+  const requirements =
+    requirementsQuery.data?.effectiveMonitoringRequirements ?? [];
   const windows = windowsQuery.data?.expectedMonitoringWindows.items ?? [];
   const gaps = gapsQuery.data?.monitoringGapHistory.items ?? [];
   const adherence = adherenceQuery.data?.patientMonitoringAdherenceSummary;
 
   return (
-    <div className="space-y-6">
-      <Panel>
-        <PanelHeader>
-          <PanelTitle icon={Icons.health}>Diabetes Programme</PanelTitle>
-          <Badge variant={statusVariant(enrolment.status)}>{titleCase(enrolment.status)}</Badge>
-        </PanelHeader>
-        <PanelBody>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-lg font-semibold text-text">{enrolment.programme.name}</p>
-              <p className="mt-1 text-sm text-muted">
-                Lead provider: {enrolment.leadProvider?.displayName ?? "Not assigned"}
-              </p>
-            </div>
-            <p className="text-sm text-muted">
-              Monitoring cadence: every {enrolment.monitoringCadenceDays} day{enrolment.monitoringCadenceDays === 1 ? "" : "s"}
-            </p>
-          </div>
-        </PanelBody>
-      </Panel>
-
-      {readiness ? <ReadinessPanel readiness={readiness} /> : null}
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <BaselineReviewPanel baseline={baseline} onChanged={refetchProgramme} canManage={canManageCarePlans} />
-        <CarePlanPanel enrolmentId={enrolment.id} carePlan={carePlan} onChanged={refetchProgramme} canManage={canManageCarePlans} />
+    <div className="min-w-0 space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+        <div className="min-w-0 space-y-1">
+          <h2 className="break-words text-base font-semibold">
+            {enrolment.programme.name}
+          </h2>
+          <p className="text-xs text-muted">
+            Lead provider:{" "}
+            {enrolment.leadProvider?.displayName ?? "Not assigned"}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {enrolments.length > 1 ? (
+            <Select
+              aria-label="Patient programme enrolment"
+              className="w-full sm:w-64"
+              value={enrolment.id}
+              options={enrolments.map((item) => ({
+                value: item.id,
+                label: `${item.programme.name} - ${titleCase(item.status)}`,
+              }))}
+              onChange={(event) => setSelectedEnrolmentId(event.target.value)}
+            />
+          ) : null}
+          <Badge variant={statusVariant(enrolment.status)}>
+            {titleCase(enrolment.status)}
+          </Badge>
+          <ProgrammeEnrolmentActions
+            key={enrolment.id}
+            enrolment={enrolment}
+            onChanged={refetchProgramme}
+            onActionOpen={() => setSelectedEnrolmentId(enrolment.id)}
+          />
+        </div>
+      </header>
+      <WorkspaceTabs
+        id="patient-programme"
+        label="Patient programme management"
+        value={activeTab}
+        onChange={(tab) => {
+          setSelectedEnrolmentId(enrolment.id);
+          setActiveTab(tab);
+        }}
+        tabs={[
+          { key: "readiness", label: "Readiness" },
+          { key: "team", label: "Care Team" },
+          { key: "baseline", label: "Baseline" },
+          { key: "care", label: "Enrolment Care Plan" },
+          { key: "shared", label: "Shared Programme Plans" },
+          { key: "journey", label: "Care Journey" },
+          { key: "monitoring", label: "Monitoring Schedule" },
+          { key: "adherence", label: "Adherence" },
+        ]}
+      />
+      {enrolmentsQuery.error ||
+      readinessQuery.error ||
+      baselineQuery.error ||
+      carePlanQuery.error ||
+      scheduleQuery.error ||
+      requirementsQuery.error ? (
+        <p role="alert" className="text-sm text-danger">
+          Some programme information could not be refreshed.{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={refetchProgramme}
+          >
+            Retry
+          </button>
+        </p>
+      ) : null}
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-readiness"
+        aria-labelledby="patient-programme-tab-readiness"
+        hidden={activeTab !== "readiness"}
+      >
+        {readiness ? (
+          <ReadinessPanel readiness={readiness} />
+        ) : (
+          <p className="py-6 text-sm text-muted">
+            {readinessQuery.loading
+              ? "Loading readiness..."
+              : "No readiness information available."}
+          </p>
+        )}
       </div>
-
-      <CareJourneyCalendarPanel carePlan={carePlan} items={scheduleItems} onChanged={refetchProgramme} canManage={canManageCarePlans} />
-
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-team"
+        aria-labelledby="patient-programme-tab-team"
+        hidden={activeTab !== "team"}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border text-muted">
+              <tr>
+                <th className="px-3 py-3 font-medium">Role</th>
+                <th className="px-3 py-3 font-medium">Team member</th>
+                <th className="px-3 py-3 font-medium">Assigned</th>
+              </tr>
+            </thead>
+            <tbody>
+              {enrolment.careTeamAssignments
+                .filter((assignment) => assignment.active)
+                .map((assignment) => (
+                  <tr key={assignment.id} className="border-b border-border">
+                    <td className="px-3 py-3">{titleCase(assignment.role)}</td>
+                    <td className="px-3 py-3">
+                      {assignment.provider?.displayName ??
+                        assignment.assignedUserDisplayName}
+                    </td>
+                    <td className="px-3 py-3">
+                      {formatDateTime(assignment.assignedAt)}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+        {!enrolment.careTeamAssignments.some(
+          (assignment) => assignment.active,
+        ) ? (
+          <p className="py-6 text-center text-sm text-muted">
+            No care-team members assigned.
+          </p>
+        ) : null}
+      </div>
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-baseline"
+        aria-labelledby="patient-programme-tab-baseline"
+        hidden={activeTab !== "baseline"}
+      >
+        <BaselineReviewPanel
+          key={enrolment.id}
+          baseline={baseline}
+          onChanged={refetchProgramme}
+          canManage={canManageCarePlans}
+        />
+      </div>
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-care"
+        aria-labelledby="patient-programme-tab-care"
+        hidden={activeTab !== "care"}
+      >
+        {carePlanQuery.loading && !carePlanQuery.data ? (
+          <p className="py-6 text-sm text-muted">Loading care plan...</p>
+        ) : carePlanQuery.error && !carePlanQuery.data ? (
+          <p className="py-6 text-sm text-muted">Care plan unavailable.</p>
+        ) : (
+          <CarePlanPanel
+            key={enrolment.id}
+            enrolmentId={enrolment.id}
+            carePlan={carePlan}
+            onChanged={refetchProgramme}
+            canManage={canManageCarePlans}
+          />
+        )}
+      </div>
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-journey"
+        aria-labelledby="patient-programme-tab-journey"
+        hidden={activeTab !== "journey"}
+      >
+        <CareJourneyCalendarPanel
+          key={enrolment.id}
+          carePlan={carePlan}
+          items={scheduleItems}
+          onChanged={refetchProgramme}
+          canManage={canManageCarePlans}
+        />
+      </div>
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-shared"
+        aria-labelledby="patient-programme-tab-shared"
+        hidden={activeTab !== "shared"}
+      >
+        <ProgrammeSharedPlansReadOnly
+          key={enrolment.programme.id}
+          programmeId={enrolment.programme.id}
+          active={activeTab === "shared"}
+        />
+      </div>
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-monitoring"
+        aria-labelledby="patient-programme-tab-monitoring"
+        hidden={activeTab !== "monitoring"}
+      >
         <MonitoringSchedulePanel
+          key={enrolment.id}
           enrolmentId={enrolment.id}
           requirements={requirements}
           windows={windows}
+          windowsError={windowsQuery.error}
+          windowsLoading={windowsQuery.loading}
+          onRetryWindows={() => {
+            void windowsQuery.refetch().catch(() => undefined);
+          }}
           onChanged={refetchProgramme}
           canManage={canManageMonitoring}
         />
-        <GapAdherencePanel gaps={gaps} adherence={adherence} />
+      </div>
+      <div
+        role="tabpanel"
+        id="patient-programme-panel-adherence"
+        aria-labelledby="patient-programme-tab-adherence"
+        hidden={activeTab !== "adherence"}
+      >
+        <GapAdherencePanel
+          gaps={gaps}
+          adherence={adherence}
+          gapsError={gapsQuery.error}
+          gapsLoading={gapsQuery.loading}
+          adherenceError={adherenceQuery.error}
+          adherenceLoading={adherenceQuery.loading}
+          onRetryGaps={() => {
+            void gapsQuery.refetch().catch(() => undefined);
+          }}
+          onRetryAdherence={() => {
+            void adherenceQuery.refetch().catch(() => undefined);
+          }}
+        />
       </div>
     </div>
   );

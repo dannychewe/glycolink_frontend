@@ -1,16 +1,25 @@
-import { VideoConsultationCall } from "@/components/VideoConsultationCall";
+"use client";
+
+import { useCallback, useState } from "react";
+import { useParams } from "next/navigation";
+import { MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { VideoConsultationCall, type CallState } from "@/components/VideoConsultationCall";
+import { VideoPatientPanel } from "@/components/patient/appointments/VideoPatientPanel";
 
-type PatientVideoConsultationPageProps = Readonly<{
-  params: Promise<{
-    id: string;
-  }>;
-}>;
+export default function PatientVideoConsultationPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? "";
 
-export default async function PatientVideoConsultationPage({
-  params,
-}: PatientVideoConsultationPageProps) {
-  const { id } = await params;
+  const [callState, setCallState] = useState<CallState>("idle");
+
+  const handleCallStateChange = useCallback((state: CallState) => {
+    setCallState(state);
+  }, []);
+
+  const isLive = callState === "ready" || callState === "joined";
+  const hasLeft = callState === "left";
 
   return (
     <Container className="max-w-none py-2">
@@ -19,6 +28,21 @@ export default async function PatientVideoConsultationPage({
         backHref={`/patient/bookings/${id}`}
         backLabel="Back to appointment"
         pcqHref={`/patient/pcq/${id}`}
+        onCallStateChange={handleCallStateChange}
+        postCallActions={
+          <>
+            <Button href="/patient/records" className="bg-white/10 text-white hover:bg-white/20">
+              View your records
+            </Button>
+            <Button href="/patient/messages" variant="ghost" className="text-white hover:bg-white/10">
+              <MessageSquare className="size-4" />
+              Message consultant
+            </Button>
+          </>
+        }
+        companion={
+          <VideoPatientPanel appointmentId={id} isLive={isLive} hasLeft={hasLeft} />
+        }
       />
     </Container>
   );

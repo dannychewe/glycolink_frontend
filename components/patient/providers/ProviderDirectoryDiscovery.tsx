@@ -257,8 +257,8 @@ export function ProviderDirectoryDiscovery() {
                     {fee !== null ? <p className="text-xs text-muted">ZMW {fee.toLocaleString("en-ZM")}</p> : null}
                   </div>
                   {provider.eligible ? (
-                    <Button href={`/patient/providers/${provider.id}/book`} fullWidth className="sm:w-auto">
-                      Request
+                    <Button href={`/providers/${provider.id}`} fullWidth className="sm:w-auto">
+                      Choose care
                     </Button>
                   ) : (
                     <Button type="button" fullWidth disabled className="sm:w-auto">
