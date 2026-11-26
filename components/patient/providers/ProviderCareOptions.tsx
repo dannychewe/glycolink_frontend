@@ -50,7 +50,7 @@ export function ProviderCareOptions({
   const [joinError, setJoinError] = useState<string | null>(null);
   const restoredProgramme = useRef(false);
   const isPatient = !isAuthenticated || getUserAccountType(user) === "PATIENT";
-  const destination = `/providers/${providerId}`;
+  const destination = `/our-team/${providerId}`;
 
   useEffect(() => {
     const programmeId = new URLSearchParams(window.location.search).get(
@@ -190,7 +190,7 @@ export function ProviderCareOptions({
             )}
             {!offer.prices.length ? (
               <p className="text-sm text-muted">
-                The clinic needs to finish pricing before you can join.
+                Pricing needs to be set up before you can join.
               </p>
             ) : null}
           </div>
@@ -311,8 +311,8 @@ export function ProviderCareOptions({
               ))}
             </fieldset>
             <p className="text-sm text-muted">
-              Joining enrols you with this clinic and consultant. Payment is
-              collected by mobile money on the next screen. Your clinic will
+              Joining enrols you with Naje Health and your consultant. Payment is
+              collected by mobile money on the next screen. Your care team will
               complete your baseline assessment and care plan before clinical
               activation.
             </p>

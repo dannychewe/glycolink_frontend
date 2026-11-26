@@ -168,7 +168,7 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
       .filter((membership) => membership?.organizationId)
       .map((membership) => ({
         value: membership.organizationId as string,
-        label: membership.organizationName ?? "Clinic organization",
+        label: membership.organizationName ?? "Organization",
         description: membership.tenantName ?? undefined,
         badge: titleCase(membership.role),
       }))
@@ -554,11 +554,11 @@ export function ProgrammeBillingDashboard({ workflow = "overview" }: { workflow?
               <div className="grid gap-3 sm:grid-cols-2">
                 <SearchableSelector
                   id="payer-organization"
-                  label="Clinic organization"
+                  label="Organization"
                   value={organizationId}
                   options={organizationOptions}
-                  placeholder="Select clinic"
-                  emptyLabel="No clinic organizations found in your session"
+                  placeholder="Select organization"
+                  emptyLabel="No organizations found in your session"
                   disabled={!canManageBilling}
                   onChange={setOrganizationId}
                 />

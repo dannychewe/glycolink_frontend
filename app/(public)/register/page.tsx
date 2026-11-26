@@ -8,7 +8,7 @@ export default function RegisterPage() {
     <PublicOnly>
       <AuthCard
         title="Create your account"
-        description="Join Naje Health to support structured diabetes care programmes."
+        description="Join Naje Health to start your structured diabetes care programme."
       >
         <Suspense>
           <AuthForm mode="register" />

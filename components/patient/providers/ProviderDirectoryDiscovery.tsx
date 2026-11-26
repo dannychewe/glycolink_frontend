@@ -86,7 +86,7 @@ export function ProviderDirectoryDiscovery() {
         description="Discover specialists available to your patient account and request a consultation."
         actions={
           <>
-            <Badge variant="secondary">Clinic policy applied</Badge>
+            <Badge variant="secondary">Care policy applied</Badge>
             <Badge variant="secondary">Public consultants only</Badge>
           </>
         }
@@ -145,7 +145,7 @@ export function ProviderDirectoryDiscovery() {
       {error ? (
         <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
           {code === "TENANT_ACCESS_DENIED" || code === "PROVIDER_ACCESS_DENIED"
-            ? "Access denied for provider directory in this tenant."
+            ? "Access denied for provider directory."
             : "Failed to load provider directory."}
         </div>
       ) : null}
@@ -257,7 +257,7 @@ export function ProviderDirectoryDiscovery() {
                     {fee !== null ? <p className="text-xs text-muted">ZMW {fee.toLocaleString("en-ZM")}</p> : null}
                   </div>
                   {provider.eligible ? (
-                    <Button href={`/providers/${provider.id}`} fullWidth className="sm:w-auto">
+                    <Button href={`/our-team/${provider.id}`} fullWidth className="sm:w-auto">
                       Choose care
                     </Button>
                   ) : (

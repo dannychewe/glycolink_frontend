@@ -59,7 +59,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             <p className="text-lg font-semibold text-text">${provider.consultationFee}</p>
           </div>
 
-          <Button href={`/providers/${provider.slug}`} variant="secondary" fullWidth className="sm:w-auto">
+          <Button href={`/our-team/${provider.slug}`} variant="secondary" fullWidth className="sm:w-auto">
             View clinician
           </Button>
         </div>

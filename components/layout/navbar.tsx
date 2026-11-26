@@ -13,9 +13,8 @@ import { cn } from "@/lib/utils/cn";
 
 const navItems = [
   { href: "/", label: "Home", exact: true },
-  { href: "/clinics", label: "For Clinics", exact: false },
-  { href: "/providers", label: "Providers", exact: false },
   { href: "/how-it-works", label: "How it works", exact: false },
+  { href: "/our-team", label: "Our team", exact: false },
 ];
 
 export function Navbar() {

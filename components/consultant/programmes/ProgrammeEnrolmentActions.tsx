@@ -263,7 +263,7 @@ export function ProgrammeEnrolmentActions({
                 </div>
                 <SearchableSelector
                   id={`team-member-${enrolment.id}`}
-                  label="Clinic team member"
+                  label="Care team member"
                   value={memberId}
                   options={candidates
                     .filter((candidate) => candidate.roles.includes(role))
@@ -271,11 +271,11 @@ export function ProgrammeEnrolmentActions({
                       value: candidate.userId,
                       label: candidate.displayName,
                     }))}
-                  placeholder="Select clinic team member"
+                  placeholder="Select care team member"
                   emptyLabel={
                     candidatesQuery.loading
-                      ? "Loading clinic team..."
-                      : "No eligible clinic members"
+                      ? "Loading care team..."
+                      : "No eligible care team members"
                   }
                   disabled={
                     saving ||

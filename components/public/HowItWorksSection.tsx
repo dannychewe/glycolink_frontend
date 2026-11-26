@@ -6,23 +6,23 @@ import { SectionLabel } from "@/components/public/SectionLabel";
 const steps = [
   {
     icon: UserRoundPlus,
-    title: "Set up a clinic programme",
-    description: "Create a diabetes care programme with enrolment rules, care-team roles, monitoring cadence, and billing setup.",
+    title: "Register and get enrolled",
+    description: "Create your Naje Health account, complete a diabetes baseline, and get enrolled into a programme by our care team.",
   },
   {
     icon: CalendarCheck2,
-    title: "Enroll and assess patients",
-    description: "Invite patients, capture their diabetes baseline, and prepare the clinical context before activation.",
+    title: "Receive your care plan",
+    description: "Your care team builds a personalised plan with goals, follow-ups, lab reviews, medication checks, and monitoring.",
   },
   {
     icon: ClipboardPlus,
-    title: "Activate care plans",
-    description: "Turn goals, follow-ups, lab reviews, medication checks, and monitoring requirements into one coordinated plan.",
+    title: "Follow your daily tasks",
+    description: "Log glucose readings, attend appointments, complete labs, and stay on track with reminders from your care team.",
   },
   {
     icon: HeartPulse,
-    title: "Work the daily queue",
-    description: "See who needs attention today, act on missed readings and alerts, and keep adherence visible for the clinic.",
+    title: "Stay connected to your team",
+    description: "Your doctors, nurses, and coordinators at Naje Health review your progress, respond to alerts, and adjust your plan.",
   },
 ];
 
@@ -32,10 +32,10 @@ export function HowItWorksSection() {
       <Container className="space-y-8">
         <div className="max-w-2xl space-y-4">
           <SectionLabel index="01">How it works</SectionLabel>
-          <h2 className="text-3xl sm:text-4xl">A practical operating system for diabetes continuity care</h2>
+          <h2 className="text-3xl sm:text-4xl">Your diabetes care journey with Naje Health</h2>
           <p>
-            Naje Health helps clinics move beyond one-off visits by giving every enrolled patient
-            a clear plan, a monitoring rhythm, and a care team that can see what needs attention.
+            From enrolment to daily follow-up, Naje Health gives you a clear plan,
+            a monitoring rhythm, and a care team that stays connected to your progress.
           </p>
         </div>
 

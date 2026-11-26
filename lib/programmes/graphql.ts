@@ -3420,6 +3420,109 @@ export type ReportingMetricDefinition = {
   permissionScope?: string | null;
 };
 
+export type CohortStatus = "DRAFT" | "OPEN" | "ACTIVE" | "COMPLETED" | "CANCELLED" | string;
+
+export type ProgrammeCohort = {
+  id: UUID;
+  label: string;
+  status: CohortStatus;
+  startsAt: DateString;
+  endsAt: DateString;
+  durationMonths: number;
+  maxCapacity?: number | null;
+  enrolledCount?: number | null;
+  spotsRemaining?: number | null;
+  enrolmentOpensAt?: DateTimeString | null;
+  enrolmentClosesAt?: DateTimeString | null;
+  metadataJson?: JsonValue;
+  createdAt: DateTimeString;
+  updatedAt: DateTimeString;
+};
+
+const COHORT_FIELDS = `
+  id
+  label
+  status
+  startsAt
+  endsAt
+  durationMonths
+  maxCapacity
+  enrolledCount
+  spotsRemaining
+  enrolmentOpensAt
+  enrolmentClosesAt
+  createdAt
+  updatedAt
+`;
+
+export const PROGRAMME_COHORTS_QUERY = gql`
+  query ProgrammeCohorts($programmeId: UUID!, $status: String) {
+    programmeCohorts(programmeId: $programmeId, status: $status) {
+      ${COHORT_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_PROGRAMME_COHORT_MUTATION = gql`
+  mutation CreateProgrammeCohort($programmeId: UUID!, $data: ProgrammeCohortInput!) {
+    createProgrammeCohort(programmeId: $programmeId, data: $data) {
+      cohort {
+        ${COHORT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const UPDATE_PROGRAMME_COHORT_MUTATION = gql`
+  mutation UpdateProgrammeCohort($cohortId: UUID!, $data: ProgrammeCohortInput!) {
+    updateProgrammeCohort(cohortId: $cohortId, data: $data) {
+      cohort {
+        ${COHORT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const OPEN_PROGRAMME_COHORT_MUTATION = gql`
+  mutation OpenProgrammeCohort($cohortId: UUID!) {
+    openProgrammeCohort(cohortId: $cohortId) {
+      cohort {
+        ${COHORT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const ACTIVATE_PROGRAMME_COHORT_MUTATION = gql`
+  mutation ActivateProgrammeCohort($cohortId: UUID!) {
+    activateProgrammeCohort(cohortId: $cohortId) {
+      cohort {
+        ${COHORT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const COMPLETE_PROGRAMME_COHORT_MUTATION = gql`
+  mutation CompleteProgrammeCohort($cohortId: UUID!) {
+    completeProgrammeCohort(cohortId: $cohortId) {
+      cohort {
+        ${COHORT_FIELDS}
+      }
+    }
+  }
+`;
+
+export const CANCEL_PROGRAMME_COHORT_MUTATION = gql`
+  mutation CancelProgrammeCohort($cohortId: UUID!, $reason: String) {
+    cancelProgrammeCohort(cohortId: $cohortId, reason: $reason) {
+      cohort {
+        ${COHORT_FIELDS}
+      }
+    }
+  }
+`;
+
 export const REPORTING_METRIC_DEFINITIONS_QUERY = gql`
   query ReportingMetricDefinitions {
     reportingMetricDefinitions {

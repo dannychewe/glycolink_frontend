@@ -181,14 +181,14 @@ export function ConsultantSidebar({
       <div className="border-b border-border px-4 py-5">
         <Link href="/" onClick={onNavigate} className="flex flex-col items-start gap-1">
           <Logo variant="horizontal" className="h-5 w-auto" />
-          <p className="text-xs text-muted">Clinic diabetes care</p>
+          <p className="text-xs text-muted">Diabetes care console</p>
         </Link>
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto px-4 py-6">
         <div className="space-y-2">
           <p className="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            Clinic Care
+            Care
           </p>
           <nav className="space-y-1">
             {mainNavigation.map((item) => {

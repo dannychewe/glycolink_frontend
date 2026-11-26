@@ -7,9 +7,9 @@ import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils/cn";
 
 const features = [
-  { icon: CalendarCheck2, label: "Run clinic diabetes programmes from one workspace" },
-  { icon: ShieldCheck, label: "Enroll patients into structured care plans" },
-  { icon: HeartPulse, label: "Spot missed readings and urgent glucose alerts sooner" },
+  { icon: CalendarCheck2, label: "Join a structured diabetes programme built around you" },
+  { icon: ShieldCheck, label: "Get a personalised care plan with clear daily tasks" },
+  { icon: HeartPulse, label: "Track your glucose and get timely alerts from your care team" },
 ];
 
 // CGM-style weekly readings. SCALE / target band drive the chart geometry.
@@ -36,17 +36,17 @@ export function HeroSection() {
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />
               <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
             </span>
-            Clinic-led diabetes continuity care
+            Diabetes continuity care by Naje Health
           </div>
 
           <div className="space-y-5">
             <h1 className="font-display text-4xl font-medium leading-[1.04] text-ink sm:text-5xl lg:text-[3.85rem]">
-              Naje Health for{" "}
-              <span className="italic text-primary">diabetes care teams</span>.
+              Diabetes care that{" "}
+              <span className="italic text-primary">stays with you</span>.
             </h1>
             <p className="max-w-lg text-base leading-7 text-muted sm:text-lg">
-              Help clinics enroll diabetic patients, assign care teams, track monitoring schedules,
-              respond to alerts, and keep patients clear on what they need to do today.
+              Naje Health enrols you into a structured diabetes programme with a dedicated care team,
+              personalised care plans, glucose monitoring, and clear daily tasks.
             </p>
           </div>
 
@@ -63,18 +63,18 @@ export function HeroSection() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button href="/register" size="lg">
-              Start a Programme
+              Join a Programme
               <ArrowRight className="size-4" />
             </Button>
-            <Button href="/clinics" variant="secondary" size="lg">
-              For Clinics
+            <Button href="/how-it-works" variant="secondary" size="lg">
+              How it works
             </Button>
           </div>
 
           <p className="text-sm text-muted">
-            Built for clinics, care coordinators, nurses, doctors, and patients managing diabetes together.{" "}
-            <Link href="/clinics" className="font-medium text-primary underline-offset-4 hover:underline">
-              See clinic workflow
+            Managed by Naje Health — doctors, nurses, and care coordinators working together for you.{" "}
+            <Link href="/our-team" className="font-medium text-primary underline-offset-4 hover:underline">
+              Meet our care team
             </Link>
           </p>
         </div>
@@ -90,7 +90,7 @@ export function HeroSection() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted">
-                    Clinic attention queue
+                    Your care dashboard
                   </p>
                   <p className="text-lg font-semibold text-ink">Diabetes care today</p>
                 </div>

@@ -6,30 +6,30 @@ import { SectionLabel } from "@/components/public/SectionLabel";
 const trustItems = [
   {
     icon: BadgeCheck,
-    title: "Clinic-Owned Programmes",
+    title: "Structured Programmes",
     description:
-      "Each programme is scoped to the clinic, its care team, and the patients enrolled into ongoing diabetes care.",
+      "Every patient is enrolled into a Naje Health programme with defined goals, monitoring schedules, and a dedicated care team.",
     iconClass: "bg-primary/10 text-primary",
   },
   {
     icon: ShieldCheck,
-    title: "Protected Patient Context",
+    title: "Your Data, Protected",
     description:
-      "Baseline assessments, care plans, readings, and notes are organized around tenant-scoped access.",
+      "Baseline assessments, care plans, readings, and clinical notes are kept private and only visible to your care team.",
     iconClass: "bg-success/10 text-success",
   },
   {
     icon: HeartHandshake,
-    title: "Care-Team Workflow",
+    title: "Coordinated Care Team",
     description:
-      "Nurses, coordinators, doctors, and billing staff can work from the same programme view with clearer handoffs.",
+      "Nurses, coordinators, and doctors at Naje Health work from the same view with clear handoffs — so nothing falls through the cracks.",
     iconClass: "bg-warning/10 text-warning",
   },
   {
     icon: Waves,
     title: "Monitoring and Alerts",
     description:
-      "Missed readings, glucose signals, reminders, and alert ownership help clinics know who needs action today.",
+      "Missed readings, glucose signals, and reminders keep both you and your Naje Health care team informed on what needs attention.",
     iconClass: "bg-primary/8 text-primary/70",
   },
 ];
@@ -40,10 +40,10 @@ export function TrustSection() {
       <Container className="space-y-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-4">
-            <SectionLabel index="02">Clinic readiness</SectionLabel>
+            <SectionLabel index="02">Why Naje Health</SectionLabel>
             <h2 className="text-3xl sm:text-4xl">Built for accountable diabetes follow-up</h2>
             <p>
-              Naje Health gives clinics the structure to manage diabetic patients between visits,
+              Naje Health gives you the structure to manage your diabetes between visits —
               where adherence, escalation, and continuity usually break down.
             </p>
           </div>

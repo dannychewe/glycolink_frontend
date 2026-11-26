@@ -12,8 +12,8 @@ import { getGraphQLErrorMessage } from "@/features/auth/auth-context";
 const visibilityOptions = [
   {
     value: "organization_only",
-    label: "Clinic consultants only",
-    description: "Invited patients can only see consultants attached to this clinic.",
+    label: "Organization consultants only",
+    description: "Invited patients can only see consultants attached to this organization.",
   },
   {
     value: "all_providers",

@@ -5,7 +5,7 @@ import { AcceptPatientInvitePanel } from "@/features/auth/components/accept-pati
 export default function AcceptPatientInvitePage() {
   return (
     <AuthCard
-      title="Welcome to NAJE Health"
+      title="Welcome to Naje Health"
       description="Set your password to finish setting up your account."
     >
       <Suspense>

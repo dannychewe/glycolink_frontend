@@ -92,7 +92,7 @@ export function ProgrammeProviderOfferSettings({
         ) : null}
         {providersError ? (
           <p role="alert" className="text-sm text-danger">
-            Unable to load clinic consultants.
+            Unable to load consultants.
           </p>
         ) : null}
         {(data?.organizationProviders ?? programme.offeringProviders ?? []).map(
@@ -119,7 +119,7 @@ export function ProgrammeProviderOfferSettings({
         )}
         {!loading && data?.organizationProviders.length === 0 ? (
           <p className="text-sm text-muted">
-            No consultants are assigned to this clinic.
+            No consultants are assigned to this organization.
           </p>
         ) : null}
       </fieldset>

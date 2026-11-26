@@ -16,10 +16,10 @@ export default async function ProgrammeJoinPage({ params }: ProgrammeJoinPagePro
         <div className="mb-8 max-w-2xl sm:mb-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">Care programme invite</p>
           <h1 className="mt-2 text-2xl font-semibold text-text sm:text-3xl">
-            You&rsquo;re invited to join a diabetes care programme
+            You&rsquo;re invited to join a Naje Health programme
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted">
-            Register once, get enrolled with the clinic, and continue with your programme tasks from your patient dashboard.
+            Register once, get enrolled in your programme, and continue with your daily tasks from your patient dashboard.
           </p>
         </div>
 

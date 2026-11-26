@@ -85,10 +85,18 @@ import {
   UPDATE_CARE_PLAN_PROGRAMME_MUTATION,
   UPDATE_MEAL_ALTERNATIVE_MUTATION,
   UPDATE_DRAFT_CARE_PROGRAMME_MUTATION,
+  PROGRAMME_COHORTS_QUERY,
+  CREATE_PROGRAMME_COHORT_MUTATION,
+  UPDATE_PROGRAMME_COHORT_MUTATION,
+  OPEN_PROGRAMME_COHORT_MUTATION,
+  ACTIVATE_PROGRAMME_COHORT_MUTATION,
+  COMPLETE_PROGRAMME_COHORT_MUTATION,
+  CANCEL_PROGRAMME_COHORT_MUTATION,
   type CarePlanProgramme,
   type CarePlanProgrammePlanType,
   type MealAlternative,
   type CareProgramme,
+  type ProgrammeCohort,
   type ProgrammeEnrolment,
   type ProgrammeScheduleItem,
   type ProgrammeShareLink,
@@ -115,7 +123,7 @@ type CarePlanProgrammesData = {
   carePlanProgrammes: CarePlanProgramme[];
 };
 
-type ProgrammePlanTab = "overview" | "general" | "meal" | "exercise" | "patients" | "journey" | "sharing" | "settings";
+type ProgrammePlanTab = "overview" | "general" | "meal" | "exercise" | "patients" | "cohorts" | "journey" | "sharing" | "settings";
 
 type ProgrammePlanForm = {
   title: string;
@@ -223,6 +231,7 @@ const programmePlanTabs: Array<{ key: ProgrammePlanTab; label: string }> = [
   { key: "meal", label: "Meal Plans" },
   { key: "exercise", label: "Exercise Plans" },
   { key: "patients", label: "Patients" },
+  { key: "cohorts", label: "Cohorts" },
   { key: "journey", label: "Care Journey" },
   { key: "sharing", label: "Sharing" },
   { key: "settings", label: "Settings" },
@@ -683,7 +692,7 @@ function ProgrammeSetupForm({
       .filter((membership) => membership?.organizationId)
       .map((membership) => ({
         value: membership.organizationId as string,
-        label: membership.organizationName ?? "Clinic organization",
+        label: membership.organizationName ?? "Organization",
         description: membership.tenantName ?? undefined,
         badge: titleCase(membership.role),
       }))
@@ -744,7 +753,7 @@ function ProgrammeSetupForm({
 
   const steps = ["Programme", "Schedule", "Patient offer", "Care journey", "Pricing", "Review"];
   const stepDescriptions = [
-    "Name your programme, choose its type, and assign it to a clinic.",
+    "Name your programme, choose its type, and assign it to an organization.",
     "Set how long the programme runs and how often patients should log readings.",
     "Write what patients will see when they find or are invited to this programme.",
     "Build the dated milestones patients follow — reviews, tasks, and check-ins.",
@@ -760,7 +769,7 @@ function ProgrammeSetupForm({
     if (step === 0) {
       if (!form.name.trim()) return "Give your programme a name.";
       if (!form.programmeType) return "Choose a programme type.";
-      if (!form.organizationId) return "Select the clinic running this programme.";
+      if (!form.organizationId) return "Select the organization running this programme.";
       return null;
     }
     if (step === 1) {
@@ -944,11 +953,11 @@ function ProgrammeSetupForm({
               </div>
               <SearchableSelector
                 id="programme-org"
-                label="Clinic"
+                label="Organization"
                 value={form.organizationId}
                 options={organizationOptions}
-                placeholder="Select the clinic running this programme"
-                emptyLabel="No clinic organizations found in your session"
+                placeholder="Select the organization running this programme"
+                emptyLabel="No organizations found in your session"
                 disabled={!canManageProgrammes}
                 onChange={(organizationId) =>
                   setForm((current) => ({ ...current, organizationId }))
@@ -977,7 +986,7 @@ function ProgrammeSetupForm({
                   onChange={(event) =>
                     setForm((current) => ({ ...current, description: event.target.value }))
                   }
-                  placeholder="Notes for your clinic team — patients won't see this"
+                  placeholder="Notes for your care team — patients won't see this"
                 />
               </div>
             </div>
@@ -1972,7 +1981,7 @@ function ProgrammesListView() {
         programme.organization?.id ?? "UNASSIGNED",
         {
           value: programme.organization?.id ?? "UNASSIGNED",
-          label: programme.organization?.name ?? "No clinic",
+          label: programme.organization?.name ?? "No organization",
         },
       ]),
     ).values(),
@@ -2092,7 +2101,7 @@ function ProgrammesListView() {
           <Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted" />
           <Input
             aria-label="Search care programmes"
-            placeholder="Search programme, code, or clinic"
+            placeholder="Search programme, code, or organization"
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -2103,10 +2112,10 @@ function ProgrammesListView() {
         </div>
         {clinicOptions.length > 1 ? (
           <Select
-            aria-label="Filter by clinic"
+            aria-label="Filter by organization"
             className="w-full sm:w-48"
             value={clinic}
-            options={[{ value: "ALL", label: "All clinics" }, ...clinicOptions]}
+            options={[{ value: "ALL", label: "All organizations" }, ...clinicOptions]}
             onChange={(event) => {
               setClinic(event.target.value);
               setPage(1);
@@ -3284,6 +3293,386 @@ function ProgrammeSharedPlansPanel({
   );
 }
 
+type CohortForm = {
+  label: string;
+  startsAt: string;
+  durationMonths: string;
+  endsAt: string;
+  maxCapacity: string;
+  enrolmentOpensAt: string;
+  enrolmentClosesAt: string;
+};
+
+const emptyCohortForm: CohortForm = {
+  label: "",
+  startsAt: "",
+  durationMonths: "3",
+  endsAt: "",
+  maxCapacity: "",
+  enrolmentOpensAt: "",
+  enrolmentClosesAt: "",
+};
+
+function cohortFormFromData(cohort: ProgrammeCohort): CohortForm {
+  return {
+    label: cohort.label,
+    startsAt: cohort.startsAt ?? "",
+    durationMonths: String(cohort.durationMonths ?? 3),
+    endsAt: cohort.endsAt ?? "",
+    maxCapacity: cohort.maxCapacity != null ? String(cohort.maxCapacity) : "",
+    enrolmentOpensAt: cohort.enrolmentOpensAt ? cohort.enrolmentOpensAt.slice(0, 16) : "",
+    enrolmentClosesAt: cohort.enrolmentClosesAt ? cohort.enrolmentClosesAt.slice(0, 16) : "",
+  };
+}
+
+function cohortStatusActions(status: string) {
+  const s = status.toUpperCase();
+  if (s === "DRAFT") return [{ action: "open" as const, label: "Open for enrolment" }];
+  if (s === "OPEN") return [{ action: "activate" as const, label: "Activate cohort" }];
+  if (s === "ACTIVE") return [{ action: "complete" as const, label: "Complete cohort" }];
+  return [];
+}
+
+function ProgrammeCohortsPanel({ programmeId, canManage }: { programmeId: string; canManage: boolean }) {
+  const [editing, setEditing] = useState<ProgrammeCohort | "new" | null>(null);
+  const [form, setForm] = useState<CohortForm>(emptyCohortForm);
+  const [error, setError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const cohortsQuery = useQuery<{ programmeCohorts: ProgrammeCohort[] }>(PROGRAMME_COHORTS_QUERY, {
+    variables: { programmeId },
+    fetchPolicy: "cache-and-network",
+  });
+  const cohorts = cohortsQuery.data?.programmeCohorts ?? [];
+
+  const [createCohort, createState] = useMutation(CREATE_PROGRAMME_COHORT_MUTATION);
+  const [updateCohort, updateState] = useMutation(UPDATE_PROGRAMME_COHORT_MUTATION);
+  const [openCohort, openState] = useMutation(OPEN_PROGRAMME_COHORT_MUTATION);
+  const [activateCohort, activateState] = useMutation(ACTIVATE_PROGRAMME_COHORT_MUTATION);
+  const [completeCohort, completeState] = useMutation(COMPLETE_PROGRAMME_COHORT_MUTATION);
+  const [cancelCohort, cancelState] = useMutation(CANCEL_PROGRAMME_COHORT_MUTATION);
+
+  const saving =
+    createState.loading || updateState.loading || openState.loading ||
+    activateState.loading || completeState.loading || cancelState.loading;
+
+  function openCreate() {
+    setForm(emptyCohortForm);
+    setError(null);
+    setEditing("new");
+  }
+
+  function openEdit(cohort: ProgrammeCohort) {
+    setForm(cohortFormFromData(cohort));
+    setError(null);
+    setEditing(cohort);
+  }
+
+  async function handleSave(event: FormEvent) {
+    event.preventDefault();
+    if (saving) return;
+    setError(null);
+    const data: Record<string, unknown> = {
+      label: form.label.trim(),
+      startsAt: form.startsAt || undefined,
+      durationMonths: form.durationMonths ? parseInt(form.durationMonths, 10) : undefined,
+      endsAt: form.endsAt || undefined,
+      maxCapacity: form.maxCapacity ? parseInt(form.maxCapacity, 10) : undefined,
+      enrolmentOpensAt: form.enrolmentOpensAt || undefined,
+      enrolmentClosesAt: form.enrolmentClosesAt || undefined,
+    };
+    try {
+      if (editing === "new") {
+        await createCohort({ variables: { programmeId, data } });
+      } else if (editing) {
+        await updateCohort({ variables: { cohortId: editing.id, data } });
+      }
+      await cohortsQuery.refetch();
+      setEditing(null);
+    } catch (err) {
+      setError(mapError(err));
+    }
+  }
+
+  async function handleLifecycle(cohortId: string, action: string) {
+    if (saving) return;
+    setError(null);
+    try {
+      if (action === "open") await openCohort({ variables: { cohortId } });
+      else if (action === "activate") await activateCohort({ variables: { cohortId } });
+      else if (action === "complete") await completeCohort({ variables: { cohortId } });
+      await cohortsQuery.refetch();
+    } catch (err) {
+      setError(mapError(err));
+    }
+  }
+
+  async function handleCancel() {
+    if (!cancellingId || saving) return;
+    setError(null);
+    try {
+      await cancelCohort({ variables: { cohortId: cancellingId, reason: cancelReason.trim() || undefined } });
+      await cohortsQuery.refetch();
+      setCancellingId(null);
+      setCancelReason("");
+    } catch (err) {
+      setError(mapError(err));
+    }
+  }
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle icon={CalendarRange} count={cohorts.length}>Cohorts</PanelTitle>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            title="Refresh cohorts"
+            aria-label="Refresh cohorts"
+            disabled={cohortsQuery.loading}
+            onClick={() => void cohortsQuery.refetch()}
+          >
+            <RefreshCw className="size-4" />
+          </Button>
+          <Button type="button" size="sm" disabled={!canManage} onClick={openCreate}>
+            <Plus className="size-4" />
+            New cohort
+          </Button>
+        </div>
+      </PanelHeader>
+      <PanelBody>
+        {error && !editing && !cancellingId ? (
+          <p role="alert" className="mb-3 text-sm text-danger">{error}</p>
+        ) : null}
+        {cohortsQuery.error ? (
+          <PanelEmpty>Unable to load cohorts. Please refresh.</PanelEmpty>
+        ) : cohorts.length === 0 ? (
+          <PanelEmpty className="rounded-lg border border-dashed border-border">
+            {cohortsQuery.loading
+              ? "Loading cohorts..."
+              : "No cohorts created yet. Create a cohort to group patients by intake period."}
+          </PanelEmpty>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-left text-sm">
+              <thead className="bg-background text-xs text-muted">
+                <tr>
+                  {["Label", "Status", "Dates", "Capacity", "Enrolled", ""].map((h) => (
+                    <th key={h} className="px-4 py-3 font-medium" scope="col">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {cohorts.map((cohort) => {
+                  const actions = cohortStatusActions(cohort.status);
+                  return (
+                    <tr key={cohort.id}>
+                      <td className="max-w-48 break-words px-4 py-3 font-medium">{cohort.label}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={statusVariant(cohort.status)}>{titleCase(cohort.status)}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-muted">
+                        {formatDateRange(cohort.startsAt, cohort.endsAt)}
+                        {cohort.durationMonths ? ` (${cohort.durationMonths}mo)` : ""}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums">
+                        {cohort.maxCapacity != null ? cohort.maxCapacity : "Unlimited"}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums">
+                        {cohort.enrolledCount ?? 0}
+                        {cohort.spotsRemaining != null ? ` / ${cohort.maxCapacity}` : ""}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          {actions.map((a) => (
+                            <Button
+                              key={a.action}
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              disabled={!canManage || saving}
+                              onClick={() => void handleLifecycle(cohort.id, a.action)}
+                            >
+                              {a.label}
+                            </Button>
+                          ))}
+                          {cohort.status.toUpperCase() === "DRAFT" ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              title="Edit cohort"
+                              disabled={!canManage || saving}
+                              onClick={() => openEdit(cohort)}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          ) : null}
+                          {!["COMPLETED", "CANCELLED"].includes(cohort.status.toUpperCase()) ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              title="Cancel cohort"
+                              disabled={!canManage || saving}
+                              onClick={() => {
+                                setError(null);
+                                setCancelReason("");
+                                setCancellingId(cohort.id);
+                              }}
+                            >
+                              <X className="size-4 text-danger" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PanelBody>
+
+      {editing ? (
+        <DetailModal
+          title={editing === "new" ? "Create cohort" : `Edit cohort: ${editing.label}`}
+          onClose={() => { if (!saving) setEditing(null); }}
+          className="sm:max-w-xl"
+        >
+          <form onSubmit={(event) => void handleSave(event)} className="space-y-4">
+            {error ? (
+              <p role="alert" className="text-sm text-danger">{error}</p>
+            ) : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="cohort-label">Cohort label</Label>
+              <Input
+                id="cohort-label"
+                value={form.label}
+                disabled={saving}
+                onChange={(e) => setForm((c) => ({ ...c, label: e.target.value }))}
+                placeholder="e.g. January 2027 intake"
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="cohort-starts-at">Start date</Label>
+                <Input
+                  id="cohort-starts-at"
+                  type="date"
+                  value={form.startsAt}
+                  disabled={saving}
+                  onChange={(e) => setForm((c) => ({ ...c, startsAt: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cohort-duration">Duration (months)</Label>
+                <Input
+                  id="cohort-duration"
+                  type="number"
+                  min={1}
+                  value={form.durationMonths}
+                  disabled={saving}
+                  onChange={(e) => setForm((c) => ({ ...c, durationMonths: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cohort-ends-at">End date <span className="font-normal text-muted">(auto-calculated if blank)</span></Label>
+                <Input
+                  id="cohort-ends-at"
+                  type="date"
+                  value={form.endsAt}
+                  disabled={saving}
+                  onChange={(e) => setForm((c) => ({ ...c, endsAt: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cohort-capacity">Max capacity <span className="font-normal text-muted">(optional)</span></Label>
+                <Input
+                  id="cohort-capacity"
+                  type="number"
+                  min={1}
+                  value={form.maxCapacity}
+                  disabled={saving}
+                  onChange={(e) => setForm((c) => ({ ...c, maxCapacity: e.target.value }))}
+                  placeholder="Unlimited"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cohort-enrolment-opens">Enrolment opens <span className="font-normal text-muted">(optional)</span></Label>
+                <Input
+                  id="cohort-enrolment-opens"
+                  type="datetime-local"
+                  value={form.enrolmentOpensAt}
+                  disabled={saving}
+                  onChange={(e) => setForm((c) => ({ ...c, enrolmentOpensAt: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cohort-enrolment-closes">Enrolment closes <span className="font-normal text-muted">(optional)</span></Label>
+                <Input
+                  id="cohort-enrolment-closes"
+                  type="datetime-local"
+                  value={form.enrolmentClosesAt}
+                  disabled={saving}
+                  onChange={(e) => setForm((c) => ({ ...c, enrolmentClosesAt: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => setEditing(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={saving || !form.label.trim() || !form.startsAt || !form.durationMonths}>
+                <Save className="size-4" />
+                {saving ? "Saving..." : editing === "new" ? "Create cohort" : "Save changes"}
+              </Button>
+            </div>
+          </form>
+        </DetailModal>
+      ) : null}
+
+      {cancellingId ? (
+        <DetailModal
+          title="Cancel cohort"
+          subtitle={cohorts.find((c) => c.id === cancellingId)?.label}
+          onClose={() => { if (!saving) setCancellingId(null); }}
+          className="sm:max-w-lg"
+        >
+          {error ? (
+            <p role="alert" className="mb-3 text-sm text-danger">{error}</p>
+          ) : null}
+          <p className="text-sm text-muted">
+            Cancelling a cohort stops new enrolments. Existing enrolments are not affected.
+          </p>
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="cohort-cancel-reason">Reason (optional)</Label>
+            <Textarea
+              id="cohort-cancel-reason"
+              value={cancelReason}
+              disabled={saving}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => setCancellingId(null)}>
+              Keep cohort
+            </Button>
+            <Button type="button" size="sm" disabled={saving} onClick={() => void handleCancel()}>
+              <X className="size-4" />
+              {saving ? "Cancelling..." : "Cancel cohort"}
+            </Button>
+          </div>
+        </DetailModal>
+      ) : null}
+    </Panel>
+  );
+}
+
 function ProgrammeDetailsView({ programmeId }: { programmeId: string }) {
   const router = useRouter();
   const { user } = useAuth();
@@ -3381,7 +3770,7 @@ function ProgrammeDetailsView({ programmeId }: { programmeId: string }) {
       if (lifecycleAction === "resume") await resumeProgramme({ variables });
       if (lifecycleAction === "archive")
         await archiveProgramme({
-          variables: { ...variables, reason: reason.trim() || "Archived by clinic admin" },
+          variables: { ...variables, reason: reason.trim() || "Archived by admin" },
         });
       await refetchAll();
       setLifecycleAction(null);
@@ -3664,6 +4053,10 @@ function ProgrammeDetailsView({ programmeId }: { programmeId: string }) {
               )}
             </Panel>
           )
+        ) : null}
+
+        {activeTab === "cohorts" ? (
+          <ProgrammeCohortsPanel programmeId={programme.id} canManage={canManageProgrammes} />
         ) : null}
 
         {activeTab === "journey" ? (

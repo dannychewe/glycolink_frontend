@@ -357,7 +357,7 @@ export function GraphqlProviderDirectory() {
                   </p>
                 </div>
                 <Button
-                  href={`/providers/${provider.id}`}
+                  href={`/our-team/${provider.id}`}
                   variant="secondary"
                   fullWidth
                   className="sm:w-auto"

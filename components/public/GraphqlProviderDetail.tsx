@@ -531,7 +531,7 @@ export function GraphqlProviderDetail({ providerId }: GraphqlProviderDetailProps
               {!isAuthenticated ? (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">Sign in to submit a clinician review.</p>
-                  <Button href={`/login?next=/providers/${provider.id}`} fullWidth>
+                  <Button href={`/login?next=/our-team/${provider.id}`} fullWidth>
                     Sign in
                   </Button>
                 </div>

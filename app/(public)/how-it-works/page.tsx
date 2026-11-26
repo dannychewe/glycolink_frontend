@@ -12,37 +12,37 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "How Naje Health Works | Diabetes Continuity Care",
   description:
-    "Learn how Naje Health helps clinics run diabetes care programmes with enrolment, baselines, care plans, monitoring, alerts, reporting, and billing.",
+    "Learn how Naje Health enrols you into a diabetes programme with a personalised care plan, monitoring schedule, glucose alerts, and a dedicated care team.",
 };
 
 const steps = [
   {
     icon: UserRoundPlus,
     step: "Step 1",
-    title: "Create a clinic programme",
+    title: "Register with Naje Health",
     description:
-      "A clinic sets up a diabetes programme with enrolment rules, care-team roles, monitoring expectations, and billing configuration.",
+      "Create your account, or accept an invitation from our care team. You'll complete a diabetes baseline so we have the right context.",
   },
   {
     icon: CalendarCheck2,
     step: "Step 2",
-    title: "Enroll the patient",
+    title: "Get enrolled in a programme",
     description:
-      "Patients can be enrolled directly or invited to join, then complete a diabetes baseline so the care team has the right context.",
+      "Our care team enrols you into a Naje Health diabetes programme matched to your needs, with monitoring expectations and follow-up cadence.",
   },
   {
     icon: ClipboardPlus,
     step: "Step 3",
-    title: "Activate the care plan",
+    title: "Receive your care plan",
     description:
-      "The team creates goals, follow-up timing, lab follow-up, medication review, patient instructions, and monitoring requirements.",
+      "Your team creates goals, follow-up timing, lab reviews, medication checks, daily tasks, and monitoring requirements personalised to you.",
   },
   {
     icon: HeartPulse,
     step: "Step 4",
-    title: "Work the attention queue",
+    title: "Stay on track, every day",
     description:
-      "The clinic sees missed monitoring, glucose alerts, open work, escalation, payment status, and reporting by programme.",
+      "Log readings, complete your daily tasks, and stay connected — your Naje Health team monitors your progress and responds to alerts.",
   },
 ];
 
@@ -50,22 +50,22 @@ const faqs = [
   {
     question: "Is Naje Health only for booking consultations?",
     answer:
-      "No. Consultations still fit into the workflow, but Naje Health is now centred on clinic-led diabetes continuity care between visits.",
+      "No. Consultations are part of the journey, but Naje Health is centred on structured diabetes continuity care between visits — monitoring, care plans, and daily follow-up.",
   },
   {
     question: "Is my health information kept private?",
     answer:
-      "Yes. Programme records, baseline data, care plans, readings, alerts, and internal clinical notes follow tenant-scoped access rules.",
+      "Yes. Your programme records, baseline data, care plans, readings, alerts, and clinical notes are kept private and only visible to your Naje Health care team.",
   },
   {
     question: "What types of diabetes does Naje Health support?",
     answer:
-      "Naje Health is designed for patients managing Type 1 diabetes, Type 2 diabetes, gestational diabetes, prediabetes, and related conditions.",
+      "Naje Health supports patients managing Type 1 diabetes, Type 2 diabetes, gestational diabetes, prediabetes, and related conditions.",
   },
   {
     question: "Can I use Naje Health from my phone?",
     answer:
-      "Yes. Patients can see what they need to do today, while care teams can review clinic queues from desktop or tablet workflows.",
+      "Yes. You can see what you need to do today, log readings, and stay connected with your care team from any device.",
   },
 ];
 
@@ -82,8 +82,8 @@ export default function HowItWorksPage() {
             Diabetes continuity care, from enrolment to daily follow-up
           </h1>
           <p className="text-base leading-7 text-muted">
-            Naje Health helps clinics answer the operational question that matters every day:
-            which diabetic patients need attention, and what should happen next?
+            Naje Health helps you stay on top of your diabetes with a structured programme,
+            a dedicated care team, and clear guidance on what to do every day.
           </p>
         </div>
       </Container>
@@ -138,23 +138,23 @@ export default function HowItWorksPage() {
         <div className="rounded-[2rem] border border-primary/10 bg-gradient-to-br from-primary to-blue-500 px-6 py-10 text-center text-white shadow-subtle sm:px-10 sm:py-14">
           <div className="mx-auto max-w-2xl space-y-4">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Ready to run structured diabetes follow-up?
+              Ready to take control of your diabetes care?
             </h2>
             <p className="text-base leading-7 text-blue-50">
-              Start with a clinic programme, enroll patients, and give both care teams and patients
-              a clearer daily workflow.
+              Join a Naje Health programme and get a personalised care plan, monitoring schedule,
+              and a dedicated team that follows up with you every day.
             </p>
           </div>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Button href="/register" size="lg" className="bg-white text-primary hover:bg-blue-50">
-              Start a programme
+              Join a programme
             </Button>
             <Button
-              href="/providers"
+              href="/our-team"
               size="lg"
               className="border border-white/30 bg-white/10 text-white hover:bg-white/15"
             >
-              View care network
+              Meet our team
             </Button>
           </div>
         </div>

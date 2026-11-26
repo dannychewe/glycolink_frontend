@@ -60,26 +60,26 @@ export function ProviderPreviewSection() {
       <Container className="space-y-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl space-y-4">
-            <SectionLabel index="03">Care network</SectionLabel>
-            <h2 className="text-3xl sm:text-4xl">Connect programmes to verified clinicians</h2>
+            <SectionLabel index="03">Our care team</SectionLabel>
+            <h2 className="text-3xl sm:text-4xl">Meet the clinicians behind your care</h2>
             <p>
-              Naje Health still supports specialist discovery, but the centre of the product is
-              coordinated diabetes follow-up run through clinic programmes.
+              Naje Health&rsquo;s team of verified doctors, nurses, and specialists work together
+              to deliver coordinated diabetes follow-up through your programme.
             </p>
           </div>
           <Link
-            href="/providers"
+            href="/our-team"
             className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            View care network
+            View our team
           </Link>
         </div>
 
         {error ? (
           <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
             {accessDenied
-              ? "Sign in to view the full care network."
-              : "Unable to load the care network right now. Please try again."}
+              ? "Sign in to view the full care team."
+              : "Unable to load the care team right now. Please try again."}
           </div>
         ) : null}
 
@@ -153,7 +153,7 @@ export function ProviderPreviewSection() {
                         : "On request"}
                     </p>
                   </div>
-                  <Button href={`/providers/${provider.id}`} variant="secondary" fullWidth className="sm:w-auto">
+                  <Button href={`/our-team/${provider.id}`} variant="secondary" fullWidth className="sm:w-auto">
                     View clinician
                   </Button>
                 </div>

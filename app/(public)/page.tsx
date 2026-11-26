@@ -7,9 +7,9 @@ import { ProviderPreviewSection } from "@/components/public/ProviderPreviewSecti
 import { TrustSection } from "@/components/public/TrustSection";
 
 export const metadata: Metadata = {
-  title: "Naje Health | Diabetes Continuity Care for Clinics",
+  title: "Naje Health | Diabetes Continuity Care",
   description:
-    "Clinic-led diabetes continuity care with patient enrolment, care plans, monitoring schedules, glucose alerts, adherence reporting, and programme billing.",
+    "Naje Health enrols you into a structured diabetes programme with personalised care plans, glucose monitoring, daily tasks, and a dedicated care team.",
 };
 
 export default function HomePage() {

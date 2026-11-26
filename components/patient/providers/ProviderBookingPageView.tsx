@@ -78,7 +78,7 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
     return (
       <div className="space-y-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-4 text-sm text-danger">
         <p>{code === "PROVIDER_NOT_FOUND" || code === "PROVIDER_ACCESS_DENIED"
-          ? getGraphQLErrorMessage(error, "This consultant is currently unavailable for booking. Please contact your clinic.")
+          ? getGraphQLErrorMessage(error, "This consultant is currently unavailable for booking. Please contact your care team.")
           : "Unable to load consultant details. Please try again."}</p>
         <Button href="/patient/care-plan" variant="secondary" size="sm">Back to care plans</Button>
       </div>
@@ -103,7 +103,7 @@ export function ProviderBookingPageView({ providerId }: ProviderBookingPageViewP
       <div className="space-y-3 border border-border bg-surface px-4 py-4">
         <p className="text-sm text-text">Complete your patient profile before booking this consultation.</p>
         <Button href={`/patient/onboarding?next=${encodeURIComponent(next)}`} onClick={() => rememberCareDestination(next)}>Complete patient profile</Button>
-        <Button href={`/providers/${providerId}`} variant="secondary">Back to care options</Button>
+        <Button href={`/our-team/${providerId}`} variant="secondary">Back to care options</Button>
       </div>
     );
   }
