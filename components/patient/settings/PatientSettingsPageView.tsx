@@ -676,6 +676,16 @@ export function PatientSettingsPageView() {
         description="Manage your profile, privacy preferences, and notifications."
       />
 
+      <Card>
+        <CardContent className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium text-text">Privacy and account controls</p>
+            <p className="text-sm">Read the <a href="/privacy" className="text-primary underline">Privacy Policy</a> or request deletion of your account and associated data.</p>
+          </div>
+          <a href="/delete-account" className="inline-flex min-h-10 items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/5">Request account deletion</a>
+        </CardContent>
+      </Card>
+
       <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button

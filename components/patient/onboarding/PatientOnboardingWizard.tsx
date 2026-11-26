@@ -41,6 +41,11 @@ import { getGraphQLErrorCode, getGraphQLErrorMessage, useAuth } from "@/features
 
 const steps = [
   {
+    title: "Health Data and Consent",
+    description: "Review how your information is used before entering health details.",
+    fields: ["consent"] as const,
+  },
+  {
     title: "Basic Info",
     description: "Your name and date of birth.",
     fields: ["fullName", "dateOfBirth"] as const,
@@ -58,11 +63,6 @@ const steps = [
       "emergencyContactRelationship",
       "emergencyContactPhone",
     ] as const,
-  },
-  {
-    title: "Consent",
-    description: "Review and agree to our terms before continuing.",
-    fields: ["consent"] as const,
   },
   {
     title: "Review",
@@ -256,7 +256,12 @@ export function PatientOnboardingWizard() {
     setErrorStep(null);
 
     try {
-      if (step === 0) {
+      if (step === 0 && !consentAlreadyAccepted) {
+        await acceptConsent({
+          variables: { policyType: "terms_of_service", version: "v1" },
+        });
+        setConsentAlreadyAccepted(true);
+      } else if (step === 1) {
         await completeProfile({
           variables: {
             data: {
@@ -265,7 +270,7 @@ export function PatientOnboardingWizard() {
             },
           },
         });
-      } else if (step === 1) {
+      } else if (step === 2) {
         await completeProfile({
           variables: {
             data: {
@@ -274,7 +279,7 @@ export function PatientOnboardingWizard() {
             },
           },
         });
-      } else if (step === 2) {
+      } else if (step === 3) {
         if (existingContactId) {
           await updatePatientContact({
             variables: {
@@ -302,24 +307,19 @@ export function PatientOnboardingWizard() {
             ?.addPatientContact?.contact?.id;
           if (newId) setExistingContactId(newId);
         }
-      } else if (step === 3 && !consentAlreadyAccepted) {
-        await acceptConsent({
-          variables: { policyType: "terms_of_service", version: "v1" },
-        });
-        setConsentAlreadyAccepted(true);
       }
       return true;
     } catch (error) {
       const code = getGraphQLErrorCode(error);
       if (code === "INVALID_DIABETES_TYPE" || code === "INVALID_DIAGNOSIS_DATE") {
         setSubmitError(getGraphQLErrorMessage(error, "Please check your diabetes profile details."));
-        setErrorStep(1);
+        setErrorStep(2);
       } else if (code === "INVALID_DATE_OF_BIRTH" || code === "INVALID_PHONE") {
         setSubmitError(getGraphQLErrorMessage(error, "Please check your basic information."));
-        setErrorStep(0);
+        setErrorStep(1);
       } else if (code === "DUPLICATE_CONTACT" || code === "INVALID_CONTACT") {
         setSubmitError(getGraphQLErrorMessage(error, "There was an issue with your emergency contact details."));
-        setErrorStep(2);
+        setErrorStep(3);
       } else {
         setSubmitError(getGraphQLErrorMessage(error, "Unable to save. Please try again."));
       }
@@ -489,16 +489,16 @@ export function PatientOnboardingWizard() {
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            {currentStep === 0 ? (
+            {currentStep === 1 ? (
               <StepBasicInfo
                 isFullNameEditable={isFullNameEditable}
                 onEnableFullNameEdit={() => setIsFullNameEditable(true)}
               />
             ) : isLastStep ? (
               <StepReview onEdit={handleEditStep} />
-            ) : currentStep === 1 ? (
-              <StepDiabetesProfile />
             ) : currentStep === 2 ? (
+              <StepDiabetesProfile />
+            ) : currentStep === 3 ? (
               <StepEmergencyContact />
             ) : (
               <StepConsent />

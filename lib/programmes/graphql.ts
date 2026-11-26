@@ -292,10 +292,25 @@ export type CarePlanProgrammeItem = {
   durationMinutes?: number | null;
   intensity?: string | null;
   instructions?: string | null;
+  contentType?: string | null;
+  videoUrl?: string | null;
+  bodyText?: string | null;
   metadataJson: JsonValue;
   sortOrder: number;
+  mealAlternatives: MealAlternative[];
   createdAt: DateTimeString;
   updatedAt: DateTimeString;
+};
+
+export type MealAlternative = {
+  id: UUID;
+  title: string;
+  description?: string | null;
+  kcal?: number | null;
+  carbsG?: number | null;
+  proteinG?: number | null;
+  fatG?: number | null;
+  sortOrder: number;
 };
 
 export type CarePlanProgramme = {
@@ -304,6 +319,9 @@ export type CarePlanProgramme = {
   title: string;
   description?: string | null;
   planType: CarePlanProgrammePlanType;
+  monthNumber?: number | null;
+  phaseLabel?: string | null;
+  scheduleCadence: string;
   startsOnDay?: number | null;
   endsOnDay?: number | null;
   durationDays?: number | null;
@@ -1073,8 +1091,21 @@ export const CARE_PLAN_PROGRAMME_ITEM_FIELDS = gql`
     durationMinutes
     intensity
     instructions
+    contentType
+    videoUrl
+    bodyText
     metadataJson
     sortOrder
+    mealAlternatives {
+      id
+      title
+      description
+      kcal
+      carbsG
+      proteinG
+      fatG
+      sortOrder
+    }
     createdAt
     updatedAt
   }
@@ -1091,6 +1122,9 @@ export const CARE_PLAN_PROGRAMME_FIELDS = gql`
     title
     description
     planType
+    monthNumber
+    phaseLabel
+    scheduleCadence
     startsOnDay
     endsOnDay
     durationDays
@@ -2496,6 +2530,28 @@ export const DELETE_CARE_PLAN_PROGRAMME_ITEM_MUTATION = gql`
       deletedId
       ok
     }
+  }
+`;
+
+export const CREATE_MEAL_ALTERNATIVE_MUTATION = gql`
+  mutation CreateMealAlternative($itemId: UUID!, $data: MealAlternativeInput!) {
+    createMealAlternative(itemId: $itemId, data: $data) {
+      mealAlternative { id title description kcal carbsG proteinG fatG sortOrder }
+    }
+  }
+`;
+
+export const UPDATE_MEAL_ALTERNATIVE_MUTATION = gql`
+  mutation UpdateMealAlternative($alternativeId: UUID!, $data: MealAlternativeInput!) {
+    updateMealAlternative(alternativeId: $alternativeId, data: $data) {
+      mealAlternative { id title description kcal carbsG proteinG fatG sortOrder }
+    }
+  }
+`;
+
+export const DELETE_MEAL_ALTERNATIVE_MUTATION = gql`
+  mutation DeleteMealAlternative($alternativeId: UUID!) {
+    deleteMealAlternative(alternativeId: $alternativeId) { deletedId ok }
   }
 `;
 

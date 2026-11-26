@@ -11,15 +11,27 @@ export function Footer() {
           <p>© {new Date().getFullYear()} Naje Health. All rights reserved.</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <Link href="/" className="transition hover:text-text">
+          <Link href="/privacy" className="transition hover:text-text">
             Privacy
           </Link>
-          <Link href="/" className="transition hover:text-text">
+          <Link href="/terms" className="transition hover:text-text">
             Terms
           </Link>
-          <Link href="/" className="transition hover:text-text">
-            Contact
+          <Link href="/delete-account" className="transition hover:text-text">
+            Delete account
           </Link>
+          <Link
+            href="/medical-disclaimer"
+            className="transition hover:text-text"
+          >
+            Medical notice
+          </Link>
+          <a
+            href="mailto:support@najehealth.com"
+            className="transition hover:text-text"
+          >
+            Contact
+          </a>
         </div>
       </Container>
     </footer>

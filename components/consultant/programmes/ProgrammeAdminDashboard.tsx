@@ -69,11 +69,13 @@ import {
   CLINIC_PROGRAMME_SCHEDULE_QUERY,
   CREATE_CARE_PLAN_PROGRAMME_ITEM_MUTATION,
   CREATE_CARE_PLAN_PROGRAMME_MUTATION,
+  CREATE_MEAL_ALTERNATIVE_MUTATION,
   CREATE_PROGRAMME_PRICE_MUTATION,
   CREATE_PROGRAMME_SHARE_LINK_MUTATION,
   CREATE_CARE_PROGRAMME_MUTATION,
   DELETE_CARE_PLAN_PROGRAMME_ITEM_MUTATION,
   DELETE_CARE_PLAN_PROGRAMME_MUTATION,
+  DELETE_MEAL_ALTERNATIVE_MUTATION,
   ENROL_PATIENT_IN_PROGRAMME_MUTATION,
   INVITE_PATIENT_TO_PROGRAMME_MUTATION,
   PAUSE_CARE_PROGRAMME_MUTATION,
@@ -81,9 +83,11 @@ import {
   RESUME_CARE_PROGRAMME_MUTATION,
   UPDATE_CARE_PLAN_PROGRAMME_ITEM_MUTATION,
   UPDATE_CARE_PLAN_PROGRAMME_MUTATION,
+  UPDATE_MEAL_ALTERNATIVE_MUTATION,
   UPDATE_DRAFT_CARE_PROGRAMME_MUTATION,
   type CarePlanProgramme,
   type CarePlanProgrammePlanType,
+  type MealAlternative,
   type CareProgramme,
   type ProgrammeEnrolment,
   type ProgrammeScheduleItem,
@@ -117,6 +121,10 @@ type ProgrammePlanForm = {
   title: string;
   description: string;
   instructions: string;
+  monthNumber: string;
+  phaseLabel: string;
+  scheduleCadence: "monthly" | "weekly";
+  sortOrder: string;
   startsOnDay: string;
   endsOnDay: string;
   durationDays: string;
@@ -135,6 +143,21 @@ type ProgrammePlanItemForm = {
   intensity: string;
   instructions: string;
   description: string;
+  contentType: "text" | "video" | "both" | "";
+  videoUrl: string;
+  bodyText: string;
+  alternatives: ProgrammeMealAlternativeForm[];
+};
+
+type ProgrammeMealAlternativeForm = {
+  id?: string;
+  clientId: string;
+  title: string;
+  description: string;
+  kcal: string;
+  carbsG: string;
+  proteinG: string;
+  fatG: string;
 };
 
 type CreateProgrammeData = {
@@ -218,6 +241,18 @@ const exerciseIntensityOptions = [
   { value: "high", label: "High" },
 ];
 
+const scheduleCadenceOptions = [
+  { value: "monthly", label: "Monthly (day of month)" },
+  { value: "weekly", label: "Weekly (day of week)" },
+];
+
+const planContentTypeOptions = [
+  { value: "", label: "No attached content" },
+  { value: "text", label: "Text" },
+  { value: "video", label: "Video" },
+  { value: "both", label: "Text and video" },
+];
+
 function calendarEventLabel(value: string) {
   return programmeCalendarEventOptions.find((option) => option.value === value)?.label ?? titleCase(value);
 }
@@ -291,6 +326,35 @@ function emptyPlanItem(planType: CarePlanProgrammePlanType, sortOrder = 0): Prog
     intensity: normalized === "EXERCISE_PLAN" ? "moderate" : "",
     instructions: "",
     description: "",
+    contentType: "text",
+    videoUrl: "",
+    bodyText: "",
+    alternatives: [],
+  };
+}
+
+function mealAlternativeFormFromAlternative(alternative: MealAlternative): ProgrammeMealAlternativeForm {
+  return {
+    id: alternative.id,
+    clientId: alternative.id,
+    title: alternative.title,
+    description: alternative.description ?? "",
+    kcal: String(alternative.kcal ?? ""),
+    carbsG: String(alternative.carbsG ?? ""),
+    proteinG: String(alternative.proteinG ?? ""),
+    fatG: String(alternative.fatG ?? ""),
+  };
+}
+
+function emptyMealAlternative(sortOrder = 0): ProgrammeMealAlternativeForm {
+  return {
+    clientId: `meal-alternative-${Date.now()}-${sortOrder}`,
+    title: "",
+    description: "",
+    kcal: "",
+    carbsG: "",
+    proteinG: "",
+    fatG: "",
   };
 }
 
@@ -299,6 +363,10 @@ function emptyPlanForm(planType: CarePlanProgrammePlanType): ProgrammePlanForm {
     title: "",
     description: "",
     instructions: "",
+    monthNumber: "",
+    phaseLabel: "",
+    scheduleCadence: "monthly",
+    sortOrder: "0",
     startsOnDay: "1",
     endsOnDay: "",
     durationDays: "",
@@ -312,6 +380,10 @@ function planFormFromPlan(plan: CarePlanProgramme): ProgrammePlanForm {
     title: plan.title,
     description: plan.description ?? "",
     instructions: plan.instructions ?? "",
+    monthNumber: String(plan.monthNumber ?? ""),
+    phaseLabel: plan.phaseLabel ?? "",
+    scheduleCadence: plan.scheduleCadence?.toLowerCase() === "weekly" ? "weekly" : "monthly",
+    sortOrder: String(plan.sortOrder ?? 0),
     startsOnDay: String(plan.startsOnDay ?? ""),
     endsOnDay: String(plan.endsOnDay ?? ""),
     durationDays: String(plan.durationDays ?? ""),
@@ -328,6 +400,10 @@ function planFormFromPlan(plan: CarePlanProgramme): ProgrammePlanForm {
           intensity: item.intensity ?? (planType === "EXERCISE_PLAN" ? "moderate" : ""),
           instructions: item.instructions ?? "",
           description: item.description ?? "",
+          contentType: (item.contentType?.toLowerCase() as ProgrammePlanItemForm["contentType"]) ?? "",
+          videoUrl: item.videoUrl ?? "",
+          bodyText: item.bodyText ?? "",
+          alternatives: (item.mealAlternatives ?? []).map(mealAlternativeFormFromAlternative),
         }))
       : [emptyPlanItem(planType)],
   };
@@ -341,12 +417,16 @@ function positiveNumberOrUndefined(value: string) {
 function planPayload(form: ProgrammePlanForm, planType: CarePlanProgrammePlanType, includeItems: boolean) {
   const payload: Record<string, unknown> = {
     title: form.title.trim(),
-    description: form.description.trim() || undefined,
+    description: form.description.trim() || null,
     planType: normalizePlanType(planType).toLowerCase(),
-    startsOnDay: positiveNumberOrUndefined(form.startsOnDay),
-    endsOnDay: positiveNumberOrUndefined(form.endsOnDay),
-    durationDays: positiveNumberOrUndefined(form.durationDays),
-    instructions: form.instructions.trim() || undefined,
+    monthNumber: positiveNumberOrUndefined(form.monthNumber) ?? null,
+    phaseLabel: form.phaseLabel.trim() || null,
+    scheduleCadence: form.scheduleCadence,
+    sortOrder: Number(form.sortOrder) || 0,
+    startsOnDay: positiveNumberOrUndefined(form.startsOnDay) ?? null,
+    endsOnDay: positiveNumberOrUndefined(form.endsOnDay) ?? null,
+    durationDays: positiveNumberOrUndefined(form.durationDays) ?? null,
+    instructions: form.instructions.trim() || null,
     metadataJson: {},
   };
   if (includeItems) {
@@ -361,15 +441,30 @@ function itemPayload(item: ProgrammePlanItemForm, planType: CarePlanProgrammePla
   const normalized = normalizePlanType(planType);
   return {
     title: item.title.trim(),
-    description: item.description.trim() || undefined,
-    dayNumber: positiveNumberOrUndefined(item.dayNumber),
-    timeOfDay: item.timeOfDay || undefined,
-    mealType: normalized === "MEAL_PLAN" ? item.mealType || undefined : undefined,
-    exerciseType: normalized === "EXERCISE_PLAN" ? item.exerciseType.trim() || item.title.trim() : undefined,
-    durationMinutes: normalized === "EXERCISE_PLAN" ? positiveNumberOrUndefined(item.durationMinutes) : undefined,
-    intensity: normalized === "EXERCISE_PLAN" ? item.intensity || undefined : undefined,
-    instructions: item.instructions.trim() || undefined,
+    description: item.description.trim() || null,
+    dayNumber: positiveNumberOrUndefined(item.dayNumber) ?? null,
+    timeOfDay: item.timeOfDay || null,
+    mealType: normalized === "MEAL_PLAN" ? item.mealType || null : null,
+    exerciseType: normalized === "EXERCISE_PLAN" ? item.exerciseType.trim() || item.title.trim() : null,
+    durationMinutes: normalized === "EXERCISE_PLAN" ? positiveNumberOrUndefined(item.durationMinutes) ?? null : null,
+    intensity: normalized === "EXERCISE_PLAN" ? item.intensity || null : null,
+    instructions: item.instructions.trim() || null,
+    contentType: item.contentType || null,
+    videoUrl: item.videoUrl.trim() || null,
+    bodyText: item.bodyText.trim() || null,
     metadataJson: {},
+    sortOrder: index,
+  };
+}
+
+function mealAlternativePayload(alternative: ProgrammeMealAlternativeForm, index: number) {
+  return {
+    title: alternative.title.trim(),
+    description: alternative.description.trim() || null,
+    kcal: positiveNumberOrUndefined(alternative.kcal) ?? null,
+    carbsG: positiveNumberOrUndefined(alternative.carbsG) ?? null,
+    proteinG: positiveNumberOrUndefined(alternative.proteinG) ?? null,
+    fatG: positiveNumberOrUndefined(alternative.fatG) ?? null,
     sortOrder: index,
   };
 }
@@ -2287,6 +2382,9 @@ function ProgrammeSharedPlansPanel({
   const [createPlan, createPlanState] = useMutation(CREATE_CARE_PLAN_PROGRAMME_MUTATION);
   const [updatePlan, updatePlanState] = useMutation(UPDATE_CARE_PLAN_PROGRAMME_MUTATION);
   const [deletePlan, deletePlanState] = useMutation(DELETE_CARE_PLAN_PROGRAMME_MUTATION);
+  const [createAlternative, createAlternativeState] = useMutation(CREATE_MEAL_ALTERNATIVE_MUTATION);
+  const [updateAlternative, updateAlternativeState] = useMutation(UPDATE_MEAL_ALTERNATIVE_MUTATION);
+  const [deleteAlternative, deleteAlternativeState] = useMutation(DELETE_MEAL_ALTERNATIVE_MUTATION);
   const [createItem, createItemState] = useMutation(CREATE_CARE_PLAN_PROGRAMME_ITEM_MUTATION);
   const [updateItem, updateItemState] = useMutation(UPDATE_CARE_PLAN_PROGRAMME_ITEM_MUTATION);
   const [deleteItem, deleteItemState] = useMutation(DELETE_CARE_PLAN_PROGRAMME_ITEM_MUTATION);
@@ -2294,6 +2392,9 @@ function ProgrammeSharedPlansPanel({
     createPlanState.loading ||
     updatePlanState.loading ||
     deletePlanState.loading ||
+    createAlternativeState.loading ||
+    updateAlternativeState.loading ||
+    deleteAlternativeState.loading ||
     createItemState.loading ||
     updateItemState.loading ||
     deleteItemState.loading;
@@ -2302,15 +2403,23 @@ function ProgrammeSharedPlansPanel({
   const Icon = isMeal ? Utensils : isExercise ? Dumbbell : ClipboardList;
   const activePlan = editingPlan;
   const selectedItem = form.items.find((item) => item.clientId === selectedItemId) ?? form.items[0];
+  const scheduleDayMaximum = form.scheduleCadence === "weekly" ? 7 : 30;
   const valid =
     Boolean(form.title.trim()) &&
-    (!form.startsOnDay || Number(form.startsOnDay) > 0) &&
-    (!form.endsOnDay || Number(form.endsOnDay) > 0) &&
-    (!form.durationDays || Number(form.durationDays) > 0) &&
+    (!form.monthNumber || (Number.isInteger(Number(form.monthNumber)) && Number(form.monthNumber) > 0)) &&
+    (!form.sortOrder || (Number.isInteger(Number(form.sortOrder)) && Number(form.sortOrder) >= 0)) &&
+    (!form.startsOnDay || (Number.isInteger(Number(form.startsOnDay)) && Number(form.startsOnDay) > 0)) &&
+    (!form.endsOnDay || (Number.isInteger(Number(form.endsOnDay)) && Number(form.endsOnDay) > 0)) &&
+    (!form.durationDays || (Number.isInteger(Number(form.durationDays)) && Number(form.durationDays) > 0)) &&
+    (!form.startsOnDay || !form.endsOnDay || Number(form.endsOnDay) >= Number(form.startsOnDay)) &&
+    !(form.durationDays && (form.startsOnDay || form.endsOnDay)) &&
     form.items.every((item) => {
       if (!item.title.trim()) return true;
-      if (item.dayNumber && !(Number(item.dayNumber) > 0)) return false;
-      if (isExercise && item.durationMinutes && !(Number(item.durationMinutes) > 0)) return false;
+      if (item.dayNumber && !(Number.isInteger(Number(item.dayNumber)) && Number(item.dayNumber) >= 1 && Number(item.dayNumber) <= scheduleDayMaximum)) return false;
+      if (isExercise && item.durationMinutes && !(Number.isInteger(Number(item.durationMinutes)) && Number(item.durationMinutes) > 0)) return false;
+      if (item.alternatives.some((alternative) => alternative.title.trim() &&
+        [alternative.kcal, alternative.carbsG, alternative.proteinG, alternative.fatG]
+          .some((value) => value && !(Number.isInteger(Number(value)) && Number(value) > 0)))) return false;
       return true;
     });
 
@@ -2389,6 +2498,8 @@ function ProgrammeSharedPlansPanel({
       return;
     }
     try {
+      const itemsToSave = form.items.filter((item) => item.title.trim());
+      const savedItemIds = new Map<string, string>();
       if (activePlan) {
         await updatePlan({
           variables: {
@@ -2396,22 +2507,69 @@ function ProgrammeSharedPlansPanel({
             data: planPayload(form, normalizedPlanType, false),
           },
         });
-        for (const [index, item] of form.items.entries()) {
-          if (!item.title.trim()) continue;
+        for (const [index, item] of itemsToSave.entries()) {
           const data = itemPayload(item, normalizedPlanType, index);
           if (item.id) {
-            await updateItem({ variables: { itemId: item.id, data } });
+            const response = await updateItem({ variables: { itemId: item.id, data } });
+            savedItemIds.set(item.clientId, response.data?.updateCarePlanProgrammeItem?.item?.id ?? item.id);
           } else {
-            await createItem({ variables: { carePlanProgrammeId: activePlan.id, data } });
+            const response = await createItem({ variables: { carePlanProgrammeId: activePlan.id, data } });
+            const savedId = response.data?.createCarePlanProgrammeItem?.item?.id;
+            if (!savedId) throw new Error(`Could not save ${isMeal ? "meal" : isExercise ? "activity" : "step"} ${index + 1}.`);
+            savedItemIds.set(item.clientId, savedId);
+            setForm((current) => ({ ...current, items: current.items.map((currentItem) => currentItem.clientId === item.clientId ? { ...currentItem, id: savedId } : currentItem) }));
           }
         }
       } else {
-        await createPlan({
+        const response = await createPlan({
           variables: {
             programmeId,
             data: planPayload(form, normalizedPlanType, true),
           },
         });
+        const savedPlan: CarePlanProgramme | null = response.data?.createCarePlanProgramme?.carePlanProgramme ?? null;
+        if (!savedPlan) throw new Error("The plan was not returned after saving. Refresh the page before trying again.");
+        savedPlan.items.forEach((savedItem: CarePlanProgramme["items"][number]) => {
+          const formItem = itemsToSave[savedItem.sortOrder];
+          if (formItem) savedItemIds.set(formItem.clientId, savedItem.id);
+        });
+        // If a later meal-alternative request fails, continue editing this saved plan rather than creating a duplicate.
+        setEditingPlan(savedPlan);
+        setCreating(false);
+        setForm((current) => ({ ...current, items: current.items.map((item) => ({ ...item, id: savedItemIds.get(item.clientId) ?? item.id })) }));
+      }
+
+      if (isMeal) {
+        for (const item of itemsToSave) {
+          const itemId = savedItemIds.get(item.clientId) ?? item.id;
+          if (!itemId) continue;
+          const keptAlternativeIds = new Set<string>();
+          for (const [index, alternative] of item.alternatives.entries()) {
+            if (!alternative.title.trim()) continue;
+            const data = mealAlternativePayload(alternative, index);
+            if (alternative.id) {
+              await updateAlternative({ variables: { alternativeId: alternative.id, data } });
+              keptAlternativeIds.add(alternative.id);
+            } else {
+              const response = await createAlternative({ variables: { itemId, data } });
+              const savedId = response.data?.createMealAlternative?.mealAlternative?.id;
+              if (!savedId) throw new Error(`Could not save alternative ${index + 1} for ${item.title}.`);
+              keptAlternativeIds.add(savedId);
+              setForm((current) => ({
+                ...current,
+                items: current.items.map((currentItem) => currentItem.clientId === item.clientId
+                  ? { ...currentItem, alternatives: currentItem.alternatives.map((currentAlternative) => currentAlternative.clientId === alternative.clientId ? { ...currentAlternative, id: savedId } : currentAlternative) }
+                  : currentItem),
+              }));
+            }
+          }
+          const originalItem = activePlan?.items.find((candidate) => candidate.id === item.id);
+          for (const oldAlternative of originalItem?.mealAlternatives ?? []) {
+            if (!keptAlternativeIds.has(oldAlternative.id)) {
+              await deleteAlternative({ variables: { alternativeId: oldAlternative.id } });
+            }
+          }
+        }
       }
       closeEditor();
       await plansQuery.refetch();
@@ -2545,6 +2703,13 @@ function ProgrammeSharedPlansPanel({
                   {isMeal ? "Meals" : isExercise ? "Activities" : "Steps"} ({form.items.filter((item) => item.title.trim()).length})
                 </Button>
               </div>
+              {!valid ? (
+                <p role="status" className="text-xs text-muted">
+                  {!form.title.trim()
+                    ? "Enter a plan name before saving."
+                    : "Check the month, schedule day, duration and nutrition values. Use whole numbers within the shown ranges."}
+                </p>
+              ) : null}
               <fieldset disabled={saving} className="min-w-0">
                 {editorTab === "details" ? (
                   <div className="grid gap-3 md:grid-cols-2">
@@ -2588,6 +2753,23 @@ function ProgrammeSharedPlansPanel({
                               : "e.g. Outlines the clinical steps for the first month of the programme"
                         }
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${normalizedPlanType}-phase`}>Phase label <span className="font-normal text-muted">(optional)</span></Label>
+                      <Input id={`${normalizedPlanType}-phase`} value={form.phaseLabel} onChange={(event) => setForm((current) => ({ ...current, phaseLabel: event.target.value }))} placeholder="e.g. Getting started" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${normalizedPlanType}-month`}>Programme month <span className="font-normal text-muted">(optional)</span></Label>
+                      <Input id={`${normalizedPlanType}-month`} type="number" min={1} step={1} value={form.monthNumber} onChange={(event) => setForm((current) => ({ ...current, monthNumber: event.target.value }))} placeholder="e.g. 1" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${normalizedPlanType}-cadence`}>Schedule cadence</Label>
+                      <Select id={`${normalizedPlanType}-cadence`} value={form.scheduleCadence} options={scheduleCadenceOptions} onChange={(event) => setForm((current) => ({ ...current, scheduleCadence: event.target.value as ProgrammePlanForm["scheduleCadence"] }))} />
+                      <p className="text-xs text-muted">Controls how item schedule days repeat.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${normalizedPlanType}-sort`}>Display order</Label>
+                      <Input id={`${normalizedPlanType}-sort`} type="number" min={0} step={1} value={form.sortOrder} onChange={(event) => setForm((current) => ({ ...current, sortOrder: event.target.value }))} />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor={`${normalizedPlanType}-starts`}>
@@ -2772,7 +2954,7 @@ function ProgrammeSharedPlansPanel({
                             ) : null}
                             <div className="space-y-1.5">
                               <Label htmlFor={`${item.clientId}-day`}>
-                                Programme day <span className="font-normal text-muted">(optional)</span>
+                                Schedule day <span className="font-normal text-muted">(optional)</span>
                               </Label>
                               <Input
                                 id={`${item.clientId}-day`}
@@ -2782,14 +2964,14 @@ function ProgrammeSharedPlansPanel({
                                 onChange={(event) =>
                                   updateItemForm(item.clientId, { dayNumber: event.target.value })
                                 }
-                                placeholder="e.g. 1"
+                                max={scheduleDayMaximum}
+                                step={1}
+                                placeholder={form.scheduleCadence === "weekly" ? "1 = Monday" : "1-30"}
                               />
                               <p className="text-xs text-muted">
-                                {isMeal
-                                  ? "Which day of the programme this meal is scheduled for."
-                                  : isExercise
-                                    ? "Which day of the programme this activity is scheduled for."
-                                    : "Which day of the programme this step is scheduled for."}
+                                {form.scheduleCadence === "weekly"
+                                  ? "Day of week: 1 = Monday through 7 = Sunday. Leave blank for every day."
+                                  : "Day of month: 1-30. Leave blank for every day of the month."}
                               </p>
                             </div>
                             <div className="space-y-1.5">
@@ -2834,7 +3016,64 @@ function ProgrammeSharedPlansPanel({
                                 }
                               />
                             </div>
+                            <div className="space-y-1.5 md:col-span-2">
+                              <Label htmlFor={`${item.clientId}-content-type`}>Patient content</Label>
+                              <Select
+                                id={`${item.clientId}-content-type`}
+                                value={item.contentType}
+                                options={planContentTypeOptions}
+                                onChange={(event) => updateItemForm(item.clientId, { contentType: event.target.value as ProgrammePlanItemForm["contentType"] })}
+                              />
+                            </div>
+                            {item.contentType === "video" || item.contentType === "both" ? (
+                              <div className="space-y-1.5 md:col-span-2">
+                                <Label htmlFor={`${item.clientId}-video-url`}>Video URL</Label>
+                                <Input id={`${item.clientId}-video-url`} type="url" value={item.videoUrl} onChange={(event) => updateItemForm(item.clientId, { videoUrl: event.target.value })} placeholder="https://" />
+                              </div>
+                            ) : null}
+                            {item.contentType === "text" || item.contentType === "both" ? (
+                              <div className="space-y-1.5 md:col-span-2">
+                                <Label htmlFor={`${item.clientId}-body-text`}>Patient-facing content</Label>
+                                <Textarea id={`${item.clientId}-body-text`} value={item.bodyText} onChange={(event) => updateItemForm(item.clientId, { bodyText: event.target.value })} placeholder="Write the approved education or instructions shown to the patient." />
+                              </div>
+                            ) : null}
                           </div>
+                          {isMeal ? (
+                            <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-semibold text-text">Meal alternatives</p>
+                                  <p className="text-xs text-muted">Optional substitutes with nutritional values.</p>
+                                </div>
+                                <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={() => updateItemForm(item.clientId, { alternatives: [...item.alternatives, emptyMealAlternative(item.alternatives.length)] })}>
+                                  <Plus className="size-4" /> Add alternative
+                                </Button>
+                              </div>
+                              {item.alternatives.map((alternative, alternativeIndex) => (
+                                <div key={alternative.clientId} className="grid gap-3 border-t border-border pt-3 md:grid-cols-2">
+                                  <div className="space-y-1.5 md:col-span-2">
+                                    <Label htmlFor={`${alternative.clientId}-title`}>Alternative name</Label>
+                                    <Input id={`${alternative.clientId}-title`} value={alternative.title} onChange={(event) => updateItemForm(item.clientId, { alternatives: item.alternatives.map((candidate) => candidate.clientId === alternative.clientId ? { ...candidate, title: event.target.value } : candidate) })} placeholder="e.g. Unsweetened yoghurt with nuts" />
+                                  </div>
+                                  <div className="space-y-1.5 md:col-span-2">
+                                    <Label htmlFor={`${alternative.clientId}-description`}>Description</Label>
+                                    <Textarea id={`${alternative.clientId}-description`} value={alternative.description} onChange={(event) => updateItemForm(item.clientId, { alternatives: item.alternatives.map((candidate) => candidate.clientId === alternative.clientId ? { ...candidate, description: event.target.value } : candidate) })} />
+                                  </div>
+                                  {(["kcal", "carbsG", "proteinG", "fatG"] as const).map((field) => (
+                                    <div key={field} className="space-y-1.5">
+                                      <Label htmlFor={`${alternative.clientId}-${field}`}>{field === "kcal" ? "Energy (kcal)" : field === "carbsG" ? "Carbohydrate (g)" : field === "proteinG" ? "Protein (g)" : "Fat (g)"}</Label>
+                                      <Input id={`${alternative.clientId}-${field}`} type="number" min={1} step={1} value={alternative[field]} onChange={(event) => updateItemForm(item.clientId, { alternatives: item.alternatives.map((candidate) => candidate.clientId === alternative.clientId ? { ...candidate, [field]: event.target.value } : candidate) })} />
+                                    </div>
+                                  ))}
+                                  <div className="flex justify-end md:col-span-2">
+                                    <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => updateItemForm(item.clientId, { alternatives: item.alternatives.filter((candidate) => candidate.clientId !== alternative.clientId) })}>
+                                      <Trash2 className="size-4" /> Remove alternative {alternativeIndex + 1}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
                           <div className="flex justify-between gap-2">
                             <p className="text-xs text-muted">
                               {isMeal ? "Meal" : isExercise ? "Activity" : "Step"}{" "}
@@ -2877,6 +3116,9 @@ function ProgrammeSharedPlansPanel({
                 <div className="min-w-0 flex-1">
                   <p className="break-words text-sm font-semibold text-text">{plan.title}</p>
                   <p className="mt-1 text-xs text-muted">
+                    {plan.phaseLabel ? `${plan.phaseLabel} | ` : ""}
+                    {plan.monthNumber ? `Month ${plan.monthNumber} | ` : ""}
+                    {titleCase(plan.scheduleCadence)} schedule |{" "}
                     {plan.startsOnDay ? `Day ${plan.startsOnDay}` : "No start day"}
                     {plan.endsOnDay ? ` - ${plan.endsOnDay}` : ""}
                     {plan.durationDays ? ` | ${plan.durationDays} days` : ""}
@@ -2942,6 +3184,11 @@ function ProgrammeSharedPlansPanel({
           }
         >
           <div className="space-y-4">
+            <p className="text-xs text-muted">
+              {viewingPlan.phaseLabel ? `${viewingPlan.phaseLabel} | ` : ""}
+              {viewingPlan.monthNumber ? `Month ${viewingPlan.monthNumber} | ` : ""}
+              {titleCase(viewingPlan.scheduleCadence)} schedule
+            </p>
             {viewingPlan.description ? (
               <p className="whitespace-pre-wrap break-words text-sm text-muted">
                 {viewingPlan.description}
@@ -2960,6 +3207,7 @@ function ProgrammeSharedPlansPanel({
                     {item.dayNumber ? `Day ${item.dayNumber}` : "Any day"}
                     {item.timeOfDay ? ` | ${item.timeOfDay}` : ""}
                     {item.mealType ? ` | ${titleCase(item.mealType)}` : ""}
+                    {item.exerciseType ? ` | ${titleCase(item.exerciseType)}` : ""}
                     {item.durationMinutes ? ` | ${item.durationMinutes} min` : ""}
                     {item.intensity ? ` | ${titleCase(item.intensity)}` : ""}
                   </p>
@@ -2967,6 +3215,25 @@ function ProgrammeSharedPlansPanel({
                     <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted">
                       {item.instructions}
                     </p>
+                  ) : null}
+                  {item.bodyText ? <p className="mt-2 whitespace-pre-wrap break-words text-sm text-text">{item.bodyText}</p> : null}
+                  {item.videoUrl ? <a className="mt-2 inline-block break-all text-sm text-primary underline" href={item.videoUrl} target="_blank" rel="noreferrer">Open video resource</a> : null}
+                  {item.mealAlternatives?.length ? (
+                    <div className="mt-3 space-y-2 rounded-md bg-background p-3">
+                      <p className="text-xs font-semibold text-text">Meal alternatives</p>
+                      {item.mealAlternatives.map((alternative) => (
+                        <div key={alternative.id} className="text-xs text-muted">
+                          <p className="font-medium text-text">{alternative.title}</p>
+                          {alternative.description ? <p>{alternative.description}</p> : null}
+                          <p>{[
+                            alternative.kcal ? `${alternative.kcal} kcal` : null,
+                            alternative.carbsG ? `${alternative.carbsG} g carbohydrate` : null,
+                            alternative.proteinG ? `${alternative.proteinG} g protein` : null,
+                            alternative.fatG ? `${alternative.fatG} g fat` : null,
+                          ].filter(Boolean).join(" | ")}</p>
+                        </div>
+                      ))}
+                    </div>
                   ) : null}
                 </li>
               ))}
